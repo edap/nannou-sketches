@@ -1,0 +1,9 @@
+#My sketches
+
+[workspace]
+members = [
+	"grid"
+]
+
+[profile.release]
+debug = true
