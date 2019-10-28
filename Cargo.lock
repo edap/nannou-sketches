@@ -1142,6 +1142,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "polyline"
+version = "0.1.0"
+dependencies = [
+ "nannou 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "ppv-lite86"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"

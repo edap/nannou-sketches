@@ -2,7 +2,8 @@
 
 [workspace]
 members = [
-	"grid"
+	"grid",
+	"polyline"
 ]
 
 [profile.release]
