@@ -5,6 +5,7 @@ use nannou::prelude::*;
 struct Model {
     points: Vec<Point2>,
     store_points: bool,
+    random_mag: f32,
 }
 
 fn main() {
@@ -21,9 +22,11 @@ fn model(app: &App) -> Model {
         .key_pressed(key_pressed)
         .build()
         .unwrap();
+
     Model {
         points: Vec::new(),
-        store_points: false
+        store_points: false,
+        random_mag: 30.0,
     }
 }
 
@@ -36,8 +39,9 @@ fn update(app: &App, model: &mut Model, _update: Update) {
             Some(v) => {
                 let old = pt2(v.x, v.y);
                 let new = pt2(app.mouse.x, app.mouse.y);
-                if new.distance(old) > 0.01 {
-                    model.points.push(new);
+                let random = pt2(new.x + random_f32() * model.random_mag, new.y + random_f32() * model.random_mag);
+                if new.distance(old) > 0.1 {
+                    model.points.push(random);
                 }
             },
         }
