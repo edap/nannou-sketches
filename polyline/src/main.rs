@@ -4,57 +4,66 @@ use nannou::prelude::*;
 
 struct Model {
     points: Vec<Point2>,
+    store_points: bool,
 }
 
 fn main() {
     nannou::app(model).update(update).run();
 }
 
-// this fn initialize the model. is the setup() in OF and processing
 fn model(app: &App) -> Model {
-    // it also create the window
     let _window = app
         .new_window()
         .with_dimensions(600, 600)
         .view(view)
-        //.mouse_pressed(mouse_pressed)
-        //.key_released(key_released)
+        .mouse_pressed(mouse_pressed)
+        .mouse_released(mouse_released)
+        .key_pressed(key_pressed)
         .build()
         .unwrap();
-    // my points
-    let mut points = Vec::new();
-    let p1 = pt2(100.0, 100.0);
-    let p2 = pt2(500.0, 200.0);
-    points.push(p1);
-    points.push(p2);
-    Model{ points }
+    Model {
+        points: Vec::new(),
+        store_points: false
+    }
 }
 
-// Update the state of your application here. By default, this gets called right before `view`.
-fn update(_app: &App, _model: &mut Model, _update: Update) {
-    // here my logic should happen
+fn update(app: &App, model: &mut Model, _update: Update) {
+    if model.store_points {
+        match model.points.last() {
+            None => {
+                model.points.push(pt2(app.mouse.x, app.mouse.y));
+            },
+            Some(v) => {
+                let old = pt2(v.x, v.y);
+                let new = pt2(app.mouse.x, app.mouse.y);
+                if new.distance(old) > 0.01 {
+                    model.points.push(new);
+                }
+            },
+        }
+    }
 }
 
 fn view(app: &App, model: &Model, frame: &Frame) {
     let draw = app.draw();
-
-    // test
-    let mut points = Vec::new();
-    let p1 = pt2(100.0, 100.0);
-    let p2 = pt2(500.0, 200.0);
-    points.push(p1);
-    points.push(p2);
     draw.background().color(RED);
-    //
-
 
     draw.polyline()
-    .join_round()
-    .points(points); // ok
-    //.points(&model.points); //not ok
+        .join_round()
+        .points(model.points.iter().cloned());
 
-
-    // Write to the window frame.
     draw.to_frame(app, &frame).unwrap();
 }
 
+fn mouse_pressed(_app: &App, model: &mut Model, _button: MouseButton) {
+    model.store_points = true;
+}
+fn mouse_released(_app: &App, model: &mut Model, _button: MouseButton) {
+    model.store_points = false;
+}
+
+fn key_pressed(_app: &App, model: &mut Model, key: Key) {
+    if key == Key::Space {
+        model.points.clear();
+    }
+}
