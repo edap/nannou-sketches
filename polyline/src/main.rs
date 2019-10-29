@@ -5,7 +5,6 @@ use nannou::prelude::*;
 struct Model {
     points: Vec<Point2>,
     store_points: bool,
-    random_mag: f32,
 }
 
 fn main() {
@@ -26,7 +25,6 @@ fn model(app: &App) -> Model {
     Model {
         points: Vec::new(),
         store_points: false,
-        random_mag: 30.0,
     }
 }
 
@@ -39,21 +37,24 @@ fn update(app: &App, model: &mut Model, _update: Update) {
             Some(v) => {
                 let old = pt2(v.x, v.y);
                 let new = pt2(app.mouse.x, app.mouse.y);
-                let random = pt2(new.x + random_f32() * model.random_mag, new.y + random_f32() * model.random_mag);
-                if new.distance(old) > 0.1 {
-                    model.points.push(random);
+                // avoid to store points that are in the same position
+                if new.distance(old) > 1.0 {
+                    model.points.push(new);
                 }
             },
         }
     }
+    randomize_points(model);
 }
 
 fn view(app: &App, model: &Model, frame: &Frame) {
     let draw = app.draw();
-    draw.background().color(RED);
+    draw.background().color(ORANGERED);
 
     draw.polyline()
         .join_round()
+        .color(DARKSLATEBLUE)
+        .stroke_weight(4.)
         .points(model.points.iter().cloned());
 
     draw.to_frame(app, &frame).unwrap();
@@ -70,4 +71,11 @@ fn key_pressed(_app: &App, model: &mut Model, key: Key) {
     if key == Key::Space {
         model.points.clear();
     }
+}
+
+fn randomize_points(model: &mut Model){
+    for p in model.points.iter_mut(){
+        p.x = p.x + (random_f32() - 0.5) * 2.0;
+        p.y = p.y + (random_f32() - 0.5) * 2.0;
+    };
 }
