@@ -573,13 +573,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "grid"
-version = "0.1.0"
-dependencies = [
- "nannou 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "half"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -688,6 +681,13 @@ version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "num-traits 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "lines-vector"
+version = "0.1.0"
+dependencies = [
+ "nannou 0.11.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

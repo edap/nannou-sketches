@@ -1,22 +1,17 @@
-extern crate nannou;
-
-use nannou::prelude::*;
-
-struct Line {
-    startP: Point2,
-    endP: Point2
-}
-
-
 // http://openframeworks.cc:80/ofBook/chapters/lines.html
 extern crate nannou;
 
 use nannou::prelude::*;
 
+struct Line {
+    start_p: Point2,
+    end_p: Point2
+}
+
 struct Model {
     points: Vec<Point2>,
     store_points: bool,
-    lines: Vector<Line>
+    lines: Vec<Line>
 }
 
 fn main() {
@@ -30,12 +25,14 @@ fn model(app: &App) -> Model {
         .view(view)
         .mouse_pressed(mouse_pressed)
         .mouse_released(mouse_released)
+        .mouse_moved(mouse_moved)
         .key_pressed(key_pressed)
         .build()
         .unwrap();
 
     Model {
         points: Vec::new(),
+        lines: Vec::new(),
         store_points: false,
     }
 }
@@ -77,6 +74,16 @@ fn mouse_pressed(_app: &App, model: &mut Model, _button: MouseButton) {
 }
 fn mouse_released(_app: &App, model: &mut Model, _button: MouseButton) {
     model.store_points = false;
+}
+fn mouse_moved(_app: &App, model: &mut Model, _pos: Vector2) {
+    if model.store_points {
+        for p in model.points {
+            let d = p.distance(_pos);
+
+
+        }
+    }
+    
 }
 
 fn key_pressed(_app: &App, model: &mut Model, key: Key) {

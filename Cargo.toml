@@ -2,7 +2,7 @@
 
 [workspace]
 members = [
-	"grid",
+	"lines-vector",
 	"polyline"
 ]
 
