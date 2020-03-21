@@ -53,7 +53,6 @@ fn update(app: &App, model: &mut Model, _update: Update) {
             },
         }
     }
-    randomize_points(model);
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
@@ -66,7 +65,6 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .end(l.end_p)
             .weight(1.0)
             .color(DARKSLATEBLUE);
-        //.stroke_weight(4.)
     }
 
     draw.to_frame(app, &frame).unwrap();
@@ -115,9 +113,3 @@ fn key_pressed(_app: &App, model: &mut Model, key: Key) {
     }
 }
 
-fn randomize_points(model: &mut Model){
-    for p in model.points.iter_mut(){
-        p.x = p.x + (random_f32() - 0.5) * 2.0;
-        p.y = p.y + (random_f32() - 0.5) * 2.0;
-    };
-}
