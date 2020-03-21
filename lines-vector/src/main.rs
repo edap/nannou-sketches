@@ -21,7 +21,7 @@ fn main() {
 fn model(app: &App) -> Model {
     let _window = app
         .new_window()
-        .with_dimensions(600, 600)
+        .size(600, 600)
         .view(view)
         .mouse_pressed(mouse_pressed)
         .mouse_released(mouse_released)
@@ -56,15 +56,18 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     randomize_points(model);
 }
 
-fn view(app: &App, model: &Model, frame: &Frame) {
+fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     draw.background().color(ORANGERED);
 
-    draw.polyline()
-        .join_round()
-        .color(DARKSLATEBLUE)
-        .stroke_weight(4.)
-        .points(model.points.iter().cloned());
+    for l in model.lines.iter() {
+        draw.line()
+            .start(l.start_p)
+            .end(l.end_p)
+            .weight(1.0)
+            .color(DARKSLATEBLUE);
+        //.stroke_weight(4.)
+    }
 
     draw.to_frame(app, &frame).unwrap();
 }
@@ -75,12 +78,31 @@ fn mouse_pressed(_app: &App, model: &mut Model, _button: MouseButton) {
 fn mouse_released(_app: &App, model: &mut Model, _button: MouseButton) {
     model.store_points = false;
 }
-fn mouse_moved(_app: &App, model: &mut Model, _pos: Vector2) {
+fn mouse_moved(app: &App, model: &mut Model, pos: Vector2) {
     if model.store_points {
-        for p in model.points {
-            let d = p.distance(_pos);
+        for p in model.points.iter_mut() {
+            let dist = p.distance(pos);
+            if dist < 50.0 {
+                let line = Line {
+                    start_p: pt2(p.x, p.y),
+                    end_p: pos,
+                };
+                model.lines.push(line);
+            }
+        }
 
-
+        match model.points.last() {
+            None => {
+                model.points.push(pt2(app.mouse.x, app.mouse.y));
+            },
+            Some(v) => {
+                let old = pt2(v.x, v.y);
+                let new = pt2(app.mouse.x, app.mouse.y);
+                // do not add points that are too close to each other
+                if new.distance(old) > 10.0 {
+                    model.points.push(new);
+                }
+            }
         }
     }
     
