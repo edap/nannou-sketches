@@ -1,12 +1,15 @@
 use nannou::prelude::*;
 mod colors;
 use crate::colors::Palette;
+use nannou::color::gradient::Gradient;
 
 struct Model {
     scheme_id: usize,
     palette: Palette,
+    gradient_one: Gradient<Hsl>,
+    gradient_two: Gradient<Hsl>,
+    gradient_three: Gradient<Hsl>,
 }
-
 
 fn main() {
     //nannou::sketch(view).run();
@@ -21,10 +24,20 @@ fn model(app: &App) -> Model {
     .build()
     .unwrap();
 
+    let scheme_id = 0;
     let palette = Palette::new();
+    let scheme = palette.get_scheme(scheme_id);
+
+    let g_one = Gradient::new(vec![Hsl::from(scheme[0]),Hsl::from(scheme[4])]);
+    let g_two = Gradient::new(vec![Hsl::from(scheme[1]),Hsl::from(scheme[2])]);
+    let g_three = Gradient::new(vec![Hsl::from(scheme[1]),Hsl::from(scheme[3])]);
+
     Model {
-        scheme_id: 0,
+        scheme_id: scheme_id,
         palette,
+        gradient_one: g_one,
+        gradient_two: g_two,
+        gradient_three: g_three,
     }
 }
 
@@ -54,11 +67,12 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
-    let tile_count = 12;
+    let win = app.window_rect();
+    let tile_count = map_range(app.mouse.x, win.w()*-1.0, win.w(), 2, 14) as u32;
 
     let draw = app.draw();
+    //let draw = draw.color_blend(BLEND_SUBTRACT);
     let draw = draw.color_blend(BLEND_ADD);
-    let win = app.window_rect();
     frame.clear(model.palette.get_scheme(model.scheme_id)[4]);
 
     // TODO Work on single tile
@@ -72,25 +86,42 @@ fn view(app: &App, model: &Model, frame: Frame) {
         let tile_h = win.h() / tile_count as f32;
         let x = (i % tile_count) as f32 * tile_w - win.w() * 0.5 + tile_w / 2.0;
         let y = (i / tile_count) as f32 * tile_h - win.h() * 0.5 + tile_h / 2.0;
-        draw_circle(&app, &draw, x, y, i, tile_w, tile_h, model.palette.get_scheme(model.scheme_id)[1]);
-        draw_poly(&app, &draw, x, y, i, tile_w, tile_h);
+        draw_circle(&app, &draw, x, y, i, tile_w, tile_h, model);
+        draw_poly(&app, &draw, x, y, i, tile_w, tile_h, model.palette.get_scheme(model.scheme_id));
     }
 
     draw.to_frame(app, &frame).unwrap();
 }
 
-fn draw_circle(app: &App, draw: &Draw, x: f32, y: f32, index: u32, _tile_w: f32, tile_h: f32, col: Rgb) {
+fn draw_circle(app: &App, draw: &Draw, x: f32, y: f32, index: u32, _tile_w: f32, tile_h: f32, model: &Model) {
+    let palette = model.palette.get_scheme(model.scheme_id);
     let amp = 10.0;
     let wave = (app.time * 0.7).cos() * amp;
 
     draw.ellipse()
-        .color(col)
+        .color(model.gradient_two.get((app.time * 0.7).cos().abs()))
         .radius(tile_h / 2.0)
         .x(x + wave * (index % 8) as f32)
         .y(y);
+
+    // shadow
+    let n_circles = 12;
+    let circle_thickness = 4.0;
+    for n in(1..n_circles) {
+        let alpha = map_range(n, 1, n_circles, 1.0, 0.0);
+        let offset = map_range(n,1, n_circles, circle_thickness, ((circle_thickness/2.0) * n_circles as f32));
+        draw.ellipse()
+            .resolution(64)
+            .no_fill()
+            .stroke_weight(circle_thickness)
+            .stroke(model.gradient_one.get(alpha))
+            .x(x + wave * (index % 8) as f32)
+            .y(y)
+            .radius(tile_h / 2.0 + offset - circle_thickness);
+    }
 }
 
-fn draw_poly(app: &App, draw: &Draw, x: f32, y: f32, _index: u32, tile_w: f32, tile_h: f32) {
+fn draw_poly(app: &App, draw: &Draw, x: f32, y: f32, _index: u32, tile_w: f32, tile_h: f32, palette: &[Rgb]) {
     let def = 3;
     let t = app.time * 0.2;
 
