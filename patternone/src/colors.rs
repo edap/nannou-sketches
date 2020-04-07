@@ -7,6 +7,42 @@ pub struct Palette {
     pub colors: [Rgb; 25],
     pub len: usize,
 }
+//   if(palette == 1){
+//     coloreUno = vec3(0.733, 1.0, 0.31);
+//     coloreDue = vec3(1.0, 0.353, 0.208);
+//     coloreTre = vec3(0.086, 0.29, 0.8);
+//     coloreQuattro = vec3(0.698, 0.188, 0.075);
+//     coloreCinque = vec3( 0.098, 0.0, 0.749);
+//   }
+//   if (palette == 2){
+//     coloreUno = vec3(1., 0.592, 0.706);
+//     coloreDue = vec3(0.898, 0.341, 0.878);
+//     coloreTre = vec3(0.902, 0.494, 0.063);
+//     coloreQuattro = vec3(0., 0.498, 0.353);
+//     coloreCinque = vec3(0.098, 0, 0.749);
+//   }
+//   if (palette == 3){
+//     coloreUno = vec3(0.965, 0.914, 0.396);
+//     coloreDue = vec3(0.333, 1, 0.235);
+//     coloreTre = vec3(0.078, 0.643, 0.8);
+//     coloreQuattro = vec3(0.706, .0, 0.514);
+//     coloreCinque = vec3(.0, .0, .0);  
+//   }
+//   if (palette == 4){
+//     coloreUno = vec3(0.055, 0.8, 0.812);
+//     coloreDue = vec3(0.965, 0.914, 0.396);
+//     coloreTre = vec3(0.902, 0.659, 0.141);
+//     coloreQuattro = vec3(0.953, 0.447, 0.035);
+//     coloreCinque = vec3(1., 0.267, 0.016);  
+//   }
+//   if (palette == 5){
+//     coloreUno = vec3(0.055, 0.8, 0.812);
+//     coloreDue = vec3(0.702, 0.839, 0.38);
+//     coloreTre = vec3(0.945, 0.757, 0.137);
+//     coloreQuattro = vec3(0.902, 0.659, 0.141);
+//     coloreCinque = vec3(0.525, 0.094, 0.949);  
+//   }
+
 
 impl Palette {
     pub fn new() -> Self {
@@ -15,15 +51,16 @@ impl Palette {
         rgb(0.733, 1.0, 0.31), //lime
         rgb(1.0, 0.353, 0.208), //red
         rgb(0.086, 0.29, 0.8), //blu
-        rgb(0.698, 0.188, 0.075), //blu hard
-        rgb( 0.098, 0.0, 0.749), //red hard
+        rgb(0.698, 0.188, 0.075), //red hard
+        rgb( 0.098, 0.0, 0.749), //blu hard
         // greenAndRosePal
-        rgb(0.055, 0.8, 0.812), //azul
-        rgb(0.702, 0.839, 0.38),
-        rgb(0.945, 0.757, 0.137), // yellow
-        rgb(0.902, 0.659, 0.141),
-        rgb(0.525, 0.094, 0.949),
-        // nesPal
+        rgb(1.0, 0.592, 0.706), //rose
+        rgb(0.898, 0.341, 0.878), //lilla
+        rgb(0.902, 0.494, 0.063), // orange
+        rgb(0.0, 0.498, 0.353), //green
+        rgb( 0.098, 0.0, 0.749),//blu
+
+        // nes variation
         rgb(0.055, 0.8, 0.812), //azul
         rgb(0.965, 0.914, 0.396), //yellow
         rgb(0.902, 0.659, 0.141), //ocra
@@ -31,10 +68,10 @@ impl Palette {
         rgb(1.0, 0.267, 0.016), // red
         // primoPal
         rgb(0.055, 0.8, 0.812), // azul
-        rgb(0.702, 0.839, 0.38),
-        rgb(0.945, 0.757, 0.137),
+        rgb(0.702, 0.839, 0.38),// verde vomito
+        rgb(0.945, 0.757, 0.137), //giallo
         rgb(0.902, 0.659, 0.141), //ocra
-        rgb(0.525, 0.094, 0.949),
+        rgb(0.525, 0.094, 0.949), //viola
         // bigBubblePal
         rgb(0.965, 0.914, 0.396), //yellow
         rgb(0.333, 1.0, 0.235), //green
