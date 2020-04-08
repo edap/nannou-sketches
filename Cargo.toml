@@ -2,8 +2,10 @@
 
 [workspace]
 members = [
+	"edapx-colors",
 	"lines-vector",
 	"polyline",
+	"pattern_2",
 	"patternone"
 ]
 

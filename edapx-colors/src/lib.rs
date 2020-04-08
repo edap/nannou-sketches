@@ -49,9 +49,6 @@ impl Palette {
             rgb(0.980, 0.788, 0.0), //giallo
             rgb(0.96, 0.478, 0.913), //lilla
             rgb(0.678, 0.0, 0.607), // viola
-
-
-
         ];
 
         let len = colors_rgb.len();
@@ -67,7 +64,7 @@ impl Palette {
             index = 0;
         }
         index = id * COLOR_PER_SCHEME;
-        let to = index + COLOR_PER_SCHEME;
-        &self.colors[index..to]
+        let to = index + COLOR_PER_SCHEME -1;
+        &self.colors[index..=to]
     }
 }
