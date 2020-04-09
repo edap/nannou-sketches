@@ -1,3 +1,4 @@
+#[warn(unused_assignments)]
 use nannou::color::Rgb;
 use nannou::color::rgb;
 

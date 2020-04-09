@@ -1793,6 +1793,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "template-quad"
+version = "0.1.0"
+dependencies = [
+ "edapx-colors 0.1.0",
+ "nannou 0.13.1 (git+https://github.com/nannou-org/nannou)",
+]
+
+[[package]]
 name = "threadpool"
 version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

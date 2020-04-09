@@ -6,7 +6,8 @@ members = [
 	"lines-vector",
 	"polyline",
 	"pattern_2",
-	"patternone"
+	"patternone",
+	"template-quad"
 ]
 
 [profile.release]

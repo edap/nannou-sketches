@@ -21,6 +21,7 @@ fn main() {
 
 fn model(app: &App) -> Model {
     app.new_window()
+        .size(600, 600)
         .key_pressed(key_pressed)
         .mouse_pressed(mouse_pressed)
         .view(view)
@@ -92,7 +93,7 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
 
     let scheme_id = model.scheme_id;
     let scheme = model.palette.get_scheme(scheme_id);
-    model.gradient_one = Gradient::new(vec![Hsl::from(scheme[0]),Hsl::from(scheme[2])]);
+    model.gradient_one = Gradient::new(vec![Hsl::from(scheme[1]),Hsl::from(scheme[2])]);
     model.gradient_two = Gradient::new(vec![Hsl::from(scheme[3]),Hsl::from(scheme[4])]);
     model.gradient_three = Gradient::new(vec![Hsl::from(scheme[4]),Hsl::from(scheme[0])]);
 }
@@ -133,6 +134,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             _ => unreachable!(),
         };
         draw = draw.rotate(rotation);
+        draw_poly(&app, &draw, x, y, i, tile_w, tile_h, model, coin);
     }
     draw.to_frame(app, &frame).unwrap();
 }
