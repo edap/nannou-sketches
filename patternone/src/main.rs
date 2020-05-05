@@ -89,7 +89,6 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
         }
         _other_key => {}
     }
-    println!("pal{:?}", model.palette.get_scheme(model.scheme_id));
 
     let scheme_id = model.scheme_id;
     let scheme = model.palette.get_scheme(scheme_id);
@@ -101,7 +100,8 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
 fn view(app: &App, model: &Model, frame: Frame) {
     let mut rng = StdRng::seed_from_u64(model.act_random_seed);
     let win = app.window_rect();
-    let tile_count = map_range(app.mouse.x, win.w()*-1.0, win.w(), 1, 8) as u32;
+    let tile_count = map_range(app.mouse.x, win.w()*-1.0, win.w(), 1, 4) as u32;
+
 
     let blends = [
         BLEND_NORMAL,
@@ -177,6 +177,7 @@ fn draw_circles(app: &App, draw: &Draw, x: f32, y: f32, index: u32, tile_w: f32,
 
 fn draw_poly(app: &App, draw: &Draw, x: f32, y: f32, _index: u32, tile_w: f32, tile_h: f32,  model: &Model, random: u8) {
     let def = 9;
+    //let def = 1 + (app.mouse.y / 10.).abs() as u32;
     let spaces = def -1;
     let parts = spaces + def;
     let thickness = tile_w / 9.0;
