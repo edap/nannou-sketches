@@ -7,6 +7,7 @@ members = [
 	"polyline",
 	"pattern_2",
 	"patternone",
+	"rayquad",
 	"template-quad"
 ]
 
