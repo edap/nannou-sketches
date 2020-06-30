@@ -9,6 +9,60 @@ fn main() {
     nannou::app(model).run();
 }
 
+struct Ray2D {
+    orig: Vector2,
+    dir: Vector2,
+}
+
+impl Ray2D{
+    pub fn new() -> Self {
+        Ray2D{
+            orig: vec2(0.0, 0.0),
+            dir: vec2(1.0, 0.0),
+        }
+    }
+
+    pub fn debug_ray(&self, draw: &Draw, mag: f32) {
+        draw.line().color(RED).start(self.orig).end(self.dir.with_magnitude(mag));
+    }
+
+
+    pub fn look_at(&mut self, x: f32, y: f32) {
+        self.dir.x = (x - self.orig.x);
+        self.dir.y = (y - self.orig.y);
+        self.dir.normalize();
+    }
+
+    pub fn intersect(&self, x1: f32, y1: f32, x2: f32, y2: f32) -> Option<Vector2> {
+        let x3 = self.orig.x;
+        let y3 = self.orig.y;
+        let x4 = self.orig.x + self.dir.x;
+        let y4 = self.orig.y + self.dir.y;
+        let den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+
+        let tri = (
+            den,
+            ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / den,
+            -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / den,
+        );
+
+
+        match tri {
+            (d, t, u) if d != 0.0 && t > 0.0 && t < 1.0 && u > 0.0 =>
+                Some(vec2(x1 + t * (x2 - x1), y1 + t * (y2 - y1))),
+            _ => None,
+
+        }
+
+        // if (t > 0.0 && t < 1.0 && u > 0.0) {
+        //   Some(vec2(x1 + t * (x2 - x1), y1 + t * (y2 - y1)));
+        // } else {
+        //   None;
+        // }
+
+    }
+}
+
 struct Model {
     scheme_id: usize,
     palette: Palette,
@@ -101,6 +155,14 @@ fn mouse_pressed(_app: &App, model: &mut Model, _button: MouseButton) {
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
+    let start_line = vec2(300.0,100.0);
+    let end_line = vec2(300.0,-300.0);
+    let mut r = Ray2D::new();
+    r.look_at(app.mouse.x, app.mouse.y);
+
+
+
+
     let draw = app.draw();
     let win = app.window_rect();
     let tile_count_w = map_range(app.mouse.x, win.w()*-1.0, win.w(), 1, 8) as u32;
@@ -112,8 +174,14 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     draw.background().color(PLUM);
 
-    // Draw a blue ellipse with default size and position.
     draw.ellipse().color(STEELBLUE).x_y(app.mouse.x, app.mouse.y);
+    r.debug_ray(&draw, 200.0);
+    draw.line().color(STEELBLUE).start(start_line).end(end_line);
+
+    if let r.intersect(start_line.x,start_line.y, end_line.x, end_line.y) = collision{
+        draw.ellipse().color(GREEN).x_y(collision.x, collision.y);
+    };
+
     draw.to_frame(app, &frame).unwrap();
 }
 
