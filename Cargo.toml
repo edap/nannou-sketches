@@ -2,6 +2,7 @@
 
 [workspace]
 members = [
+	"ray2d",
 	"edapx-colors",
 	"lines-vector",
 	"polyline",

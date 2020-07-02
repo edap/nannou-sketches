@@ -1,136 +1,46 @@
-
 use nannou::prelude::*;
-use nannou::rand::rngs::StdRng;
-use nannou::rand::{Rng, SeedableRng};
-use nannou::color::gradient::Gradient;
-use edapx_colors::Palette;
+use ray2d::Ray2D;
+
+const N_WALL: usize = 20;
 
 fn main() {
     nannou::app(model).run();
 }
 
-struct Ray2D {
-    orig: Vector2,
-    dir: Vector2,
-}
-
-impl Ray2D{
-    pub fn new() -> Self {
-        Ray2D{
-            orig: vec2(0.0, 0.0),
-            dir: vec2(1.0, 0.0),
-        }
-    }
-
-    pub fn debug_ray(&self, draw: &Draw, mag: f32) {
-        //draw.arrow().weight(5.0).points(start, end);
-        draw.arrow()
-            .color(RED)
-            .start(self.orig)
-            .end(self.dir.with_magnitude(mag));
-    }
-
-
-    pub fn look_at(&mut self, x: f32, y: f32) {
-        self.dir.x = (x - self.orig.x);
-        self.dir.y = (y - self.orig.y);
-        self.dir.normalize();
-    }
-
-    pub fn intersect(&self, x1: f32, y1: f32, x2: f32, y2: f32) -> Option<Vector2> {
-        let x3 = self.orig.x;
-        let y3 = self.orig.y;
-        let x4 = self.orig.x + self.dir.x;
-        let y4 = self.orig.y + self.dir.y;
-        let den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-
-        let tri = (
-            den,
-            ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / den,
-            -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / den,
-        );
-
-        match tri {
-            (d, t, u) if d != 0.0 && t > 0.0 && t < 1.0 && u > 0.0 =>
-                Some(vec2(x1 + t * (x2 - x1), y1 + t * (y2 - y1))),
-            _ => None,
-
-        }
-    }
-}
-
 struct Model {
-    scheme_id: usize,
-    palette: Palette,
-    gradient_one: Gradient<Hsl>,
-    gradient_two: Gradient<Hsl>,
-    gradient_three: Gradient<Hsl>,
-    blend_id: usize,
-    act_random_seed: u64,
-    walls: Vec<f32>,
+    walls: Vec<Vector2>,
 }
 
 fn model(app: &App) -> Model {
     app.new_window()
-        //.size(800, 800)
+        .size(800, 800)
         .view(view)
         .key_pressed(key_pressed)
-        .mouse_pressed(mouse_pressed)
         .build()
         .unwrap();
 
-    let scheme_id = 0;
-    let palette = Palette::new();
-    let scheme = palette.get_scheme(scheme_id);
+    let mut walls: Vec<Vector2> = Vec::new();
+    let win = app.window_rect();
+    println!("{}", win.w());
 
-    let gradient_one = Gradient::new(vec![Hsl::from(scheme[0]),Hsl::from(scheme[2])]);
-    let gradient_two = Gradient::new(vec![Hsl::from(scheme[1]),Hsl::from(scheme[3])]);
-    let gradient_three = Gradient::new(vec![Hsl::from(scheme[4]),Hsl::from(scheme[1])]);
-    Model {
-        scheme_id,
-        palette,
-        gradient_one,
-        gradient_two,
-        gradient_three,
-        blend_id: 0,
-        act_random_seed: 0,
-        walls: Vec::new(),
+    while walls.len() < N_WALL * 2 {
+        let start_p = vec2(
+            random_range(-win.w() / 2.0, win.w() / 2.0),
+            random_range(-win.h() / 2.0, win.h() / 2.0),
+        );
+        let end_p = vec2(
+            random_range(-win.w() / 2.0, win.w() / 2.0),
+            random_range(-win.h() / 2.0, win.h() / 2.0),
+        );
+        walls.push(start_p);
+        walls.push(end_p);
     }
+
+    Model { walls }
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
     match key {
-        Key::Key1 => {
-            model.scheme_id = 0;
-        }
-        Key::Key2 => {
-            model.scheme_id = 1;
-        }
-        Key::Key3 => {
-            model.scheme_id = 2;
-        }
-        Key::Key4 => {
-            model.scheme_id = 3;
-        }
-        Key::Key5 => {
-            model.scheme_id = 4;
-        }
-        Key::Key6 => {
-            model.scheme_id = 5;
-        }
-        Key::Q => {
-            model.blend_id = 0;
-        }
-        Key::W => {
-            model.blend_id = 1;
-        }
-        Key::E => {
-            model.blend_id = 2;
-        }
-        Key::R => {
-            model.blend_id = 3;
-        }
-
         Key::S => {
             app.main_window()
                 .capture_frame(app.time.to_string() + ".png");
@@ -138,35 +48,45 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
         }
         _other_key => {}
     }
-
-    let scheme_id = model.scheme_id;
-    let scheme = model.palette.get_scheme(scheme_id);
-    model.gradient_one = Gradient::new(vec![Hsl::from(scheme[0]),Hsl::from(scheme[2])]);
-    model.gradient_two = Gradient::new(vec![Hsl::from(scheme[3]),Hsl::from(scheme[4])]);
-    model.gradient_three = Gradient::new(vec![Hsl::from(scheme[4]),Hsl::from(scheme[0])]);
-}
-
-fn mouse_pressed(_app: &App, model: &mut Model, _button: MouseButton) {
-    model.act_random_seed = (random_f32() * 100000.0) as u64;
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     draw.background().color(PLUM);
 
-    let start_line = vec2(300.0,100.0);
-    let end_line = vec2(300.0,-300.0);
-
     let mut r = Ray2D::new();
     r.look_at(app.mouse.x, app.mouse.y);
 
     r.debug_ray(&draw, 200.0);
-    draw.line().color(STEELBLUE).start(start_line).end(end_line);
 
-    if let Some(collision) = r.intersect(start_line.x,start_line.y, end_line.x, end_line.y) {
-        draw.ellipse().color(GREEN).x_y(collision.x, collision.y);
-    };
+    for index in (0..N_WALL).step_by(2) {
+        draw.line()
+            .color(STEELBLUE)
+            .start(model.walls[index])
+            .end(model.walls[index + 1]);
+
+        if let Some(collision) = r.intersect(
+            model.walls[index].x,
+            model.walls[index].y,
+            model.walls[index + 1].x,
+            model.walls[index + 1].y,
+        ) {
+            // collision point
+            draw.ellipse()
+                .color(GREEN)
+                .x_y(collision.x, collision.y)
+                .w_h(10.0, 10.0);
+
+            // reflection
+            let segment_dir = (model.walls[index] - model.walls[index + 1]).normalize();
+            let segment_surface_normal = vec2(segment_dir.y, -segment_dir.x);
+            let refl = r.reflect(segment_surface_normal);
+            draw.line()
+                .color(YELLOW)
+                .start(collision)
+                .end(collision + refl.with_magnitude(100.0));
+        };
+    }
 
     draw.to_frame(app, &frame).unwrap();
 }
-
