@@ -1,7 +1,7 @@
 use nannou::prelude::*;
 use ray2d::Ray2D;
 
-const N_WALL: usize = 20;
+const N_WALL: usize = 10;
 
 fn main() {
     nannou::app(model).run();
@@ -58,45 +58,55 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     let mut r = Ray2D::new();
     r.look_at(app.mouse.x, app.mouse.y);
-
     r.debug_ray(&draw, 200.0);
 
+    let mut collision: Vector2 = vec2(0.0, 0.0);
+    let mut distance: f32 = Float::infinity();
+    let mut surface_normal: Vector2 = vec2(0.0, 0.0);
+
+    // find the closest intersection point between the ray and the walls
     for index in (0..N_WALL).step_by(2) {
         draw.line()
             .color(STEELBLUE)
             .start(model.walls[index])
             .end(model.walls[index + 1]);
 
-        if let Some(collision) = r.intersect(
+        if let Some(collision_distance) = r.intersection_distance(
             model.walls[index].x,
             model.walls[index].y,
             model.walls[index + 1].x,
             model.walls[index + 1].y,
         ) {
-            // collision point
-            draw.ellipse()
-                .color(GREEN)
-                .x_y(collision.x, collision.y)
-                .w_h(10.0, 10.0);
-
-            let segment_dir = (model.walls[index] - model.walls[index + 1]).normalize();
-            let segment_surface_normal = vec2(segment_dir.y, -segment_dir.x);
-
-            // reflection
-            let refl = r.reflect(segment_surface_normal);
-            draw.line()
-                .color(YELLOW)
-                .start(collision)
-                .end(collision + refl.with_magnitude(100.0));
-
-            // refraction
-            let refr = r.refract(segment_surface_normal, 1.0);
-            draw.line()
-                .color(INDIGO)
-                .start(collision)
-                .end(collision + refr.with_magnitude(100.0));
-        };
+            if collision_distance < distance {
+                distance = collision_distance;
+                collision = r.orig + r.dir.with_magnitude(collision_distance);
+                let segment_dir = (model.walls[index] - model.walls[index + 1]).normalize();
+                surface_normal = vec2(segment_dir.y, -segment_dir.x);
+            }
+        }
     }
+
+    if distance < Float::infinity() {
+        // collision point
+        draw.ellipse()
+            .color(GREEN)
+            .x_y(collision.x, collision.y)
+            .w_h(10.0, 10.0);
+
+        // reflection
+        let refl = r.reflect(surface_normal);
+        draw.line()
+            .color(YELLOW)
+            .start(collision)
+            .end(collision + refl.with_magnitude(100.0));
+
+        // refraction
+        let refr = r.refract(surface_normal, 1.2);
+        draw.line()
+            .color(INDIGO)
+            .start(collision)
+            .end(collision + refr.with_magnitude(100.0));
+    };
 
     draw.to_frame(app, &frame).unwrap();
 }

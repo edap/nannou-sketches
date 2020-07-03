@@ -56,73 +56,27 @@ impl Ray2D {
         self.dir = self.dir.normalize();
     }
 
-    pub fn intersect(&self, x1: f32, y1: f32, x2: f32, y2: f32) -> Option<Vector2> {
-        let x3 = self.orig.x;
-        let y3 = self.orig.y;
-        let x4 = self.orig.x + self.dir.x;
-        let y4 = self.orig.y + self.dir.y;
-        let den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-
-        let tri = (
-            den,
-            ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / den,
-            -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / den,
-        );
-
-        match tri {
-            (d, t, u) if d != 0.0 && t > 0.0 && t < 1.0 && u > 0.0 => {
-                Some(vec2(x1 + t * (x2 - x1), y1 + t * (y2 - y1)))
-            }
-            _ => None,
+    pub fn intersection_point(&self, x1: f32, y1: f32, x2: f32, y2: f32) -> Option<Vector2> {
+        if let Some(collision_distance) = self.intersection_distance(x1, y1, x2, y2) {
+            return Some(self.orig + self.dir.with_magnitude(collision_distance as f32));
         }
+        None
     }
 
-    pub fn intersect_r<'a>(
-        &self,
-        x1: f32,
-        y1: f32,
-        x2: f32,
-        y2: f32,
-        collision: &'a mut Vector2,
-    ) -> Option<&'a mut Vector2> {
+    pub fn intersection_distance(&self, x1: f32, y1: f32, x2: f32, y2: f32) -> Option<f32> {
         let x3 = self.orig.x;
         let y3 = self.orig.y;
         let x4 = self.orig.x + self.dir.x;
         let y4 = self.orig.y + self.dir.y;
         let den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
 
-        let tri = (
-            den,
-            ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / den,
-            -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / den,
-        );
+        let t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / den;
+        let u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / den;
 
-        match tri {
-            (d, t, u) if d != 0.0 && t > 0.0 && t < 1.0 && u > 0.0 => {
-                collision.x = x1 + t * (x2 - x1);
-                collision.y = y1 + t * (y2 - y1);
-                Some(collision)
-            }
-            _ => None,
-        }
-    }
-
-    pub fn intersection_distance<'a>(&self, x1: f32, y1: f32, x2: f32, y2: f32) -> Option<f32> {
-        let x3 = self.orig.x;
-        let y3 = self.orig.y;
-        let x4 = self.orig.x + self.dir.x;
-        let y4 = self.orig.y + self.dir.y;
-        let den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-
-        let tri = (
-            den,
-            ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / den,
-            -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / den,
-        );
-
-        match tri {
-            (d, t, u) if d != 0.0 && t > 0.0 && t < 1.0 && u > 0.0 => Some(t),
-            _ => None,
+        if den != 0.0 && t > 0.0 && t < 1.0 && u > 0.0 {
+            Some(u)
+        } else {
+            None
         }
     }
 }
