@@ -35,6 +35,8 @@ fn model(app: &App) -> Model {
         walls.push(start_p);
         walls.push(end_p);
     }
+    // let test = vec2(2.0, 2.0);
+    // let testa = vec2(12.0, 12.0);
 
     Model { walls }
 }
@@ -77,14 +79,22 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .x_y(collision.x, collision.y)
                 .w_h(10.0, 10.0);
 
-            // reflection
             let segment_dir = (model.walls[index] - model.walls[index + 1]).normalize();
             let segment_surface_normal = vec2(segment_dir.y, -segment_dir.x);
+
+            // reflection
             let refl = r.reflect(segment_surface_normal);
             draw.line()
                 .color(YELLOW)
                 .start(collision)
                 .end(collision + refl.with_magnitude(100.0));
+
+            // refraction
+            let refr = r.refract(segment_surface_normal, 1.0);
+            draw.line()
+                .color(INDIGO)
+                .start(collision)
+                .end(collision + refr.with_magnitude(100.0));
         };
     }
 

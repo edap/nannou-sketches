@@ -2,8 +2,8 @@
 use nannou::prelude::*;
 
 pub struct Ray2D {
-    orig: Vector2,
-    dir: Vector2,
+    pub orig: Vector2,
+    pub dir: Vector2,
 }
 
 impl Ray2D {
@@ -21,20 +21,26 @@ impl Ray2D {
         self.dir - surface_normal.with_magnitude(2.0 * surface_normal.dot(self.dir))
     }
 
-    pub fn get_dir(&self) -> &Vector2 {
-        &self.dir
-    }
+    pub fn refract(&self, surface_normal: Vector2, ior: f32) -> Vector2 {
+        // https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/reflection-refraction-fresnel
 
-    pub fn get_orig(&self) -> &Vector2 {
-        &self.orig
-    }
-
-    pub fn set_origin(&mut self, new_orig: Vector2) {
-        self.orig = new_orig
-    }
-
-    pub fn set_dir(&mut self, new_dir: Vector2) {
-        self.dir = new_dir
+        let mut cosi = clamp(-1.0, 1.0, self.dir.dot(surface_normal));
+        let (mut etai, mut etat) = (1.0, ior);
+        let mut n = surface_normal;
+        if cosi < 0.0 {
+            cosi = -cosi;
+        } else {
+            std::mem::swap(&mut etai, &mut etat);
+            n = -surface_normal;
+        }
+        let eta = etai / etat;
+        let k = 1.0 - eta * eta * (1.0 - cosi * cosi);
+        if k < 0.0 {
+            //vec2(0.0, 0.0)
+            self.dir.with_magnitude(0.0)
+        } else {
+            self.dir.with_magnitude(eta) + n.with_magnitude(eta * cosi - k.sqrt())
+        }
     }
 
     pub fn debug_ray(&self, draw: &Draw, mag: f32) {
@@ -47,7 +53,7 @@ impl Ray2D {
     pub fn look_at(&mut self, x: f32, y: f32) {
         self.dir.x = x - self.orig.x;
         self.dir.y = y - self.orig.y;
-        self.dir.normalize();
+        self.dir = self.dir.normalize();
     }
 
     pub fn intersect(&self, x1: f32, y1: f32, x2: f32, y2: f32) -> Option<Vector2> {
@@ -101,14 +107,7 @@ impl Ray2D {
         }
     }
 
-    pub fn intersect_e<'a>(
-        &self,
-        x1: f32,
-        y1: f32,
-        x2: f32,
-        y2: f32,
-        dist: &'a mut f32,
-    ) -> Option<&'a mut f32> {
+    pub fn intersection_distance<'a>(&self, x1: f32, y1: f32, x2: f32, y2: f32) -> Option<f32> {
         let x3 = self.orig.x;
         let y3 = self.orig.y;
         let x4 = self.orig.x + self.dir.x;
@@ -122,10 +121,7 @@ impl Ray2D {
         );
 
         match tri {
-            (d, t, u) if d != 0.0 && t > 0.0 && t < 1.0 && u > 0.0 => {
-                *dist = t;
-                Some(dist)
-            }
+            (d, t, u) if d != 0.0 && t > 0.0 && t < 1.0 && u > 0.0 => Some(t),
             _ => None,
         }
     }
