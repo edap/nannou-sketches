@@ -41,7 +41,7 @@ fn model(app: &App) -> Model {
     Model { walls }
 }
 
-fn key_pressed(app: &App, model: &mut Model, key: Key) {
+fn key_pressed(app: &App, _model: &mut Model, key: Key) {
     match key {
         Key::S => {
             app.main_window()
@@ -58,7 +58,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     let mut r = Ray2D::new();
     r.look_at(app.mouse.x, app.mouse.y);
-    r.debug_ray(&draw, 200.0);
+    r.draw(&draw, 200.0, 3.0, rgb(0.3, 0.3, 0.3));
 
     let mut collision: Vector2 = vec2(0.0, 0.0);
     let mut distance: f32 = Float::infinity();
@@ -69,6 +69,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
         draw.line()
             .color(STEELBLUE)
             .start(model.walls[index])
+            .caps_round()
             .end(model.walls[index + 1]);
 
         if let Some(collision_distance) = r.intersection_distance(
@@ -98,6 +99,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
         draw.line()
             .color(YELLOW)
             .start(collision)
+            .caps_round()
             .end(collision + refl.with_magnitude(100.0));
 
         // refraction
@@ -105,6 +107,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
         draw.line()
             .color(INDIGO)
             .start(collision)
+            .caps_round()
             .end(collision + refr.with_magnitude(100.0));
     };
 

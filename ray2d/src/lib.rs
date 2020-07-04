@@ -43,9 +43,10 @@ impl Ray2D {
         }
     }
 
-    pub fn debug_ray(&self, draw: &Draw, mag: f32) {
+    pub fn draw(&self, draw: &Draw, mag: f32, weight: f32, col: Rgb) {
         draw.arrow()
-            .color(RED)
+            .color(col)
+            .weight(weight)
             .start(self.orig)
             .end(self.dir.with_magnitude(mag));
     }
