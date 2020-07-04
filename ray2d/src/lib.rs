@@ -57,6 +57,10 @@ impl Ray2D {
         self.dir = self.dir.normalize();
     }
 
+    pub fn set_dir_from_angle(&mut self, a_radians: f32) {
+        self.dir = Vector2::from_angle(a_radians);
+    }
+
     pub fn intersect_segment(&self, x1: f32, y1: f32, x2: f32, y2: f32) -> Option<f32> {
         let x3 = self.orig.x;
         let y3 = self.orig.y;

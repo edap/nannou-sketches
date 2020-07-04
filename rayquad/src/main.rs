@@ -1,4 +1,8 @@
+use edapx_colors::Palette;
+use nannou::color::gradient::Gradient;
 use nannou::prelude::*;
+use nannou::rand::rngs::StdRng;
+use nannou::rand::{Rng, SeedableRng};
 use nannou::ui::prelude::*;
 use ray2d::Ray2D;
 
@@ -14,33 +18,27 @@ struct Model {
     ui: Ui,
     ids: Ids,
     ray_width: f32,
-    resolution: usize,
-    scale: f32,
+    wall_width: f32,
     rotation: f32,
     color: Rgb,
     position: Point2,
-    // wall_width: f32,
-    // ray_color: Rgb,
-    // wall_color: Rgb,
-    // bg_color: Rgb,
-    // position: Point2,
-    // rotation: f32,
+    scheme_id: usize,
+    palette: Palette,
+    gradient_one: Gradient<Hsl>,
+    gradient_two: Gradient<Hsl>,
+    gradient_three: Gradient<Hsl>,
+    blend_id: usize,
+    act_random_seed: u64,
 }
 
 widget_ids! {
     struct Ids {
         ray_width,
-        resolution,
-        scale,
+        wall_width,
         rotation,
         random_color,
         position,
-        // wall_width,
-        // ray_color,
-        // wall_color,
-        // bg_color,
-        // position,
-        // rotation,
+
     }
 }
 
@@ -64,21 +62,17 @@ fn model(app: &App) -> Model {
     // Generate some ids for our widgets.
     let ids = Ids::new(ui.widget_id_generator());
 
-    // Init our variables
     let ray_width = 6.0;
-
-    // Init our variables
-    let resolution = 6;
-    let scale = 200.0;
+    let wall_width = 2.0;
     let rotation = 0.0;
     let position = pt2(0.0, 0.0);
     let color = rgb(1.0, 0.0, 1.0);
-    // let wall_width = 200.0;
-    // let rotation = 0.0;
-    // let position = pt2(0.0, 0.0);
-    // let ray_color = rgb(1.0, 0.0, 0.0);
-    // let wall_color = rgb(1.0, 1.0, 0.0);
-    // let bg_color = rgb(1.0, 0.0, 1.0);
+    let scheme_id = 0;
+    let palette = Palette::new();
+    let scheme = palette.get_scheme(scheme_id);
+    let gradient_one = Gradient::new(vec![Hsl::from(scheme[0]), Hsl::from(scheme[2])]);
+    let gradient_two = Gradient::new(vec![Hsl::from(scheme[1]), Hsl::from(scheme[3])]);
+    let gradient_three = Gradient::new(vec![Hsl::from(scheme[4]), Hsl::from(scheme[1])]);
 
     Model {
         walls,
@@ -86,45 +80,17 @@ fn model(app: &App) -> Model {
         ui,
         ids,
         ray_width,
-
-        resolution,
-        scale,
+        wall_width,
         rotation,
         position,
         color,
-        // wall_width,
-        // ray_color,
-        // wall_color,
-        // bg_color,
-        // position,
-        // rotation,
-    }
-}
-
-fn make_walls(walls: &mut Vec<Vector2>, win: &geom::Rect) {
-    while walls.len() < N_WALL * 2 {
-        let start_p = vec2(
-            random_range(-win.w() / 2.0, win.w() / 2.0),
-            random_range(-win.h() / 2.0, win.h() / 2.0),
-        );
-        let end_p = vec2(
-            random_range(-win.w() / 2.0, win.w() / 2.0),
-            random_range(-win.h() / 2.0, win.h() / 2.0),
-        );
-        walls.push(start_p);
-        walls.push(end_p);
-    }
-}
-
-fn key_pressed(app: &App, model: &mut Model, key: Key) {
-    match key {
-        Key::S => {
-            app.main_window()
-                .capture_frame(app.time.to_string() + ".png");
-            //.capture_frame(app.exe_name().unwrap() + ".png");
-        }
-        Key::G => model.draw_gui = !model.draw_gui,
-        _other_key => {}
+        scheme_id,
+        palette,
+        gradient_one,
+        gradient_two,
+        gradient_three,
+        blend_id: 0,
+        act_random_seed: 0,
     }
 }
 
@@ -141,20 +107,20 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             .border(0.0)
     }
 
-    for value in slider(model.resolution as f32, 3.0, 15.0)
+    for value in slider(model.wall_width as f32, 1.0, 5.0)
         .top_left_with_margin(20.0)
-        .label("Resolution")
-        .set(model.ids.resolution, ui)
+        .label("wall width")
+        .set(model.ids.wall_width, ui)
     {
-        model.resolution = value as usize;
+        model.wall_width = value;
     }
 
-    for value in slider(model.scale, 10.0, 500.0)
+    for value in slider(model.ray_width, 1.0, 10.0)
         .down(10.0)
-        .label("Scale")
-        .set(model.ids.scale, ui)
+        .label("ray width")
+        .set(model.ids.ray_width, ui)
     {
-        model.scale = value;
+        model.ray_width = value;
     }
 
     for value in slider(model.rotation, -PI, PI)
@@ -200,12 +166,42 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
-    let draw = app.draw();
-    draw.background().color(PLUM);
+    let win = app.window_rect();
+    let tile_count_w = map_range(app.mouse.x, win.w() * -1.0, win.w(), 1, 8) as u32;
+    let tile_count_h = (win.h() * 2.0).abs() as u32 / tile_count_w;
+    let mut rng = StdRng::seed_from_u64(model.act_random_seed);
+
+    let blends = [BLEND_NORMAL, BLEND_ADD, BLEND_SUBTRACT, BLEND_LIGHTEST];
+    let draw = app.draw().color_blend(blends[model.blend_id].clone());
+    frame.clear(model.palette.get_scheme(model.scheme_id)[4]);
+
+    let tot = tile_count_w * tile_count_h;
+
+    // for i in 0..tot {
+    //     let tile_size = win.w() / tile_count_w as f32;
+    //     let x = (i % tile_count_w) as f32 * tile_size - win.w() * 0.5 + tile_size / 2.0;
+    //     let y = (i / tile_count_w) as f32 * tile_size - win.h() * 0.5 + tile_size / 2.0;
+    //     let mut draw = draw.x_y(x, y);
+    //     let toggle = rng.gen_range(0, 2);
+    //     let rotation = match toggle {
+    //         0 => -PI,
+    //         1 => 0.0,
+    //         _ => unreachable!(),
+    //     };
+    //     draw = draw.rotate(rotation);
+    //     draw.ellipse()
+    //         .x_y(0.0, 0.0)
+    //         .radius(tile_size / 2.0)
+    //         //.color(BLACK);
+    //         .no_fill()
+    //         .stroke_weight(3.0)
+    //         .stroke(rgba(0.0, 0.0, 0.0, 0.5));
+    // }
 
     let mut r = Ray2D::new();
-    r.look_at(app.mouse.x, app.mouse.y);
-    r.draw(&draw, 200.0, 3.0, rgb(0.3, 0.3, 0.3));
+    //r.look_at(app.mouse.x, app.mouse.y);
+    r.set_dir_from_angle(model.rotation);
+    r.draw(&draw, 200.0, model.ray_width, rgb(0.3, 0.3, 0.3));
 
     let mut collision: Vector2 = vec2(0.0, 0.0);
     let mut distance: f32 = Float::infinity();
@@ -214,6 +210,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     // find the closest intersection point between the ray and the walls
     for index in (0..N_WALL).step_by(2) {
         draw.line()
+            .weight(model.wall_width)
             .color(STEELBLUE)
             .start(model.walls[index])
             .caps_round()
@@ -262,5 +259,62 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     if model.draw_gui {
         model.ui.draw_to_frame(app, &frame).unwrap();
+    }
+}
+
+fn make_walls(walls: &mut Vec<Vector2>, win: &geom::Rect) {
+    while walls.len() < N_WALL * 2 {
+        let start_p = vec2(
+            random_range(-win.w() / 2.0, win.w() / 2.0),
+            random_range(-win.h() / 2.0, win.h() / 2.0),
+        );
+        let end_p = vec2(
+            random_range(-win.w() / 2.0, win.w() / 2.0),
+            random_range(-win.h() / 2.0, win.h() / 2.0),
+        );
+        walls.push(start_p);
+        walls.push(end_p);
+    }
+}
+
+fn key_pressed(app: &App, model: &mut Model, key: Key) {
+    match key {
+        Key::Key1 => {
+            model.scheme_id = 0;
+        }
+        Key::Key2 => {
+            model.scheme_id = 1;
+        }
+        Key::Key3 => {
+            model.scheme_id = 2;
+        }
+        Key::Key4 => {
+            model.scheme_id = 3;
+        }
+        Key::Key5 => {
+            model.scheme_id = 4;
+        }
+        Key::Key6 => {
+            model.scheme_id = 5;
+        }
+        Key::Q => {
+            model.blend_id = 0;
+        }
+        Key::W => {
+            model.blend_id = 1;
+        }
+        Key::E => {
+            model.blend_id = 2;
+        }
+        Key::R => {
+            model.blend_id = 3;
+        }
+        Key::S => {
+            app.main_window()
+                .capture_frame(app.time.to_string() + ".png");
+            //.capture_frame(app.exe_name().unwrap() + ".png");
+        }
+        Key::G => model.draw_gui = !model.draw_gui,
+        _other_key => {}
     }
 }
