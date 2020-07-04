@@ -23,6 +23,15 @@ fn model(app: &App) -> Model {
     let win = app.window_rect();
     println!("{}", win.w());
 
+    make_walls(&mut walls, &win);
+
+    // let test = vec2(2.0, 2.0);
+    // let testa = vec2(12.0, 12.0);
+
+    Model { walls }
+}
+
+fn make_walls(walls: &mut Vec<Vector2>, win: &Rect) {
     while walls.len() < N_WALL * 2 {
         let start_p = vec2(
             random_range(-win.w() / 2.0, win.w() / 2.0),
@@ -35,10 +44,6 @@ fn model(app: &App) -> Model {
         walls.push(start_p);
         walls.push(end_p);
     }
-    // let test = vec2(2.0, 2.0);
-    // let testa = vec2(12.0, 12.0);
-
-    Model { walls }
 }
 
 fn key_pressed(app: &App, _model: &mut Model, key: Key) {
@@ -72,7 +77,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .caps_round()
             .end(model.walls[index + 1]);
 
-        if let Some(collision_distance) = r.intersection_distance(
+        if let Some(collision_distance) = r.intersect_segment(
             model.walls[index].x,
             model.walls[index].y,
             model.walls[index + 1].x,

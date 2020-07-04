@@ -57,14 +57,7 @@ impl Ray2D {
         self.dir = self.dir.normalize();
     }
 
-    pub fn intersection_point(&self, x1: f32, y1: f32, x2: f32, y2: f32) -> Option<Vector2> {
-        if let Some(collision_distance) = self.intersection_distance(x1, y1, x2, y2) {
-            return Some(self.orig + self.dir.with_magnitude(collision_distance as f32));
-        }
-        None
-    }
-
-    pub fn intersection_distance(&self, x1: f32, y1: f32, x2: f32, y2: f32) -> Option<f32> {
+    pub fn intersect_segment(&self, x1: f32, y1: f32, x2: f32, y2: f32) -> Option<f32> {
         let x3 = self.orig.x;
         let y3 = self.orig.y;
         let x4 = self.orig.x + self.dir.x;
