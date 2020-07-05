@@ -16,8 +16,6 @@ struct Model {
     ray_width: f32,
     wall_width: f32,
     rotation: f32,
-    color: Rgb,
-    position: Point2,
 }
 
 widget_ids! {
@@ -25,9 +23,6 @@ widget_ids! {
         ray_width,
         wall_width,
         rotation,
-        random_color,
-        position,
-
     }
 }
 
@@ -54,8 +49,6 @@ fn model(app: &App) -> Model {
     let ray_width = 6.0;
     let wall_width = 2.0;
     let rotation = 0.0;
-    let position = pt2(0.0, 0.0);
-    let color = rgb(1.0, 0.0, 1.0);
 
     Model {
         walls,
@@ -65,8 +58,6 @@ fn model(app: &App) -> Model {
         ray_width,
         wall_width,
         rotation,
-        position,
-        color,
     }
 }
 
@@ -106,39 +97,6 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
     {
         model.rotation = value;
     }
-
-    for _click in widget::Button::new()
-        .down(10.0)
-        .w_h(200.0, 60.0)
-        .label("Random Color")
-        .label_font_size(15)
-        .rgb(0.3, 0.3, 0.3)
-        .label_rgb(1.0, 1.0, 1.0)
-        .border(0.0)
-        .set(model.ids.random_color, ui)
-    {
-        model.color = rgb(random(), random(), random());
-    }
-
-    for (x, y) in widget::XYPad::new(
-        model.position.x,
-        -200.0,
-        200.0,
-        model.position.y,
-        -200.0,
-        200.0,
-    )
-    .down(10.0)
-    .w_h(200.0, 200.0)
-    .label("Position")
-    .label_font_size(15)
-    .rgb(0.3, 0.3, 0.3)
-    .label_rgb(1.0, 1.0, 1.0)
-    .border(0.0)
-    .set(model.ids.position, ui)
-    {
-        model.position = Point2::new(x, y);
-    }
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
@@ -146,6 +104,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     draw.background().color(ORANGERED);
 
     let mut r = Ray2D::new();
+    //r.orig = model.position;
     //r.look_at(app.mouse.x, app.mouse.y);
     r.set_dir_from_angle(model.rotation);
     r.draw(&draw, 200.0, model.ray_width, rgb(0.3, 0.3, 0.3));

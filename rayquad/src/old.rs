@@ -1,9 +1,8 @@
-
+use edapx_colors::Palette;
+use nannou::color::gradient::Gradient;
 use nannou::prelude::*;
 use nannou::rand::rngs::StdRng;
 use nannou::rand::{Rng, SeedableRng};
-use nannou::color::gradient::Gradient;
-use edapx_colors::Palette;
 
 fn main() {
     nannou::app(model).run();
@@ -14,18 +13,20 @@ struct Ray2D {
     dir: Vector2,
 }
 
-impl Ray2D{
+impl Ray2D {
     pub fn new() -> Self {
-        Ray2D{
+        Ray2D {
             orig: vec2(0.0, 0.0),
             dir: vec2(1.0, 0.0),
         }
     }
 
     pub fn debug_ray(&self, draw: &Draw, mag: f32) {
-        draw.line().color(RED).start(self.orig).end(self.dir.with_magnitude(mag));
+        draw.line()
+            .color(RED)
+            .start(self.orig)
+            .end(self.dir.with_magnitude(mag));
     }
-
 
     pub fn look_at(&mut self, x: f32, y: f32) {
         self.dir.x = (x - self.orig.x);
@@ -46,12 +47,11 @@ impl Ray2D{
             -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / den,
         );
 
-
         match tri {
-            (d, t, u) if d != 0.0 && t > 0.0 && t < 1.0 && u > 0.0 =>
-                Some(vec2(x1 + t * (x2 - x1), y1 + t * (y2 - y1))),
+            (d, t, u) if d != 0.0 && t > 0.0 && t < 1.0 && u > 0.0 => {
+                Some(vec2(x1 + t * (x2 - x1), y1 + t * (y2 - y1)))
+            }
             _ => None,
-
         }
 
         // if (t > 0.0 && t < 1.0 && u > 0.0) {
@@ -59,7 +59,6 @@ impl Ray2D{
         // } else {
         //   None;
         // }
-
     }
 }
 
@@ -71,7 +70,7 @@ struct Model {
     gradient_three: Gradient<Hsl>,
     blend_id: usize,
     act_random_seed: u64,
-    point: Vector2
+    point: Vector2,
 }
 
 fn model(app: &App) -> Model {
@@ -87,9 +86,9 @@ fn model(app: &App) -> Model {
     let palette = Palette::new();
     let scheme = palette.get_scheme(scheme_id);
 
-    let gradient_one = Gradient::new(vec![Hsl::from(scheme[0]),Hsl::from(scheme[2])]);
-    let gradient_two = Gradient::new(vec![Hsl::from(scheme[1]),Hsl::from(scheme[3])]);
-    let gradient_three = Gradient::new(vec![Hsl::from(scheme[4]),Hsl::from(scheme[1])]);
+    let gradient_one = Gradient::new(vec![Hsl::from(scheme[0]), Hsl::from(scheme[2])]);
+    let gradient_two = Gradient::new(vec![Hsl::from(scheme[1]), Hsl::from(scheme[3])]);
+    let gradient_three = Gradient::new(vec![Hsl::from(scheme[4]), Hsl::from(scheme[1])]);
     Model {
         scheme_id,
         palette,
@@ -98,7 +97,7 @@ fn model(app: &App) -> Model {
         gradient_three,
         blend_id: 0,
         act_random_seed: 0,
-        point: vec2(0.0,0.0),
+        point: vec2(0.0, 0.0),
     }
 }
 
@@ -145,9 +144,9 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
 
     let scheme_id = model.scheme_id;
     let scheme = model.palette.get_scheme(scheme_id);
-    model.gradient_one = Gradient::new(vec![Hsl::from(scheme[0]),Hsl::from(scheme[2])]);
-    model.gradient_two = Gradient::new(vec![Hsl::from(scheme[3]),Hsl::from(scheme[4])]);
-    model.gradient_three = Gradient::new(vec![Hsl::from(scheme[4]),Hsl::from(scheme[0])]);
+    model.gradient_one = Gradient::new(vec![Hsl::from(scheme[0]), Hsl::from(scheme[2])]);
+    model.gradient_two = Gradient::new(vec![Hsl::from(scheme[3]), Hsl::from(scheme[4])]);
+    model.gradient_three = Gradient::new(vec![Hsl::from(scheme[4]), Hsl::from(scheme[0])]);
 }
 
 fn mouse_pressed(_app: &App, model: &mut Model, _button: MouseButton) {
@@ -155,33 +154,30 @@ fn mouse_pressed(_app: &App, model: &mut Model, _button: MouseButton) {
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
-    let start_line = vec2(300.0,100.0);
-    let end_line = vec2(300.0,-300.0);
+    let start_line = vec2(300.0, 100.0);
+    let end_line = vec2(300.0, -300.0);
     let mut r = Ray2D::new();
     r.look_at(app.mouse.x, app.mouse.y);
 
-
-
-
     let draw = app.draw();
     let win = app.window_rect();
-    let tile_count_w = map_range(app.mouse.x, win.w()*-1.0, win.w(), 1, 8) as u32;
+    let tile_count_w = map_range(app.mouse.x, win.w() * -1.0, win.w(), 1, 8) as u32;
     let tile_count_h = (win.h() * 2.0).abs() as u32 / tile_count_w;
     let mut rng = StdRng::seed_from_u64(model.act_random_seed);
 
     let tot = tile_count_w * tile_count_h;
 
-
     draw.background().color(PLUM);
 
-    draw.ellipse().color(STEELBLUE).x_y(app.mouse.x, app.mouse.y);
+    draw.ellipse()
+        .color(STEELBLUE)
+        .x_y(app.mouse.x, app.mouse.y);
     r.debug_ray(&draw, 200.0);
     draw.line().color(STEELBLUE).start(start_line).end(end_line);
 
-    if let Some(collision) = r.intersect(start_line.x,start_line.y, end_line.x, end_line.y) {
+    if let Some(collision) = r.intersect(start_line.x, start_line.y, end_line.x, end_line.y) {
         draw.ellipse().color(GREEN).x_y(collision.x, collision.y);
     };
 
     draw.to_frame(app, &frame).unwrap();
 }
-
