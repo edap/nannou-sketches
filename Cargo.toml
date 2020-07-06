@@ -9,6 +9,7 @@ members = [
 	"pattern_2",
 	"patternone",
 	"rayquad",
+	"rayquad2",
 	"template-quad"
 ]
 

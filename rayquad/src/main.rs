@@ -107,7 +107,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     //r.orig = model.position;
     //r.look_at(app.mouse.x, app.mouse.y);
     r.set_dir_from_angle(model.rotation);
-    r.draw(&draw, 200.0, model.ray_width, rgb(0.3, 0.3, 0.3));
+    r.draw(&draw, 60.0, model.ray_width, rgb(0.3, 0.3, 0.3));
 
     let mut collision: Vector2 = vec2(0.0, 0.0);
     let mut distance: f32 = Float::infinity();
