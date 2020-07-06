@@ -9,6 +9,9 @@ fn main() {
 struct Model {
     walls: Vec<Vector2>,
     rays: Vec<Ray2D>,
+    refractions: Vec<Vector2>,
+    reflections: Vec<Vector2>,
+    collisions: Vec<Vector2>, // it odd indexes are for the collision, even indexes for the ray origin
     draw_gui: bool,
     ui: Ui,
     ids: Ids,
@@ -35,6 +38,9 @@ fn model(app: &App) -> Model {
 
     let mut walls: Vec<Vector2> = Vec::new();
     let mut rays: Vec<Ray2D> = Vec::new();
+    let collisions: Vec<Vector2> = Vec::new();
+    let refractions: Vec<Vector2> = Vec::new();
+    let reflections: Vec<Vector2> = Vec::new();
     let win = app.window_rect();
     let n_grid = 6;
     make_walls(&mut walls, &mut rays, &win, n_grid);
@@ -54,6 +60,9 @@ fn model(app: &App) -> Model {
     Model {
         walls,
         rays,
+        refractions,
+        reflections,
+        collisions,
         draw_gui,
         ui,
         ids,
@@ -99,28 +108,14 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
     {
         model.rotation = value;
     }
-}
 
-fn view(app: &App, model: &Model, frame: Frame) {
-    let draw = app.draw();
-    draw.background().color(ORANGERED);
-
-    // draw the walls
-    let size = model.walls.len();
-    for index in (0..size).step_by(2) {
-        draw.line()
-            .weight(model.wall_width)
-            .color(STEELBLUE)
-            .start(model.walls[index])
-            .caps_round()
-            .end(model.walls[index + 1]);
-    }
-
+    model.collisions.clear();
+    model.refractions.clear();
+    model.reflections.clear();
     // for each ray, find the closest intersection
     for r in model.rays.iter_mut() {
         //r.set_dir_from_angle(model.rotation);
         r.dir = Vector2::from_angle(model.rotation);
-        println!("{:?}", r.orig);
         let mut collision: Vector2 = vec2(0.0, 0.0);
         let mut distance: f32 = Float::infinity();
         let mut surface_normal: Vector2 = vec2(0.0, 0.0);
@@ -143,28 +138,70 @@ fn view(app: &App, model: &Model, frame: Frame) {
         }
         if distance < Float::infinity() {
             // collision point
-            draw.ellipse()
-                .color(GREEN)
-                .x_y(collision.x, collision.y)
-                .w_h(10.0, 10.0);
-            // reflection
+            model.collisions.push(r.orig);
+            model.collisions.push(collision);
+
+            // reflections
             let refl = r.reflect(surface_normal);
-            draw.line()
-                .color(YELLOW)
-                .start(collision)
-                .caps_round()
-                .end(collision + refl.with_magnitude(100.0));
+            // reflections vec
+            model.reflections.push(refl);
             // refraction
             let refr = r.refract(surface_normal, 1.2);
-            draw.line()
-                .color(INDIGO)
-                .start(collision)
-                .caps_round()
-                .end(collision + refr.with_magnitude(100.0));
+            model.refractions.push(refr);
         };
-
-        r.draw(&draw, 6.0, model.ray_width, rgb(0.2, 0.3, 0.9));
     }
+}
+
+fn view(app: &App, model: &Model, frame: Frame) {
+    let draw = app.draw();
+    draw.background().color(ORANGERED);
+
+    // draw the walls
+    let size = model.walls.len();
+    for index in (0..size).step_by(2) {
+        draw.line()
+            .weight(model.wall_width)
+            .color(STEELBLUE)
+            .start(model.walls[index])
+            .caps_round()
+            .end(model.walls[index + 1]);
+    }
+
+    // for each ray, draw collisions, reflections and refractions
+    let collisions_n = model.collisions.len();
+    for index_col in (0..collisions_n).step_by(2) {
+        draw.ellipse()
+            .color(GREEN)
+            .x_y(
+                model.collisions[index_col + 1].x,
+                model.collisions[index_col + 1].y,
+            )
+            .w_h(10.0, 10.0);
+
+        draw.arrow()
+            .color(BLUE)
+            .weight(model.ray_width)
+            .start(model.collisions[index_col])
+            .end(model.collisions[index_col + 1]);
+
+        // reflections
+        let refl = model.reflections[index_col / 2];
+        draw.line()
+            .color(YELLOW)
+            .start(model.collisions[index_col + 1])
+            .caps_round()
+            .end(model.collisions[index_col + 1] + refl.with_magnitude(100.0));
+
+        // refractions
+        let refr = model.refractions[index_col / 2];
+        draw.line()
+            .color(INDIGO)
+            .start(model.collisions[index_col + 1])
+            .caps_round()
+            .end(model.collisions[index_col + 1] + refr.with_magnitude(100.0));
+    }
+
+    //r.draw(&draw, 6.0, model.ray_width, rgb(0.2, 0.3, 0.9));
 
     draw.to_frame(app, &frame).unwrap();
 
