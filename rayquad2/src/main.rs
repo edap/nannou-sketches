@@ -168,6 +168,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     }
 
     // for each ray, draw collisions, reflections and refractions
+
     let collisions_n = model.collisions.len();
     for index_col in (0..collisions_n).step_by(2) {
         draw.ellipse()
@@ -177,7 +178,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 model.collisions[index_col + 1].y,
             )
             .w_h(10.0, 10.0);
-
+        // ray. From origin to collision
         draw.arrow()
             .color(BLUE)
             .weight(model.ray_width)
@@ -223,8 +224,18 @@ fn make_walls(
     let mut ypos = win.bottom();
     for _x in 0..tile_count_w {
         for _y in 0..(win.h() as u32 / side as u32) {
-            let start_p = vec2(xpos as f32, ypos as f32);
-            let end_p = vec2(xpos + side as f32 - 10.0, ypos);
+            let coin = random_range(0.0, 1.0);
+            let start_p;
+            let end_p;
+
+            if coin > 0.2 {
+                start_p = vec2(xpos as f32, ypos as f32);
+                end_p = vec2(xpos + side as f32 - 10.0, ypos)
+            } else {
+                start_p = vec2(xpos as f32, ypos as f32);
+                end_p = vec2(xpos + side as f32 - 10.0, ypos - side as f32)
+            }
+
             walls.push(start_p);
             walls.push(end_p);
 
