@@ -21,6 +21,7 @@ struct Model {
     rotation: f32,
     scheme_id: usize,
     palette: Palette,
+    tile_count_w: u32
 }
 
 widget_ids! {
@@ -33,7 +34,6 @@ widget_ids! {
 }
 
 fn model(app: &App) -> Model {
-    let n_grid = 20;
     app.new_window()
         .size(800, 800)
         .view(view)
@@ -48,7 +48,7 @@ fn model(app: &App) -> Model {
     let reflections: Vec<Vector2> = Vec::new();
     let win = app.window_rect();
 
-    make_walls(&mut walls, &mut rays, &win, n_grid);
+
 
     let draw_gui = true;
 
@@ -65,6 +65,8 @@ fn model(app: &App) -> Model {
     let scheme_id = 0;
     let palette = Palette::new();
     let scheme = palette.get_scheme(scheme_id);
+    let tile_count_w = 6;
+    make_walls(&mut walls, &mut rays, &win, tile_count_w);
 
     Model {
         walls,
@@ -80,6 +82,7 @@ fn model(app: &App) -> Model {
         rotation,
         scheme_id,
         palette,
+        tile_count_w
     }
 }
 
@@ -173,6 +176,8 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
 
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
+    let side = (app.window_rect().w() as u32 / model.tile_count_w) as f32;
+    let radius_coll = side * 0.4;
     draw.background().color(model.palette.get_scheme(model.scheme_id)[0]);
 
     // draw the walls
@@ -200,7 +205,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 model.collisions[index_col + 1].x,
                 model.collisions[index_col + 1].y,
             )
-            .w_h(dd*50.0, dd*50.0);
+            .w_h(dd*radius_coll, dd*radius_coll);
         // ray. From origin to collision
         draw.arrow()
             .color(model.palette.get_scheme(model.scheme_id)[3])
@@ -218,11 +223,21 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
         // refractions
         let refr = model.refractions[index_col / 2];
-        draw.line()
-            .color(INDIGO)
-            .start(model.collisions[index_col + 1])
-            .caps_round()
-            .end(model.collisions[index_col + 1] + refr.with_magnitude(100.0));
+        let pt2 = model.collisions[index_col + 1] + refr.rotate(-0.2).with_magnitude(side/4.0);
+        let pt3 = model.collisions[index_col + 1] + refr.rotate(0.2).with_magnitude(side/4.0);
+
+        draw.tri().points(model.collisions[index_col + 1], pt2, pt3)
+        //draw.line()
+            .color(INDIGO);
+            //.start(model.collisions[index_col + 1])
+            //.caps_round()
+            //.end(model.collisions[index_col + 1] + refr.with_magnitude(100.0));
+
+        //draw.line()
+        // .color(INDIGO);
+        // .start(model.collisions[index_col + 1])
+        // .caps_round()
+        // .end(model.collisions[index_col + 1] + refr.with_magnitude(100.0));
     }
 
     //r.draw(&draw, 6.0, model.ray_width, rgb(0.2, 0.3, 0.9));
