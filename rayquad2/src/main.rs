@@ -1,6 +1,6 @@
+use edapx_colors::Palette;
 use nannou::prelude::*;
 use nannou::ui::prelude::*;
-use edapx_colors::Palette;
 use ray2d::Ray2D;
 
 fn main() {
@@ -21,7 +21,7 @@ struct Model {
     rotation: f32,
     scheme_id: usize,
     palette: Palette,
-    tile_count_w: u32
+    tile_count_w: u32,
 }
 
 widget_ids! {
@@ -34,6 +34,7 @@ widget_ids! {
 }
 
 fn model(app: &App) -> Model {
+    let tile_count_w = 10;
     app.new_window()
         .size(800, 800)
         .view(view)
@@ -47,8 +48,6 @@ fn model(app: &App) -> Model {
     let refractions: Vec<Vector2> = Vec::new();
     let reflections: Vec<Vector2> = Vec::new();
     let win = app.window_rect();
-
-
 
     let draw_gui = true;
 
@@ -64,8 +63,6 @@ fn model(app: &App) -> Model {
 
     let scheme_id = 0;
     let palette = Palette::new();
-    let scheme = palette.get_scheme(scheme_id);
-    let tile_count_w = 6;
     make_walls(&mut walls, &mut rays, &win, tile_count_w);
 
     Model {
@@ -82,7 +79,7 @@ fn model(app: &App) -> Model {
         rotation,
         scheme_id,
         palette,
-        tile_count_w
+        tile_count_w,
     }
 }
 
@@ -115,14 +112,13 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         model.ray_width = value;
     }
 
-    for value in slider(model.rotation, -0.003, 0.003)
+    for value in slider(model.rotation, -0.01, 0.01)
         .down(10.0)
         .label("Rotation")
         .set(model.ids.rotation, ui)
     {
         model.rotation = value;
     }
-
 
     for value in slider(model.rotation, 0.0, 5.0)
         .down(10.0)
@@ -178,7 +174,8 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     let side = (app.window_rect().w() as u32 / model.tile_count_w) as f32;
     let radius_coll = side * 0.4;
-    draw.background().color(model.palette.get_scheme(model.scheme_id)[0]);
+    draw.background()
+        .color(model.palette.get_scheme(model.scheme_id)[0]);
 
     // draw the walls
     let size = model.walls.len();
@@ -190,54 +187,64 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .caps_round()
             .end(model.walls[index + 1]);
     }
-    // for each ray, draw collisions, reflections and refractions
 
+    // for each ray, draw collisions, reflections and refractions
     let collisions_n = model.collisions.len();
     for index_col in (0..collisions_n).step_by(2) {
+        let collision = model.collisions[index_col + 1];
         let refl = model.reflections[index_col / 2];
-        let dd = (model.collisions[index_col] - model.collisions[index_col + 1]).normalize().dot(refl).abs();
-        draw.ellipse()
-            .stroke(model.palette.get_scheme(model.scheme_id)[2])
-            .stroke_weight(1.0 + 4.0 * (1.0-dd))
-            .no_fill()
-            .color(model.palette.get_scheme(model.scheme_id)[2])
-            .x_y(
-                model.collisions[index_col + 1].x,
-                model.collisions[index_col + 1].y,
-            )
-            .w_h(dd*radius_coll, dd*radius_coll);
+        let refr = model.refractions[index_col / 2];
+        let dd = (model.collisions[index_col] - collision)
+            .normalize()
+            .dot(refl)
+            .abs();
+        let drifr = (model.collisions[index_col] - collision)
+            .normalize()
+            .dot(refr)
+            .abs();
         // ray. From origin to collision
         draw.arrow()
             .color(model.palette.get_scheme(model.scheme_id)[3])
             .weight(model.ray_width)
             .start(model.collisions[index_col])
-            .end(model.collisions[index_col + 1]);
+            .end(collision);
 
         // reflections
 
-        draw.line()
+        draw.arrow()
             .color(model.palette.get_scheme(model.scheme_id)[4])
-            .start(model.collisions[index_col + 1])
-            .caps_round()
-            .end(model.collisions[index_col + 1] + refl.with_magnitude(100.0));
+            .start(collision)
+            .weight(model.ray_width)
+            .end(collision + refl.with_magnitude((side / 2.0) * dd));
 
         // refractions
-        let refr = model.refractions[index_col / 2];
-        let pt2 = model.collisions[index_col + 1] + refr.rotate(-0.2).with_magnitude(side/4.0);
-        let pt3 = model.collisions[index_col + 1] + refr.rotate(0.2).with_magnitude(side/4.0);
+        let point2 = collision + refr.rotate(-0.8 * drifr).with_magnitude(side * 0.4);
+        let point3 = collision + refr.rotate(0.8 * drifr).with_magnitude(side * 0.4);
+        //let pt1 = pt2(10.2, 10.3);
+        let point1 = pt2(collision.x, collision.y);
 
-        draw.tri().points(model.collisions[index_col + 1], pt2, pt3)
-        //draw.line()
-            .color(INDIGO);
-            //.start(model.collisions[index_col + 1])
-            //.caps_round()
-            //.end(model.collisions[index_col + 1] + refr.with_magnitude(100.0));
+        let points = vec![
+            (point1, model.palette.get_scheme(model.scheme_id)[1]),
+            (point2, model.palette.get_scheme(model.scheme_id)[0]),
+            (point3, model.palette.get_scheme(model.scheme_id)[0]),
+        ];
 
-        //draw.line()
-        // .color(INDIGO);
-        // .start(model.collisions[index_col + 1])
-        // .caps_round()
-        // .end(model.collisions[index_col + 1] + refr.with_magnitude(100.0));
+        draw.polygon().points_colored(points.iter().cloned());
+        // collision point
+        draw.ellipse()
+            .stroke(model.palette.get_scheme(model.scheme_id)[2])
+            .stroke_weight(1.0 + 4.0 * (1.0 - dd))
+            .no_fill()
+            .color(model.palette.get_scheme(model.scheme_id)[2])
+            .x_y(collision.x, collision.y)
+            .w_h(dd * radius_coll, dd * radius_coll);
+    }
+    let radius = model.ray_width * 2.0;
+    for r in &model.rays {
+        draw.ellipse()
+            .w_h(radius, radius)
+            .color(model.palette.get_scheme(model.scheme_id)[3])
+            .x_y(r.orig.x, r.orig.y);
     }
 
     //r.draw(&draw, 6.0, model.ray_width, rgb(0.2, 0.3, 0.9));
@@ -268,24 +275,22 @@ fn make_walls(
             let start_p;
             let end_p;
             let padding = 0.1 * side as f32;
-            
             let mut r = Ray2D::new();
             if coin > 0.5 {
-                start_p = vec2(xpos + padding, ypos + side as f32 -padding);
-                end_p = vec2(xpos + side as f32 -padding, ypos +padding);
-                r.orig = vec2(xpos + padding, ypos +padding);
-                r.dir = Vector2::from_angle(PI/4.0 + random_range(-0.3, 0.3));
+                start_p = vec2(xpos + padding, ypos + side as f32 - padding);
+                end_p = vec2(xpos + side as f32 - padding, ypos + padding);
+                r.orig = vec2(xpos + padding, ypos + padding);
+                r.dir = Vector2::from_angle(PI / 4.0 + random_range(-0.3, 0.3));
             } else {
-                start_p = vec2(xpos + padding, ypos +padding);
-                end_p = vec2(xpos + side as f32 -padding, ypos + side as f32 -padding);
-                r.orig = vec2(xpos + side as f32 -padding, ypos +padding);
-                r.dir = Vector2::from_angle(PI-PI/4.0 + random_range(-0.3, 0.3));
+                start_p = vec2(xpos + padding, ypos + padding);
+                end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
+                r.orig = vec2(xpos + side as f32 - padding, ypos + padding);
+                r.dir = Vector2::from_angle(PI - PI / 4.0 + random_range(-0.3, 0.3));
             }
 
             walls.push(start_p);
             walls.push(end_p);
             rays.push(r);
-
 
             ypos += side as f32;
         }
