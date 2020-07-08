@@ -1776,6 +1776,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rayquad3"
+version = "0.1.0"
+dependencies = [
+ "edapx-colors 0.1.0",
+ "nannou 0.14.1 (git+https://github.com/nannou-org/nannou)",
+ "ray2d 0.1.0",
+]
+
+[[package]]
 name = "rdrand"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

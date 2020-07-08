@@ -79,3 +79,32 @@ impl Ray2D {
         }
     }
 }
+
+pub struct BouncingRay2D {
+    pub ray_origin: Ray2D,
+    pub ray: Ray2D,
+    pub speed: f32,
+    pub bounces: usize,
+    pub max_bounces: usize,
+}
+
+impl BouncingRay2D {
+    pub fn new() -> Self {
+        BouncingRay2D {
+            ray_origin: Ray2D::new(),
+            ray: Ray2D::new(),
+            speed: 1.0,
+            bounces: 0,
+            max_bounces: 12,
+        }
+    }
+
+    pub fn max_bounces_reached(&self) -> bool {
+        self.bounces > self.max_bounces
+    }
+
+    pub fn reset(&mut self) {
+        self.ray.orig = self.ray_origin.orig;
+        self.ray.dir = self.ray_origin.dir;
+    }
+}
