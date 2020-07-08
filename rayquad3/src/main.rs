@@ -126,6 +126,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
     // for each ray, find the closest intersection
     for r in model.rays.iter_mut() {
         r.ray.dir = r.ray.dir.rotate(model.rotation);
+        //https://github.com/edap/udk-2018-mirage-of-mirrors/blob/master/01-RayBounceRecursive/src/ofApp.cpp
         bounceRay(model, r, 12);
         let mut collision: Vector2 = vec2(0.0, 0.0);
         let mut distance: f32 = Float::infinity();
