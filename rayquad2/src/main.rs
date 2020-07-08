@@ -34,7 +34,7 @@ widget_ids! {
 }
 
 fn model(app: &App) -> Model {
-    let tile_count_w = 10;
+    let tile_count_w = 12;
     app.new_window()
         .size(800, 800)
         .view(view)
@@ -112,7 +112,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         model.ray_width = value;
     }
 
-    for value in slider(model.rotation, -0.01, 0.01)
+    for value in slider(model.rotation, -0.1, 0.1)
         .down(10.0)
         .label("Rotation")
         .set(model.ids.rotation, ui)
@@ -173,7 +173,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     let side = (app.window_rect().w() as u32 / model.tile_count_w) as f32;
-    let radius_coll = side * 0.4;
+    let radius = model.ray_width * 2.0;
     draw.background()
         .color(model.palette.get_scheme(model.scheme_id)[0]);
 
@@ -198,10 +198,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .normalize()
             .dot(refl)
             .abs();
-        let drifr = (model.collisions[index_col] - collision)
-            .normalize()
-            .dot(refr)
-            .abs();
+
         // ray. From origin to collision
         draw.arrow()
             .color(model.palette.get_scheme(model.scheme_id)[3])
@@ -209,8 +206,10 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .start(model.collisions[index_col])
             .end(collision);
 
-        // reflections
-
+        draw.ellipse()
+            .w_h(radius, radius)
+            .color(model.palette.get_scheme(model.scheme_id)[4])
+            .x_y(collision.x, collision.y);
         draw.arrow()
             .color(model.palette.get_scheme(model.scheme_id)[4])
             .start(collision)
@@ -218,36 +217,24 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .end(collision + refl.with_magnitude((side / 2.0) * dd));
 
         // refractions
-        let point2 = collision + refr.rotate(-0.8 * drifr).with_magnitude(side * 0.4);
-        let point3 = collision + refr.rotate(0.8 * drifr).with_magnitude(side * 0.4);
-        //let pt1 = pt2(10.2, 10.3);
-        let point1 = pt2(collision.x, collision.y);
+        let point2 = collision + refr.rotate(-0.4).with_magnitude(side * 0.3);
+        let point3 = collision + refr.rotate(0.4).with_magnitude(side * 0.3);
 
-        let points = vec![
-            (point1, model.palette.get_scheme(model.scheme_id)[1]),
-            (point2, model.palette.get_scheme(model.scheme_id)[0]),
-            (point3, model.palette.get_scheme(model.scheme_id)[0]),
-        ];
+        let mut c_wall: Rgba = model.palette.get_scheme(model.scheme_id)[1].into();
+        let mut c_bg: Rgba = model.palette.get_scheme(model.scheme_id)[0].into();
+        c_wall.alpha = 0.5;
+        c_bg.alpha = 0.5;
+        let points = vec![(collision, c_wall), (point2, c_bg), (point3, c_bg)];
 
         draw.polygon().points_colored(points.iter().cloned());
-        // collision point
-        draw.ellipse()
-            .stroke(model.palette.get_scheme(model.scheme_id)[2])
-            .stroke_weight(1.0 + 4.0 * (1.0 - dd))
-            .no_fill()
-            .color(model.palette.get_scheme(model.scheme_id)[2])
-            .x_y(collision.x, collision.y)
-            .w_h(dd * radius_coll, dd * radius_coll);
     }
-    let radius = model.ray_width * 2.0;
+
     for r in &model.rays {
         draw.ellipse()
             .w_h(radius, radius)
             .color(model.palette.get_scheme(model.scheme_id)[3])
             .x_y(r.orig.x, r.orig.y);
     }
-
-    //r.draw(&draw, 6.0, model.ray_width, rgb(0.2, 0.3, 0.9));
 
     draw.to_frame(app, &frame).unwrap();
 
@@ -256,7 +243,6 @@ fn view(app: &App, model: &Model, frame: Frame) {
     }
 }
 
-// 10 print
 fn make_walls(
     walls: &mut Vec<Vector2>,
     rays: &mut Vec<Ray2D>,
@@ -264,11 +250,9 @@ fn make_walls(
     tile_count_w: u32,
 ) {
     let side = win.w() as u32 / tile_count_w;
-    println!("{:?}", side);
-
     let mut xpos = win.left();
     let mut ypos = win.bottom();
-    println!("{:?}", ypos);
+
     for _x in 0..tile_count_w {
         for _y in 0..(win.h() as u32 / side as u32) {
             let coin = random_range(0.0, 1.0);
@@ -285,7 +269,7 @@ fn make_walls(
                 start_p = vec2(xpos + padding, ypos + padding);
                 end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
                 r.orig = vec2(xpos + side as f32 - padding, ypos + padding);
-                r.dir = Vector2::from_angle(PI - PI / 4.0 + random_range(-0.3, 0.3));
+                r.dir = Vector2::from_angle(PI / 4.0 + random_range(-0.3, 0.3));
             }
 
             walls.push(start_p);
@@ -297,42 +281,6 @@ fn make_walls(
         ypos = win.bottom();
         xpos += side as f32;
     }
-    println!("{:?}", rays);
-
-    // let tot = tile_count_w * tile_count_h;
-    // println!("{:?}", tot);
-    // println!("{:?}", win.h());
-    // println!("{:?}", win.left());
-
-    // for i in 0..tot {
-    //     let tile_size = win.w() / tile_count_w as f32;
-    //     let x = (i % tile_count_w) as f32 * tile_size - win.w() * 0.5 + tile_size / 2.0;
-    //     let y = (i / tile_count_w) as f32 * tile_size - win.h() * 0.5 + tile_size / 2.0;
-
-    //     let start_p = vec2(x, y);
-    //     let end_p = vec2(x + tile_size - 10.0, y);
-    //     walls.push(start_p);
-    //     walls.push(end_p);
-    //     let toggle = random_range(0, 2);
-    //     let rotation = match toggle {
-    //         0 => -PI,
-    //         1 => 0.0,
-    //         _ => unreachable!(),
-    //     };
-    // }
-
-    // while walls.len() < N_WALL * 2 {
-    //     let start_p = vec2(
-    //         random_range(-win.w() / 2.0, win.w() / 2.0),
-    //         random_range(-win.h() / 2.0, win.h() / 2.0),
-    //     );
-    //     let end_p = vec2(
-    //         random_range(-win.w() / 2.0, win.w() / 2.0),
-    //         random_range(-win.h() / 2.0, win.h() / 2.0),
-    //     );
-    //     walls.push(start_p);
-    //     walls.push(end_p);
-    // }
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
