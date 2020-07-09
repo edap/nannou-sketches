@@ -80,96 +80,106 @@ fn model(app: &App) -> Model {
 fn update(_app: &App, model: &mut Model, _update: Update) {
     // Calling `set_widgets` allows us to instantiate some widgets.
     let ui = &mut model.ui.set_widgets();
-
-    fn slider(val: f32, min: f32, max: f32) -> widget::Slider<'static, f32> {
-        widget::Slider::new(val, min, max)
-            .w_h(200.0, 30.0)
-            .label_font_size(15)
-            .rgb(0.3, 0.3, 0.3)
-            .label_rgb(1.0, 1.0, 1.0)
-            .border(0.0)
-    }
-
-    for value in slider(model.wall_width as f32, 1.0, 15.0)
-        .top_left_with_margin(20.0)
-        .label("wall width")
-        .set(model.ids.wall_width, ui)
     {
-        model.wall_width = value;
-    }
+        fn slider(val: f32, min: f32, max: f32) -> widget::Slider<'static, f32> {
+            widget::Slider::new(val, min, max)
+                .w_h(200.0, 30.0)
+                .label_font_size(15)
+                .rgb(0.3, 0.3, 0.3)
+                .label_rgb(1.0, 1.0, 1.0)
+                .border(0.0)
+        }
 
-    for value in slider(model.ray_width, 1.0, 10.0)
-        .down(10.0)
-        .label("ray width")
-        .set(model.ids.ray_width, ui)
-    {
-        model.ray_width = value;
-    }
+        for value in slider(model.wall_width as f32, 1.0, 15.0)
+            .top_left_with_margin(20.0)
+            .label("wall width")
+            .set(model.ids.wall_width, ui)
+        {
+            model.wall_width = value;
+        }
 
-    for value in slider(model.rotation, -0.1, 0.1)
-        .down(10.0)
-        .label("Rotation")
-        .set(model.ids.rotation, ui)
-    {
-        model.rotation = value;
-    }
+        for value in slider(model.ray_width, 1.0, 10.0)
+            .down(10.0)
+            .label("ray width")
+            .set(model.ids.ray_width, ui)
+        {
+            model.ray_width = value;
+        }
 
-    for value in slider(model.rotation, 0.0, 5.0)
-        .down(10.0)
-        .label("scheme_id")
-        .set(model.ids.scheme_id, ui)
-    {
-        model.scheme_id = value as usize;
+        for value in slider(model.rotation, -0.1, 0.1)
+            .down(10.0)
+            .label("Rotation")
+            .set(model.ids.rotation, ui)
+        {
+            model.rotation = value;
+        }
+
+        for value in slider(model.rotation, 0.0, 5.0)
+            .down(10.0)
+            .label("scheme_id")
+            .set(model.ids.scheme_id, ui)
+        {
+            model.scheme_id = value as usize;
+        }
     }
 
     model.collisions.clear();
     // for each ray, find the closest intersection
+    let walls = &model.walls;
     for r in model.rays.iter_mut() {
         r.ray.dir = r.ray.dir.rotate(model.rotation);
         //https://github.com/edap/udk-2018-mirage-of-mirrors/blob/master/01-RayBounceRecursive/src/ofApp.cpp
-        bounceRay(model, r, 12);
-        let mut collision: Vector2 = vec2(0.0, 0.0);
-        let mut distance: f32 = Float::infinity();
-        let mut surface_normal: Vector2 = vec2(0.0, 0.0);
-        // find the closest intersection point between the ray and the walls
-        let size = model.walls.len();
-        for index in (0..size).step_by(2) {
-            if let Some(collision_distance) = r.ray.intersect_segment(
-                model.walls[index].x,
-                model.walls[index].y,
-                model.walls[index + 1].x,
-                model.walls[index + 1].y,
-            ) {
-                if collision_distance < distance {
-                    distance = collision_distance;
-                    collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
-                    let segment_dir = (model.walls[index] - model.walls[index + 1]).normalize();
-                    surface_normal = vec2(segment_dir.y, -segment_dir.x);
-                }
-            }
-        }
-        if distance < Float::infinity() {
-            // collision point
-            model.collisions.push(r.ray.orig);
+
+        if let Some(collision) = bounce(&walls, r, 12) {
             model.collisions.push(collision);
-            r.bounces += 1;
-
-            while !r.max_bounces_reached() {
-                r.ray.orig = collision;
-                r.ray.dir = surface_normal;
-            }
-
-            // r.ray.orig = collision;
-            // r.ray.dir = surface_normal;
-            // r.bounces += 1;
-            // if r.max_bounces_reached() {
-            //     r.reset()
-            // }
         };
     }
 }
 
-fn bounceRay(model: &Model, ray: &mut BouncingRay2D, max_bounces: usize) {}
+fn bounce(walls: &Vec<Vector2>, r: &mut BouncingRay2D, max_bounces: usize) -> Option<Vector2> {
+    let mut collisions: Vec<Vector2> = Vec::new();
+    let mut collision: Vector2 = vec2(0.0, 0.0);
+    let mut distance: f32 = Float::infinity();
+    let mut surface_normal: Vector2 = vec2(0.0, 0.0);
+    // find the closest intersection point between the ray and the walls
+    let size = walls.len();
+    for index in (0..size).step_by(2) {
+        if let Some(collision_distance) = r.ray.intersect_segment(
+            walls[index].x,
+            walls[index].y,
+            walls[index + 1].x,
+            walls[index + 1].y,
+        ) {
+            if collision_distance < distance {
+                distance = collision_distance;
+                collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
+                let segment_dir = (walls[index] - walls[index + 1]).normalize();
+                surface_normal = vec2(segment_dir.y, -segment_dir.x);
+            }
+        }
+    }
+    if distance < Float::infinity() {
+        // collision point
+        collisions.push(r.ray.orig);
+        collisions.push(collision);
+        r.bounces += 1;
+
+        // while !r.max_bounces_reached() {
+        //     r.ray.orig = collision;
+        //     r.ray.dir = surface_normal;
+        // }
+
+        // r.ray.orig = collision;
+        // r.ray.dir = surface_normal;
+        // r.bounces += 1;
+        // if r.max_bounces_reached() {
+        //     r.reset()
+        // }
+        Some(collision)
+    } else {
+        None
+    }
+}
 
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
