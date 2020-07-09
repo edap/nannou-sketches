@@ -124,12 +124,14 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
     }
 
     model.collisions.clear();
-    // for each ray, find the closest intersection
     let walls = &model.walls;
     for r in model.rays.iter_mut() {
         r.ray.dir = r.ray.dir.rotate(model.rotation);
         //https://github.com/edap/udk-2018-mirage-of-mirrors/blob/master/01-RayBounceRecursive/src/ofApp.cpp
 
+        // forse puoi rimuovere la classe BouncingRay2D, e aggiungere un metodo bounce che e' recursive
+        // passi a bounce l'origine per il reset
+        // Bounce potrebbe ritornare anche un nuovo ray per la refracted light
         if let Some(collision) = bounce(&walls, r, 12) {
             model.collisions.push(collision);
         };
