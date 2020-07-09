@@ -106,7 +106,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.ray_width = value;
         }
 
-        for value in slider(model.rotation, -0.1, 0.1)
+        for value in slider(model.rotation, -1.1, 1.1)
             .down(10.0)
             .label("Rotation")
             .set(model.ids.rotation, ui)
@@ -126,20 +126,22 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
     model.collisions.clear();
     let walls = &model.walls;
     for r in model.rays.iter_mut() {
+        r.reset();
         r.ray.dir = r.ray.dir.rotate(model.rotation);
         //https://github.com/edap/udk-2018-mirage-of-mirrors/blob/master/01-RayBounceRecursive/src/ofApp.cpp
 
         // forse puoi rimuovere la classe BouncingRay2D, e aggiungere un metodo bounce che e' recursive
         // passi a bounce l'origine per il reset
         // Bounce potrebbe ritornare anche un nuovo ray per la refracted light
-        if let Some(collision) = bounce(&walls, r, 12) {
+        // trovare una soluzione senza recursion
+        if let Some(collision) = bounce(&walls, r) {
             model.collisions.push(collision);
         };
     }
+    //println!("{:?}", model.collisions);
 }
 
-fn bounce(walls: &Vec<Vector2>, r: &mut BouncingRay2D, max_bounces: usize) -> Option<Vector2> {
-    let mut collisions: Vec<Vector2> = Vec::new();
+fn bounce(walls: &Vec<Vector2>, r: &mut BouncingRay2D) -> Option<Vector2> {
     let mut collision: Vector2 = vec2(0.0, 0.0);
     let mut distance: f32 = Float::infinity();
     let mut surface_normal: Vector2 = vec2(0.0, 0.0);
@@ -162,22 +164,24 @@ fn bounce(walls: &Vec<Vector2>, r: &mut BouncingRay2D, max_bounces: usize) -> Op
     }
     if distance < Float::infinity() {
         // collision point
-        collisions.push(r.ray.orig);
-        collisions.push(collision);
         r.bounces += 1;
-
-        // while !r.max_bounces_reached() {
-        //     r.ray.orig = collision;
-        //     r.ray.dir = surface_normal;
-        // }
-
+        if !r.max_bounces_reached() {
+            r.ray.orig = collision;
+            r.ray.dir = surface_normal;
+            // https://stackoverflow.com/questions/16946888/is-it-possible-to-make-a-recursive-closure-in-rust
+            // come si esegue bounce e allo stesso tempo ritorna vec2??
+            bounce(walls, r);
+            Some(collision)
+        }else{
+            None
+        }
         // r.ray.orig = collision;
         // r.ray.dir = surface_normal;
         // r.bounces += 1;
         // if r.max_bounces_reached() {
         //     r.reset()
         // }
-        Some(collision)
+        
     } else {
         None
     }

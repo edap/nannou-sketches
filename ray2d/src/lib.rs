@@ -104,7 +104,9 @@ impl BouncingRay2D {
     }
 
     pub fn reset(&mut self) {
+        self.bounces = 0;
         self.ray.orig = self.ray_origin.orig;
+        println!("{:?}", self.ray.orig);
         self.ray.dir = self.ray_origin.dir;
     }
 }
