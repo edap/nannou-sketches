@@ -32,7 +32,7 @@ widget_ids! {
 }
 
 fn model(app: &App) -> Model {
-    let tile_count_w = 4;
+    let tile_count_w = 12;
     app.new_window()
         .size(800, 800)
         .view(view)
@@ -106,7 +106,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.ray_width = value;
         }
 
-        for value in slider(model.rotation, -1.1, 1.1)
+        for value in slider(model.rotation, -PI, PI)
             .down(10.0)
             .label("Rotation")
             .set(model.ids.rotation, ui)
@@ -123,68 +123,44 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
     }
 
-    model.collisions.clear();
-    let walls = &model.walls;
     for r in model.rays.iter_mut() {
+        model.collisions.clear();
+
+        while !r.max_bounces_reached() {
+            let mut collision: Vector2 = vec2(0.0, 0.0);
+            let mut distance: f32 = Float::infinity();
+            let mut surface_normal: Vector2 = vec2(0.0, 0.0);
+            // find the closest intersection point between the ray and the walls
+            for index in (0..model.walls.len()).step_by(2) {
+                if let Some(collision_distance) = r.ray.intersect_segment(
+                    model.walls[index].x,
+                    model.walls[index].y,
+                    model.walls[index + 1].x,
+                    model.walls[index + 1].y,
+                ) {
+                    if collision_distance < distance {
+                        distance = collision_distance;
+                        collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
+                        let segment_dir = (model.walls[index] - model.walls[index + 1]).normalize();
+                        surface_normal = vec2(segment_dir.y, -segment_dir.x);
+                    }
+                }
+            }
+            if distance < Float::infinity() {
+                // collision point
+                r.bounces += 1;
+                let refl = r.ray.reflect(surface_normal);
+                r.ray.orig = collision + refl.with_magnitude(0.001);
+                r.ray.dir = refl;
+                model.collisions.push(collision);
+            } else {
+                break;
+            };
+        }
         r.reset();
         r.ray.dir = r.ray.dir.rotate(model.rotation);
-        //https://github.com/edap/udk-2018-mirage-of-mirrors/blob/master/01-RayBounceRecursive/src/ofApp.cpp
-
-        // forse puoi rimuovere la classe BouncingRay2D, e aggiungere un metodo bounce che e' recursive
-        // passi a bounce l'origine per il reset
-        // Bounce potrebbe ritornare anche un nuovo ray per la refracted light
-        // trovare una soluzione senza recursion
-        if let Some(collision) = bounce(&walls, r) {
-            model.collisions.push(collision);
-        };
     }
-    //println!("{:?}", model.collisions);
-}
-
-fn bounce(walls: &Vec<Vector2>, r: &mut BouncingRay2D) -> Option<Vector2> {
-    let mut collision: Vector2 = vec2(0.0, 0.0);
-    let mut distance: f32 = Float::infinity();
-    let mut surface_normal: Vector2 = vec2(0.0, 0.0);
-    // find the closest intersection point between the ray and the walls
-    let size = walls.len();
-    for index in (0..size).step_by(2) {
-        if let Some(collision_distance) = r.ray.intersect_segment(
-            walls[index].x,
-            walls[index].y,
-            walls[index + 1].x,
-            walls[index + 1].y,
-        ) {
-            if collision_distance < distance {
-                distance = collision_distance;
-                collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
-                let segment_dir = (walls[index] - walls[index + 1]).normalize();
-                surface_normal = vec2(segment_dir.y, -segment_dir.x);
-            }
-        }
-    }
-    if distance < Float::infinity() {
-        // collision point
-        r.bounces += 1;
-        if !r.max_bounces_reached() {
-            r.ray.orig = collision;
-            r.ray.dir = surface_normal;
-            // https://stackoverflow.com/questions/16946888/is-it-possible-to-make-a-recursive-closure-in-rust
-            // come si esegue bounce e allo stesso tempo ritorna vec2??
-            bounce(walls, r);
-            Some(collision)
-        }else{
-            None
-        }
-        // r.ray.orig = collision;
-        // r.ray.dir = surface_normal;
-        // r.bounces += 1;
-        // if r.max_bounces_reached() {
-        //     r.reset()
-        // }
-        
-    } else {
-        None
-    }
+    println!("{:?}", model.collisions);
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
@@ -216,6 +192,9 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .w_h(10., 10.)
             .color(model.palette.get_scheme(model.scheme_id)[2]);
     }
+    draw.polyline()
+        .points(model.collisions.iter().cloned())
+        .color(model.palette.get_scheme(model.scheme_id)[2]);
 
     draw.to_frame(app, &frame).unwrap();
 
