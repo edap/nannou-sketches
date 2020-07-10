@@ -106,7 +106,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.ray_width = value;
         }
 
-        for value in slider(model.rotation, -PI, PI)
+        for value in slider(model.rotation, -0.01, 0.01)
             .down(10.0)
             .label("Rotation")
             .set(model.ids.rotation, ui)
@@ -114,7 +114,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.rotation = value;
         }
 
-        for value in slider(model.rotation, 0.0, 5.0)
+        for value in slider(model.scheme_id as f32, 0.0, 5.0)
             .down(10.0)
             .label("scheme_id")
             .set(model.ids.scheme_id, ui)
@@ -158,7 +158,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             };
         }
         r.reset();
-        r.ray.dir = r.ray.dir.rotate(model.rotation);
+        r.ray.dir = r.ray.dir.rotate(_app.time * model.rotation);
     }
 }
 
@@ -225,17 +225,26 @@ fn make_walls(
                 end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
             }
 
+            //if _x % 2 == 0 && _y % 2 == 0 {
+            // let mut r = BouncingRay2D::new();
+            // r.ray_origin.dir = Vector2::from_angle(random_range(-PI, PI));
+            // r.ray_origin.orig = start_p;
+            // r.ray.orig = start_p;
+            // rays.push(r);
+            //} else {
             walls.push(start_p);
             walls.push(end_p);
+            //}
 
             ypos += side as f32;
         }
         ypos = win.bottom();
         xpos += side as f32;
     }
-
     let mut r = BouncingRay2D::new();
-    r.ray.orig = vec2(50.0, -350.0);
+    r.ray_origin.dir = Vector2::from_angle(random_range(-PI, PI));
+    r.ray_origin.orig = vec2(0.0, 0.0);
+    r.ray.orig = vec2(0.0, 0.0);
     rays.push(r);
 }
 

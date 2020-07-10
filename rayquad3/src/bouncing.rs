@@ -1,6 +1,7 @@
 use nannou::prelude::*;
 use ray2d::Ray2D;
 
+#[derive(Debug)]
 pub struct BouncingRay2D {
     pub ray_origin: Ray2D,
     pub ray: Ray2D,
