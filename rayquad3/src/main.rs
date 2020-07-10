@@ -140,7 +140,10 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 ) {
                     if collision_distance < distance {
                         distance = collision_distance;
-                        collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
+                        collision = r.ray.orig
+                            + r.ray
+                                .dir
+                                .with_magnitude(collision_distance - model.wall_width / 2.0);
                         let segment_dir = (model.walls[index] - model.walls[index + 1]).normalize();
                         surface_normal = vec2(segment_dir.y, -segment_dir.x);
                     }
@@ -158,8 +161,8 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             };
         }
         r.reset();
-        r.ray.dir = r.ray.dir.rotate(model.rotation);
-        //r.ray.dir = r.ray.dir.rotate(_app.time * 0.001);
+        //r.ray.dir = r.ray.dir.rotate(model.rotation);
+        r.ray.dir = r.ray.dir.rotate(_app.time * 0.001);
     }
 }
 
@@ -190,8 +193,16 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .w_h(10., 10.)
                 .color(model.palette.get_scheme(model.scheme_id)[2]);
         }
-        draw.polyline()
-            .points(r.collisions.iter().cloned())
+        let ppp = r
+            .collisions
+            .iter()
+            .map(|v| (pt2(v.x, v.y), model.palette.get_scheme(model.scheme_id)[2]));
+        draw.polygon()
+            //.points(r.collisions.iter().cloned())
+            .points_colored(ppp)
+            //.weight(3.0)
+            //.weight(model.ray_width)
+            //.caps_round()
             .color(model.palette.get_scheme(model.scheme_id)[2]);
     }
 
