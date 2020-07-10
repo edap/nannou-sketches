@@ -1,7 +1,10 @@
 use edapx_colors::Palette;
 use nannou::prelude::*;
 use nannou::ui::prelude::*;
-use ray2d::BouncingRay2D;
+//use ray2d::BouncingRay2D;
+
+mod bouncing;
+pub use crate::bouncing::BouncingRay2D;
 
 fn main() {
     nannou::app(model).update(update).run();
@@ -10,7 +13,6 @@ fn main() {
 struct Model {
     walls: Vec<Vector2>,
     rays: Vec<BouncingRay2D>,
-    collisions: Vec<Vector2>, // it odd indexes are for the collision, even indexes for the ray origin
     draw_gui: bool,
     ui: Ui,
     ids: Ids,
@@ -42,7 +44,6 @@ fn model(app: &App) -> Model {
 
     let mut walls: Vec<Vector2> = Vec::new();
     let mut rays: Vec<BouncingRay2D> = Vec::new();
-    let collisions: Vec<Vector2> = Vec::new();
     let win = app.window_rect();
 
     let draw_gui = true;
@@ -64,7 +65,6 @@ fn model(app: &App) -> Model {
     Model {
         walls,
         rays,
-        collisions,
         draw_gui,
         ui,
         ids,
@@ -124,7 +124,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
     }
 
     for r in model.rays.iter_mut() {
-        model.collisions.clear();
+        r.collisions.clear();
 
         while !r.max_bounces_reached() {
             let mut collision: Vector2 = vec2(0.0, 0.0);
@@ -152,7 +152,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 let refl = r.ray.reflect(surface_normal);
                 r.ray.orig = collision + refl.with_magnitude(0.001);
                 r.ray.dir = refl;
-                model.collisions.push(collision);
+                r.collisions.push(collision);
             } else {
                 break;
             };
@@ -160,7 +160,6 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         r.reset();
         r.ray.dir = r.ray.dir.rotate(model.rotation);
     }
-    println!("{:?}", model.collisions);
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
@@ -184,17 +183,16 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .color(model.palette.get_scheme(model.scheme_id)[3])
             .start(r.ray.orig)
             .end(r.ray.orig + r.ray.dir.with_magnitude(100.0));
-    }
-
-    for c in &model.collisions {
-        draw.ellipse()
-            .x_y(c.x, c.y)
-            .w_h(10., 10.)
+        for c in &r.collisions {
+            draw.ellipse()
+                .x_y(c.x, c.y)
+                .w_h(10., 10.)
+                .color(model.palette.get_scheme(model.scheme_id)[2]);
+        }
+        draw.polyline()
+            .points(r.collisions.iter().cloned())
             .color(model.palette.get_scheme(model.scheme_id)[2]);
     }
-    draw.polyline()
-        .points(model.collisions.iter().cloned())
-        .color(model.palette.get_scheme(model.scheme_id)[2]);
 
     draw.to_frame(app, &frame).unwrap();
 
