@@ -106,7 +106,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.ray_width = value;
         }
 
-        for value in slider(model.rotation, -0.01, 0.01)
+        for value in slider(model.rotation, -PI, PI)
             .down(10.0)
             .label("Rotation")
             .set(model.ids.rotation, ui)
@@ -158,7 +158,8 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             };
         }
         r.reset();
-        r.ray.dir = r.ray.dir.rotate(_app.time * model.rotation);
+        r.ray.dir = r.ray.dir.rotate(model.rotation);
+        //r.ray.dir = r.ray.dir.rotate(_app.time * 0.001);
     }
 }
 
