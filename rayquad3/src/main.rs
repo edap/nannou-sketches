@@ -1,7 +1,7 @@
 use edapx_colors::Palette;
+use nannou::color::gradient::Gradient;
 use nannou::prelude::*;
 use nannou::ui::prelude::*;
-//use ray2d::BouncingRay2D;
 
 mod bouncing;
 pub use crate::bouncing::BouncingRay2D;
@@ -22,14 +22,23 @@ struct Model {
     scheme_id: usize,
     palette: Palette,
     tile_count_w: u32,
+    show_walls: bool,
+    animation: bool,
+    draw_refl: bool,
+    gradient_one: Gradient<Hsl>,
+    gradient_two: Gradient<Hsl>,
+    gradient_three: Gradient<Hsl>,
 }
 
 widget_ids! {
     struct Ids {
-        ray_width,
         wall_width,
+        ray_width,
         rotation,
-        scheme_id
+        scheme_id,
+        draw_refl,
+        animation,
+        show_walls
     }
 }
 
@@ -60,7 +69,15 @@ fn model(app: &App) -> Model {
 
     let scheme_id = 0;
     let palette = Palette::new();
+    let scheme = palette.get_scheme(scheme_id);
     make_walls(&mut walls, &mut rays, &win, tile_count_w);
+    let show_walls = true;
+    let animation = true;
+    let draw_refl = true;
+
+    let gradient_one = Gradient::new(vec![Hsl::from(scheme[0]), Hsl::from(scheme[2])]);
+    let gradient_two = Gradient::new(vec![Hsl::from(scheme[1]), Hsl::from(scheme[3])]);
+    let gradient_three = Gradient::new(vec![Hsl::from(scheme[4]), Hsl::from(scheme[1])]);
 
     Model {
         walls,
@@ -68,12 +85,18 @@ fn model(app: &App) -> Model {
         draw_gui,
         ui,
         ids,
-        ray_width,
         wall_width,
+        ray_width,
         rotation,
         scheme_id,
         palette,
         tile_count_w,
+        show_walls,
+        animation,
+        gradient_one,
+        gradient_two,
+        gradient_three,
+        draw_refl,
     }
 }
 
@@ -83,6 +106,15 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
     {
         fn slider(val: f32, min: f32, max: f32) -> widget::Slider<'static, f32> {
             widget::Slider::new(val, min, max)
+                .w_h(200.0, 30.0)
+                .label_font_size(15)
+                .rgb(0.3, 0.3, 0.3)
+                .label_rgb(1.0, 1.0, 1.0)
+                .border(0.0)
+        }
+
+        fn toggle(val: bool) -> widget::Toggle<'static> {
+            widget::Toggle::new(val)
                 .w_h(200.0, 30.0)
                 .label_font_size(15)
                 .rgb(0.3, 0.3, 0.3)
@@ -106,25 +138,56 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.ray_width = value;
         }
 
-        for value in slider(model.rotation, -PI, PI)
-            .down(10.0)
+        for val in slider(model.rotation, -PI, PI)
+            .down(20.0)
             .label("Rotation")
             .set(model.ids.rotation, ui)
         {
-            model.rotation = value;
+            model.rotation = val;
         }
 
         for value in slider(model.scheme_id as f32, 0.0, 5.0)
-            .down(10.0)
+            .down(30.0)
             .label("scheme_id")
             .set(model.ids.scheme_id, ui)
         {
             model.scheme_id = value as usize;
         }
+
+        for v in toggle(model.draw_refl as bool)
+            .label("Draw reflection")
+            .set(model.ids.draw_refl, ui)
+        {
+            model.draw_refl = v;
+        }
+
+        for v in toggle(model.animation as bool)
+            .label("Animation")
+            .set(model.ids.animation, ui)
+        {
+            model.animation = v;
+        }
+
+        for v in toggle(model.show_walls as bool)
+            .label("Show wall")
+            .set(model.ids.show_walls, ui)
+        {
+            model.show_walls = v;
+        }
+
+        // for new_bool in widget::Toggle::new(model.ids.draw_refl).set(model.ids.draw_refl, ui) {
+        //     model.ids.draw_refl = new_bool;
+        // }
     }
 
     for r in model.rays.iter_mut() {
         r.collisions.clear();
+        r.reflections.clear();
+        r.refl_intensity = 0.0;
+
+        // this two are not necessary but add a line more from the ray to the destination
+        r.collisions.push(r.ray.orig);
+        r.reflections.push(r.ray.dir);
 
         while !r.max_bounces_reached() {
             let mut collision: Vector2 = vec2(0.0, 0.0);
@@ -140,10 +203,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 ) {
                     if collision_distance < distance {
                         distance = collision_distance;
-                        collision = r.ray.orig
-                            + r.ray
-                                .dir
-                                .with_magnitude(collision_distance - model.wall_width / 2.0);
+                        collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
                         let segment_dir = (model.walls[index] - model.walls[index + 1]).normalize();
                         surface_normal = vec2(segment_dir.y, -segment_dir.x);
                     }
@@ -156,54 +216,81 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 r.ray.orig = collision + refl.with_magnitude(0.001);
                 r.ray.dir = refl;
                 r.collisions.push(collision);
+                r.reflections.push(refl);
             } else {
                 break;
             };
         }
         r.reset();
-        //r.ray.dir = r.ray.dir.rotate(model.rotation);
-        r.ray.dir = r.ray.dir.rotate(_app.time * 0.001);
+        if model.animation {
+            r.ray.dir = r.ray.dir.rotate(_app.time * 0.001);
+        } else {
+            r.ray.dir = r.ray.dir.rotate(model.rotation);
+        }
     }
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     draw.background()
-        .color(model.palette.get_scheme(model.scheme_id)[0]);
+        .color(model.palette.get_scheme(model.scheme_id)[4]);
 
     // draw the walls
-    let size = model.walls.len();
-    for index in (0..size).step_by(2) {
-        draw.line()
-            .weight(model.wall_width)
-            .color(model.palette.get_scheme(model.scheme_id)[1])
-            .start(model.walls[index])
-            .caps_round()
-            .end(model.walls[index + 1]);
+    if model.show_walls {
+        let size = model.walls.len();
+        for index in (0..size).step_by(2) {
+            draw.line()
+                .weight(model.wall_width)
+                .color(model.palette.get_scheme(model.scheme_id)[1])
+                .start(model.walls[index])
+                .caps_round()
+                .end(model.walls[index + 1]);
+        }
     }
 
     for r in &model.rays {
-        draw.arrow()
-            .color(model.palette.get_scheme(model.scheme_id)[3])
-            .start(r.ray.orig)
-            .end(r.ray.orig + r.ray.dir.with_magnitude(100.0));
+        // draw.arrow()
+        //     .color(model.palette.get_scheme(model.scheme_id)[3])
+        //     .start(r.ray.orig)
+        //     .weight(model.ray_width)
+        //     .end(r.ray.orig + r.ray.dir.with_magnitude(20.0));
         for c in &r.collisions {
             draw.ellipse()
                 .x_y(c.x, c.y)
                 .w_h(10., 10.)
                 .color(model.palette.get_scheme(model.scheme_id)[2]);
         }
-        let ppp = r
-            .collisions
-            .iter()
-            .map(|v| (pt2(v.x, v.y), model.palette.get_scheme(model.scheme_id)[2]));
+
+        for (&x, &y) in r.collisions.iter().zip(r.reflections.iter()) {
+            println!("{:?}{:?}", x, y);
+        }
+
+
+        let ppp = r.collisions.iter().zip(r.reflections.iter().map(|&c, &r| {
+            let mut col = rgb(0.0,0.0,0.0);
+            if r.x > 0.0 {
+                col = model.palette.get_scheme(model.scheme_id)[2];
+            }else{
+                col = model.palette.get_scheme(model.scheme_id)[3];
+            }
+            (pt2(c.x, c.y),col)
+            }
+        );
+
+        // let ppp = r
+        //     .collisions
+        //     .iter()
+        //     .map(|v| (pt2(v.x, v.y), model.palette.get_scheme(model.scheme_id)[2]));
         draw.polygon()
-            //.points(r.collisions.iter().cloned())
             .points_colored(ppp)
-            //.weight(3.0)
-            //.weight(model.ray_width)
-            //.caps_round()
             .color(model.palette.get_scheme(model.scheme_id)[2]);
+
+        draw.path()
+            .stroke()
+            .stroke_weight(model.ray_width)
+            .caps_round()
+            .points(r.collisions.iter().cloned())
+            .color(model.palette.get_scheme(model.scheme_id)[3]);
     }
 
     draw.to_frame(app, &frame).unwrap();
