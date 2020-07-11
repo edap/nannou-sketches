@@ -43,7 +43,7 @@ widget_ids! {
 }
 
 fn model(app: &App) -> Model {
-    let tile_count_w = 12;
+    let tile_count_w = 16;
     app.new_window()
         .size(800, 800)
         .view(view)
@@ -174,10 +174,6 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         {
             model.show_walls = v;
         }
-
-        // for new_bool in widget::Toggle::new(model.ids.draw_refl).set(model.ids.draw_refl, ui) {
-        //     model.ids.draw_refl = new_bool;
-        // }
     }
 
     for r in model.rays.iter_mut() {
@@ -261,36 +257,44 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .color(model.palette.get_scheme(model.scheme_id)[2]);
         }
 
-        for (&x, &y) in r.collisions.iter().zip(r.reflections.iter()) {
-            println!("{:?}{:?}", x, y);
-        }
 
-
-        let ppp = r.collisions.iter().zip(r.reflections.iter().map(|&c, &r| {
-            let mut col = rgb(0.0,0.0,0.0);
-            if r.x > 0.0 {
-                col = model.palette.get_scheme(model.scheme_id)[2];
+        //let mut col = hsl(0.5, 1.0, 1.0);
+        let mut col = rgb(0.5, 1.0, 1.0);
+        let ppp = r.collisions.iter().zip(r.reflections.iter()).map(|(&co, &re)|{
+            if re.x > 0.0 {
+                //col = model.gradient_one.get(0.7);
+                col = model.palette.get_scheme(model.scheme_id)[2]
             }else{
-                col = model.palette.get_scheme(model.scheme_id)[3];
+                //col = model.gradient_two.get(0.7);
+                col = model.palette.get_scheme(model.scheme_id)[3]
             }
-            (pt2(c.x, c.y),col)
-            }
-        );
+            (pt2(co.x, co.y), col)
+        });
+        
+        // .map(|&c, &r| {
+        //     let mut col = rgb(0.0,0.0,0.0);
+        //     if r.x > 0.0 {
+        //         col = model.palette.get_scheme(model.scheme_id)[2];
+        //     }else{
+        //         col = model.palette.get_scheme(model.scheme_id)[3];
+        //     }
+        //     (pt2(c.x, c.y),col)
+        //     }
+        // );
 
         // let ppp = r
         //     .collisions
         //     .iter()
         //     .map(|v| (pt2(v.x, v.y), model.palette.get_scheme(model.scheme_id)[2]));
-        draw.polygon()
-            .points_colored(ppp)
-            .color(model.palette.get_scheme(model.scheme_id)[2]);
+        draw.polygon().points_colored(ppp);
+            //.color(model.palette.get_scheme(model.scheme_id)[2]);
 
         draw.path()
             .stroke()
             .stroke_weight(model.ray_width)
             .caps_round()
             .points(r.collisions.iter().cloned())
-            .color(model.palette.get_scheme(model.scheme_id)[3]);
+            .color(model.palette.get_scheme(model.scheme_id)[0]);
     }
 
     draw.to_frame(app, &frame).unwrap();
@@ -324,27 +328,27 @@ fn make_walls(
                 end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
             }
 
-            //if _x % 2 == 0 && _y % 2 == 0 {
-            // let mut r = BouncingRay2D::new();
-            // r.ray_origin.dir = Vector2::from_angle(random_range(-PI, PI));
-            // r.ray_origin.orig = start_p;
-            // r.ray.orig = start_p;
-            // rays.push(r);
-            //} else {
+            if _x % 4 == 0 && _y % 4 == 0 {
+            let mut r = BouncingRay2D::new();
+            r.ray_origin.dir = Vector2::from_angle(random_range(-PI, PI));
+            r.ray_origin.orig = start_p;
+            r.ray.orig = start_p;
+            rays.push(r);
+            } else {
             walls.push(start_p);
             walls.push(end_p);
-            //}
+            }
 
             ypos += side as f32;
         }
         ypos = win.bottom();
         xpos += side as f32;
     }
-    let mut r = BouncingRay2D::new();
-    r.ray_origin.dir = Vector2::from_angle(random_range(-PI, PI));
-    r.ray_origin.orig = vec2(0.0, 0.0);
-    r.ray.orig = vec2(0.0, 0.0);
-    rays.push(r);
+    // let mut r = BouncingRay2D::new();
+    // r.ray_origin.dir = Vector2::from_angle(random_range(-PI, PI));
+    // r.ray_origin.orig = vec2(0.0, 0.0);
+    // r.ray.orig = vec2(0.0, 0.0);
+    // rays.push(r);
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
