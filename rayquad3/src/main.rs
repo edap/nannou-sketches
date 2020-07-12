@@ -70,7 +70,7 @@ fn model(app: &App) -> Model {
     let scheme_id = 0;
     let palette = Palette::new();
     let scheme = palette.get_scheme(scheme_id);
-    make_walls(&mut walls, &mut rays, &win, tile_count_w);
+    make_walls(&mut walls, &mut rays, &win, tile_count_w, 0);
     let show_walls = true;
     let animation = true;
     let draw_refl = true;
@@ -182,8 +182,8 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         r.refl_intensity = 0.0;
 
         // this two are not necessary but add a line more from the ray to the destination
-        r.collisions.push(r.ray.orig);
-        r.reflections.push(r.ray.dir);
+        //r.collisions.push(r.ray.orig);
+        //r.reflections.push(r.ray.dir);
 
         while !r.max_bounces_reached() {
             let mut collision: Vector2 = vec2(0.0, 0.0);
@@ -257,20 +257,22 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .color(model.palette.get_scheme(model.scheme_id)[2]);
         }
 
-
         //let mut col = hsl(0.5, 1.0, 1.0);
         let mut col = rgb(0.5, 1.0, 1.0);
-        let ppp = r.collisions.iter().zip(r.reflections.iter()).map(|(&co, &re)|{
-            if re.x > 0.0 {
-                //col = model.gradient_one.get(0.7);
-                col = model.palette.get_scheme(model.scheme_id)[2]
-            }else{
-                //col = model.gradient_two.get(0.7);
-                col = model.palette.get_scheme(model.scheme_id)[3]
-            }
-            (pt2(co.x, co.y), col)
-        });
-        
+        let ppp = r
+            .collisions
+            .iter()
+            .zip(r.reflections.iter())
+            .map(|(&co, &re)| {
+                if re.x > 0.0 {
+                    //col = model.gradient_one.get(0.7);
+                    col = model.palette.get_scheme(model.scheme_id)[2]
+                } else {
+                    //col = model.gradient_two.get(0.7);
+                    col = model.palette.get_scheme(model.scheme_id)[3]
+                }
+                (pt2(co.x, co.y), col)
+            });
         // .map(|&c, &r| {
         //     let mut col = rgb(0.0,0.0,0.0);
         //     if r.x > 0.0 {
@@ -287,7 +289,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
         //     .iter()
         //     .map(|v| (pt2(v.x, v.y), model.palette.get_scheme(model.scheme_id)[2]));
         draw.polygon().points_colored(ppp);
-            //.color(model.palette.get_scheme(model.scheme_id)[2]);
+        //.color(model.palette.get_scheme(model.scheme_id)[2]);
 
         draw.path()
             .stroke()
@@ -309,6 +311,7 @@ fn make_walls(
     rays: &mut Vec<BouncingRay2D>,
     win: &geom::Rect,
     tile_count_w: u32,
+    mode: u8, // 0 even, 1 random rotation, 2 one in the middle
 ) {
     let side = win.w() as u32 / tile_count_w;
     let mut xpos = win.left();
@@ -316,27 +319,54 @@ fn make_walls(
 
     for _x in 0..tile_count_w {
         for _y in 0..(win.h() as u32 / side as u32) {
-            let coin = random_range(0.0, 1.0);
+            //let coin = random_range(0.0, 1.0);
+            let coin = 1.0;
             let start_p;
             let end_p;
             let padding = 0.1 * side as f32;
-            if coin > 0.5 {
-                start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-            } else {
-                start_p = vec2(xpos + padding, ypos + padding);
-                end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-            }
+            //if coin > 0.5 {
 
-            if _x % 4 == 0 && _y % 4 == 0 {
-            let mut r = BouncingRay2D::new();
-            r.ray_origin.dir = Vector2::from_angle(random_range(-PI, PI));
-            r.ray_origin.orig = start_p;
-            r.ray.orig = start_p;
-            rays.push(r);
-            } else {
-            walls.push(start_p);
-            walls.push(end_p);
+            match mode {
+                0 => {
+                    if _x % 2 == 0 {
+                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
+                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
+                    } else {
+                        start_p = vec2(xpos + padding, ypos + padding);
+                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
+                    }
+                    if _x % 4 == 0 && _y % 4 == 0 {
+                        let mut r = BouncingRay2D::new();
+                        //r.ray_origin.dir = Vector2::from_angle(random_range(-PI, PI));
+                        r.ray_origin.dir = Vector2::from_angle(1.0);
+                        r.ray_origin.orig = start_p;
+                        r.ray.orig = start_p;
+                        rays.push(r);
+                    } else {
+                        walls.push(start_p);
+                        walls.push(end_p);
+                    }
+                }
+                1 => {
+                    if coin > 0.5 {
+                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
+                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
+                    } else {
+                        start_p = vec2(xpos + padding, ypos + padding);
+                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
+                    }
+                    if _x % 4 == 0 && _y % 4 == 0 {
+                        let mut r = BouncingRay2D::new();
+                        r.ray_origin.dir = Vector2::from_angle(random_range(-PI, PI));
+                        r.ray_origin.orig = start_p;
+                        r.ray.orig = start_p;
+                        rays.push(r);
+                    } else {
+                        walls.push(start_p);
+                        walls.push(end_p);
+                    }
+                }
+                _ => {}
             }
 
             ypos += side as f32;
@@ -344,11 +374,13 @@ fn make_walls(
         ypos = win.bottom();
         xpos += side as f32;
     }
-    // let mut r = BouncingRay2D::new();
-    // r.ray_origin.dir = Vector2::from_angle(random_range(-PI, PI));
-    // r.ray_origin.orig = vec2(0.0, 0.0);
-    // r.ray.orig = vec2(0.0, 0.0);
-    // rays.push(r);
+    if mode == 2 {
+        let mut r = BouncingRay2D::new();
+        r.ray_origin.dir = Vector2::from_angle(random_range(-PI, PI));
+        r.ray_origin.orig = vec2(0.0, 0.0);
+        r.ray.orig = vec2(0.0, 0.0);
+        rays.push(r);
+    }
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
