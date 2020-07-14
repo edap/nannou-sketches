@@ -19,6 +19,7 @@ struct Model {
     wall_width: f32,
     rotation: f32,
     scheme_id: usize,
+    blend_id: usize,
     palette: Palette,
     show_walls: bool,
     animation: bool,
@@ -32,6 +33,7 @@ widget_ids! {
         ray_width,
         rotation,
         scheme_id,
+        blend_id,
         draw_refl,
         animation,
         animation_speed,
@@ -42,7 +44,7 @@ widget_ids! {
 fn model(app: &App) -> Model {
     let tile_count_w = 6;
     app.new_window()
-        .size(800, 800)
+        .size(900, 900)
         .view(view)
         .key_pressed(key_pressed)
         .build()
@@ -65,6 +67,7 @@ fn model(app: &App) -> Model {
     let rotation = 0.0;
 
     let scheme_id = 0;
+    let blend_id = 0;
     let palette = Palette::new();
     make_walls(&mut walls, &mut rays, &win, tile_count_w, 4);
     let show_walls = true;
@@ -82,6 +85,7 @@ fn model(app: &App) -> Model {
         ray_width,
         rotation,
         scheme_id,
+        blend_id,
         palette,
         show_walls,
         animation,
@@ -142,6 +146,15 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             .set(model.ids.scheme_id, ui)
         {
             model.scheme_id = value as usize;
+        }
+
+
+        for value in slider(model.blend_id as f32, 0.0, 3.0)
+            .down(30.0)
+            .label("blend_id")
+            .set(model.ids.blend_id, ui)
+        {
+            model.blend_id = value as usize;
         }
 
         for v in toggle(model.draw_refl as bool)
@@ -226,7 +239,15 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
-    let draw = app.draw();
+    let blends = [
+        BLEND_NORMAL,
+        BLEND_ADD,
+        BLEND_SUBTRACT,
+        BLEND_LIGHTEST,
+    ];
+    let mut draw = app.draw().color_blend(blends[model.blend_id].clone());
+    frame.clear(model.palette.get_scheme(model.scheme_id)[4]);
+    //let draw = app.draw();
     draw.background()
         .color(model.palette.get_scheme(model.scheme_id)[4]);
 
