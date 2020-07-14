@@ -66,7 +66,7 @@ fn model(app: &App) -> Model {
 
     let scheme_id = 0;
     let palette = Palette::new();
-    make_walls(&mut walls, &mut rays, &win, tile_count_w, 2);
+    make_walls(&mut walls, &mut rays, &win, tile_count_w, 4);
     let show_walls = true;
     let animation = true;
     let animation_speed = 0.01;
@@ -176,7 +176,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
 
     for r in model.rays.iter_mut() {
         r.collisions.clear();
-        r.refractions.clear();
+        r.reflections.clear();
         r.refl_intensity = 0.0;
 
         // this two are not necessary but add a line more from the ray to the destination
@@ -207,11 +207,11 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 // collision point
                 r.bounces += 1;
                 let refl = r.ray.reflect(surface_normal);
-                r.ray.orig = collision + refl.with_magnitude(0.01);
+                r.ray.orig = collision + refl.with_magnitude(0.03);
                 r.ray.dir = refl;
                 r.collisions.push(collision);
                 //r.refractions.push(r.ray.refract(surface_normal, 1.0));
-                r.refractions.push(refl);
+                r.reflections.push(refl);
             } else {
                 break;
             };
@@ -245,12 +245,15 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     for r in &model.rays {
         draw.arrow()
-            .color(model.palette.get_scheme(model.scheme_id)[3])
+            .color(model.palette.get_scheme(model.scheme_id)[0])
             .start(r.ray.orig)
-            .weight(model.ray_width)
+            .weight(model.ray_width * 2.0)
             .end(r.ray.orig + r.ray.dir.with_magnitude(20.0));
         for c in &r.collisions {
             draw.ellipse()
+                .no_fill()
+                .stroke(model.palette.get_scheme(model.scheme_id)[2])
+                .stroke_weight(3.0)
                 .x_y(c.x, c.y)
                 .w_h(10., 10.)
                 .color(model.palette.get_scheme(model.scheme_id)[2]);
@@ -260,7 +263,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
         let ppp = r
             .collisions
             .iter()
-            .zip(r.refractions.iter())
+            .zip(r.reflections.iter())
             .map(|(&co, &re)| {
                 if re.x > 0.0 {
                     col = model.palette.get_scheme(model.scheme_id)[2]
@@ -279,7 +282,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .points(r.collisions.iter().cloned())
             .color(model.palette.get_scheme(model.scheme_id)[0]);
 
-        for (&c, &r) in r.collisions.iter().zip(r.refractions.iter()) {
+        for (&c, &r) in r.collisions.iter().zip(r.reflections.iter()) {
             draw.arrow()
                 .start(c)
                 .end(c + r.with_magnitude(20.0))
@@ -300,7 +303,7 @@ fn make_walls(
     rays: &mut Vec<BouncingRay2D>,
     win: &geom::Rect,
     tile_count_w: u32,
-    mode: u8, // 0 even, 1 random rotation, 2 one in the middle
+    mode: u8, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
 ) {
     let side = win.w() as u32 / tile_count_w;
     let mut xpos = win.left();
@@ -382,6 +385,33 @@ fn make_walls(
                         walls.push(start_p);
                         walls.push(end_p);
                     }
+                }
+                4 => {
+                    if _x % 2 == 0 && _y % 2 == 0 {
+                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
+                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
+                        let mut r = BouncingRay2D::new();
+                        //r.ray_origin.dir = Vector2::from_angle(random_range(-PI, PI));
+                        r.ray_origin.dir = Vector2::from_angle(1.0);
+                        // r.ray_origin.orig = start_p;
+                        // r.ray.orig = start_p;
+                        let o = vec2(xpos + side as f32 / 2.0, ypos + side as f32 - padding);
+                        r.ray_origin.orig = o;
+                        r.ray.orig = o;
+                        rays.push(r);
+                    } else if _y % 2 == 0 && _x % 2 != 0{
+                        start_p = vec2(xpos + padding, ypos + padding);
+                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
+                    } else if _x % 2 != 0 && _y % 2 != 0 {
+                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
+                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
+                    }else{
+                        start_p = vec2(xpos + padding, ypos + padding);
+                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
+                    }
+                    walls.push(start_p);
+                    walls.push(end_p); 
+
                 }
                 _ => {}
             }

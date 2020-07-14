@@ -35,7 +35,7 @@ impl Palette {
             rgb(0.055, 0.8, 0.812),   // azul
             rgb(0.702, 0.839, 0.38),  // verde vomito
             rgb(0.945, 0.757, 0.137), //giallo
-            rgb(0.902, 0.659, 0.141), //ocra
+            rgb(0.902, 0.259, 0.141), //ocra CHANGE
             rgb(0.525, 0.094, 0.949), //viola
             // bigBubblePal
             rgb(0.965, 0.914, 0.396), //yellow

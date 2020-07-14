@@ -8,21 +8,21 @@ pub struct BouncingRay2D {
     pub bounces: usize,
     pub max_bounces: usize,
     pub collisions: Vec<Vector2>,
-    pub refractions: Vec<Vector2>,
+    pub reflections: Vec<Vector2>,
     pub refl_intensity: f32,
 }
 
 impl BouncingRay2D {
     pub fn new() -> Self {
         let collisions: Vec<Vector2> = Vec::new();
-        let refractions: Vec<Vector2> = Vec::new();
+        let reflections: Vec<Vector2> = Vec::new();
         BouncingRay2D {
             ray_origin: Ray2D::new(),
             ray: Ray2D::new(),
             bounces: 0,
             max_bounces: 200,
             collisions,
-            refractions,
+            reflections,
             refl_intensity: 0.0,
         }
     }
