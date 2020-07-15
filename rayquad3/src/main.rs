@@ -17,6 +17,7 @@ struct Model {
     ids: Ids,
     ray_width: f32,
     wall_width: f32,
+    collision_radius: f32,
     rotation: f32,
     scheme_id: usize,
     blend_id: usize,
@@ -25,16 +26,19 @@ struct Model {
     animation: bool,
     animation_speed: f32,
     draw_refl: bool,
+    draw_polygon: bool,
 }
 
 widget_ids! {
     struct Ids {
         wall_width,
         ray_width,
+        collision_radius,
         rotation,
         scheme_id,
         blend_id,
         draw_refl,
+        draw_polygon,
         animation,
         animation_speed,
         show_walls
@@ -65,15 +69,17 @@ fn model(app: &App) -> Model {
     let ray_width = 6.0;
     let wall_width = 2.0;
     let rotation = 0.0;
+    let collision_radius = 3.0;
 
-    let scheme_id = 0;
-    let blend_id = 0;
+    let scheme_id = 5;
+    let blend_id = 2;
     let palette = Palette::new();
     make_walls(&mut walls, &mut rays, &win, tile_count_w, 4);
     let show_walls = true;
     let animation = true;
     let animation_speed = 0.01;
     let draw_refl = true;
+    let draw_polygon = true;
 
     Model {
         walls,
@@ -82,6 +88,7 @@ fn model(app: &App) -> Model {
         ui,
         ids,
         wall_width,
+        collision_radius,
         ray_width,
         rotation,
         scheme_id,
@@ -91,6 +98,7 @@ fn model(app: &App) -> Model {
         animation,
         animation_speed,
         draw_refl,
+        draw_polygon,
     }
 }
 
@@ -124,6 +132,14 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.wall_width = value;
         }
 
+        for value in slider(model.collision_radius as f32, 5.0, 45.0)
+            .down(10.0)
+            .label("collision radius")
+            .set(model.ids.collision_radius, ui)
+        {
+            model.collision_radius = value;
+        }
+
         for value in slider(model.ray_width, 1.0, 10.0)
             .down(10.0)
             .label("ray width")
@@ -148,7 +164,6 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.scheme_id = value as usize;
         }
 
-
         for value in slider(model.blend_id as f32, 0.0, 3.0)
             .down(30.0)
             .label("blend_id")
@@ -162,6 +177,13 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             .set(model.ids.draw_refl, ui)
         {
             model.draw_refl = v;
+        }
+
+        for v in toggle(model.draw_polygon as bool)
+            .label("Draw poly")
+            .set(model.ids.draw_polygon, ui)
+        {
+            model.draw_polygon = v;
         }
 
         for v in toggle(model.animation as bool)
@@ -190,11 +212,12 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
     for r in model.rays.iter_mut() {
         r.collisions.clear();
         r.reflections.clear();
-        r.refl_intensity = 0.0;
+        r.refl_intensity.clear();
 
         // this two are not necessary but add a line more from the ray to the destination
-        //r.collisions.push(r.ray.orig);
-        //r.reflections.push(r.ray.dir);
+        r.collisions.push(r.ray.orig);
+        r.reflections.push(r.ray.dir);
+        r.refl_intensity.push(0.0);
 
         while !r.max_bounces_reached() {
             let mut collision: Vector2 = vec2(0.0, 0.0);
@@ -220,6 +243,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 // collision point
                 r.bounces += 1;
                 let refl = r.ray.reflect(surface_normal);
+                r.refl_intensity.push(r.ray.dir.dot(refl).abs());
                 r.ray.orig = collision + refl.with_magnitude(0.03);
                 r.ray.dir = refl;
                 r.collisions.push(collision);
@@ -239,13 +263,8 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
-    let blends = [
-        BLEND_NORMAL,
-        BLEND_ADD,
-        BLEND_SUBTRACT,
-        BLEND_LIGHTEST,
-    ];
-    let mut draw = app.draw().color_blend(blends[model.blend_id].clone());
+    let blends = [BLEND_NORMAL, BLEND_ADD, BLEND_SUBTRACT, BLEND_LIGHTEST];
+    let draw = app.draw().color_blend(blends[model.blend_id].clone());
     frame.clear(model.palette.get_scheme(model.scheme_id)[4]);
     //let draw = app.draw();
     draw.background()
@@ -265,19 +284,18 @@ fn view(app: &App, model: &Model, frame: Frame) {
     }
 
     for r in &model.rays {
-        draw.arrow()
-            .color(model.palette.get_scheme(model.scheme_id)[0])
-            .start(r.ray.orig)
-            .weight(model.ray_width * 2.0)
-            .end(r.ray.orig + r.ray.dir.with_magnitude(20.0));
-        for c in &r.collisions {
+        // draw.arrow()
+        //     .color(model.palette.get_scheme(model.scheme_id)[0])
+        //     .start(r.ray.orig)
+        //     .weight(model.ray_width * 2.0)
+        //     .end(r.ray.orig + r.ray.dir.with_magnitude(20.0));
+        for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
             draw.ellipse()
                 .no_fill()
                 .stroke(model.palette.get_scheme(model.scheme_id)[2])
                 .stroke_weight(3.0)
                 .x_y(c.x, c.y)
-                .w_h(10., 10.)
-                .color(model.palette.get_scheme(model.scheme_id)[2]);
+                .w_h(model.collision_radius * i, model.collision_radius * i);
         }
 
         let mut col = rgb(0.0, 0.0, 0.0);
@@ -294,7 +312,9 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 (pt2(co.x, co.y), col)
             });
 
-        draw.polygon().points_colored(ppp);
+        if model.draw_polygon {
+            draw.polygon().points_colored(ppp);
+        };
 
         draw.path()
             .stroke()
@@ -308,7 +328,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .start(c)
                 .end(c + r.with_magnitude(20.0))
                 .stroke_weight(model.ray_width)
-                .color(model.palette.get_scheme(model.scheme_id)[0]);
+                .color(model.palette.get_scheme(model.scheme_id)[1]);
         }
     }
 
@@ -419,20 +439,21 @@ fn make_walls(
                         let o = vec2(xpos + side as f32 / 2.0, ypos + side as f32 - padding);
                         r.ray_origin.orig = o;
                         r.ray.orig = o;
-                        rays.push(r);
-                    } else if _y % 2 == 0 && _x % 2 != 0{
+                        if random_range(0.0, 0.5) > 0.0 {
+                            rays.push(r);
+                        }
+                    } else if _y % 2 == 0 && _x % 2 != 0 {
                         start_p = vec2(xpos + padding, ypos + padding);
                         end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
                     } else if _x % 2 != 0 && _y % 2 != 0 {
                         start_p = vec2(xpos + padding, ypos + side as f32 - padding);
                         end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                    }else{
+                    } else {
                         start_p = vec2(xpos + padding, ypos + padding);
                         end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
                     }
                     walls.push(start_p);
-                    walls.push(end_p); 
-
+                    walls.push(end_p);
                 }
                 _ => {}
             }
