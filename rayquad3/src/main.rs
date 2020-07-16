@@ -46,9 +46,9 @@ widget_ids! {
 }
 
 fn model(app: &App) -> Model {
-    let tile_count_w = 6;
+    let tile_count_w = 8;
     app.new_window()
-        .size(900, 900)
+        .size(800, 800)
         .view(view)
         .key_pressed(key_pressed)
         .build()
@@ -298,7 +298,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .w_h(model.collision_radius * i, model.collision_radius * i);
         }
 
-        let mut col = rgb(0.0, 0.0, 0.0);
+        let mut col = rgba(0.0, 0.0, 0.0, 0.0);
         let ppp = r
             .collisions
             .iter()
@@ -439,7 +439,7 @@ fn make_walls(
                         let o = vec2(xpos + side as f32 / 2.0, ypos + side as f32 - padding);
                         r.ray_origin.orig = o;
                         r.ray.orig = o;
-                        if random_range(0.0, 0.5) > 0.0 {
+                        if coin > 0.0 {
                             rays.push(r);
                         }
                     } else if _y % 2 == 0 && _x % 2 != 0 {
