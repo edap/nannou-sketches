@@ -218,7 +218,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         r.collisions.clear();
         r.reflections.clear();
         r.refl_intensity.clear();
-        r.primary_ray.orig.x = (_app.time.sin() * 0.18) * 400.0;
+        r.primary_ray.orig.x = (_app.time * 0.1).sin() * 300.0;
 
         // this two are not necessary but add a line more from the ray to the destination
         // r.collisions.push(r.ray.orig);
@@ -284,7 +284,6 @@ fn view(app: &App, model: &Model, frame: Frame) {
     }
 
     for r in &model.rays {
-        println!("{:?} ncoll", r.collisions.len());
         draw.arrow()
             .color(model.palette.get_scheme(model.scheme_id)[0])
             .start(r.ray.orig)
