@@ -454,7 +454,7 @@ fn make_walls(
                         let o = vec2(xpos + side as f32 / 2.0, ypos + side as f32 - padding);
                         r.primary_ray.orig = o;
                         r.ray.orig = o;
-                        if coin > 0.6 {
+                        if coin > 0.5 {
                             rays.push(r);
                         }
                     } else if _y % 2 == 0 && _x % 2 != 0 {
