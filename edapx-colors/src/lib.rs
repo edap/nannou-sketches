@@ -73,4 +73,20 @@ impl Palette {
         let to = index + COLOR_PER_SCHEME - 1;
         &self.colors[index..=to]
     }
+
+    pub fn get_first(&self, scheme_id: usize, offset: usize) -> Rgba {
+        return self.get_scheme(scheme_id)[(0 + offset) % COLOR_PER_SCHEME];
+    }
+    pub fn get_second(&self, scheme_id: usize, offset: usize) -> Rgba {
+        return self.get_scheme(scheme_id)[(1 + offset) % COLOR_PER_SCHEME];
+    }
+    pub fn get_third(&self, scheme_id: usize, offset: usize) -> Rgba {
+        return self.get_scheme(scheme_id)[(2 + offset) % COLOR_PER_SCHEME];
+    }
+    pub fn get_fourth(&self, scheme_id: usize, offset: usize) -> Rgba {
+        return self.get_scheme(scheme_id)[(3 + offset) % COLOR_PER_SCHEME];
+    }
+    pub fn get_fifth(&self, scheme_id: usize, offset: usize) -> Rgba {
+        return self.get_scheme(scheme_id)[(4 + offset) % COLOR_PER_SCHEME];
+    }
 }
