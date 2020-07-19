@@ -9,8 +9,13 @@ fn main() {
     nannou::app(model).update(update).run();
 }
 
+struct Circle {
+    pos: Vector2,
+    radius: f32,
+}
+
 struct Model {
-    walls: Vec<Vector2>,
+    walls: Vec<Circle>,
     rays: Vec<BouncingRay2D>,
     draw_gui: bool,
     ui: Ui,
@@ -46,7 +51,7 @@ widget_ids! {
 }
 
 fn model(app: &App) -> Model {
-    let tile_count_w = 8;
+    let tile_count_w = 2;
     app.new_window()
         .size(800, 800)
         .view(view)
@@ -54,7 +59,7 @@ fn model(app: &App) -> Model {
         .build()
         .unwrap();
 
-    let mut walls: Vec<Vector2> = Vec::new();
+    let mut walls: Vec<Circle> = Vec::new();
     let mut rays: Vec<BouncingRay2D> = Vec::new();
     let win = app.window_rect();
 
@@ -74,7 +79,7 @@ fn model(app: &App) -> Model {
     let scheme_id = 5;
     let blend_id = 2;
     let palette = Palette::new();
-    make_walls(&mut walls, &mut rays, &win, tile_count_w, 4);
+    make_circles(&mut walls, &mut rays, &win, tile_count_w, 4);
     let show_walls = true;
     let animation = true;
     let animation_speed = 0.01;
@@ -215,33 +220,39 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         r.refl_intensity.clear();
 
         // this two are not necessary but add a line more from the ray to the destination
-        r.collisions.push(r.ray.orig);
-        r.reflections.push(r.ray.dir);
-        r.refl_intensity.push(0.0);
+        // r.collisions.push(r.ray.orig);
+        // r.reflections.push(r.ray.dir);
+        // r.refl_intensity.push(0.0);
 
         while !r.max_bounces_reached() {
+            //println!("get {:?}", r.max_bounces);
             let mut collision: Vector2 = vec2(0.0, 0.0);
             let mut distance: f32 = Float::infinity();
             let mut surface_normal: Vector2 = vec2(0.0, 0.0);
             // find the closest intersection point between the ray and the walls
-            for index in (0..model.walls.len()).step_by(2) {
-                if let Some(collision_distance) = r.ray.intersect_segment(
-                    model.walls[index].x,
-                    model.walls[index].y,
-                    model.walls[index + 1].x,
-                    model.walls[index + 1].y,
-                ) {
+            for c in &model.walls {
+                if let Some(collision_distance) = r.ray.intersect_circle(c.pos, c.radius) {
                     if collision_distance < distance {
                         distance = collision_distance;
                         collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
-                        let segment_dir = (model.walls[index] - model.walls[index + 1]).normalize();
-                        surface_normal = vec2(segment_dir.y, -segment_dir.x);
+                        if r.primary_ray.orig.distance(c.pos) <= c.radius {
+                            println!("dentro");
+                            println!("{:?}", r.ray.orig.distance(c.pos));
+                            surface_normal = (c.pos - collision).normalize();
+                            println!("{:?} dis", r.primary_ray.orig.distance(c.pos));
+                            println!("{:?}", surface_normal);
+                        } else {
+                            println!("fuori");
+                            surface_normal = (collision - c.pos).normalize();
+                            println!("{:?}", surface_normal);
+                        }
                     }
                 }
             }
             if distance < Float::infinity() {
                 // collision point
                 r.bounces += 1;
+                //println!("{:?}", r.bounces);
                 let refl = r.ray.reflect(surface_normal);
                 r.refl_intensity.push(r.ray.dir.dot(refl).abs());
                 r.ray.orig = collision + refl.with_magnitude(0.03);
@@ -254,6 +265,8 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             };
         }
         r.reset();
+        // println!("{:?}", r.bounces);
+        //println!("RESE");
         if model.animation {
             r.ray.dir = r.ray.dir.rotate(_app.time * model.animation_speed);
         } else {
@@ -272,23 +285,27 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     // draw the walls
     if model.show_walls {
-        let size = model.walls.len();
-        for index in (0..size).step_by(2) {
-            draw.line()
-                .weight(model.wall_width)
-                .color(model.palette.get_scheme(model.scheme_id)[1])
-                .start(model.walls[index])
-                .caps_round()
-                .end(model.walls[index + 1]);
+        for c in &model.walls {
+            draw.ellipse()
+                .x_y(c.pos.x, c.pos.y)
+                .w_h(c.radius * 2.0, c.radius * 2.0)
+                .color(model.palette.get_scheme(model.scheme_id)[1]);
         }
     }
 
     for r in &model.rays {
-        // draw.arrow()
-        //     .color(model.palette.get_scheme(model.scheme_id)[0])
-        //     .start(r.ray.orig)
-        //     .weight(model.ray_width * 2.0)
-        //     .end(r.ray.orig + r.ray.dir.with_magnitude(20.0));
+        let mut end = vec2(0.0, 0.0);
+        println!("{:?} len", r.collisions.len());
+        if r.collisions.len() > 0 {
+            end = r.collisions[0];
+        } else {
+            end = r.ray.orig + r.ray.dir.with_magnitude(20.0);
+        }
+        draw.arrow()
+            .color(model.palette.get_scheme(model.scheme_id)[0])
+            .start(r.ray.orig)
+            .weight(model.ray_width * 2.0)
+            .end(end);
         for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
             draw.ellipse()
                 .no_fill()
@@ -339,8 +356,8 @@ fn view(app: &App, model: &Model, frame: Frame) {
     }
 }
 
-fn make_walls(
-    walls: &mut Vec<Vector2>,
+fn make_circles(
+    walls: &mut Vec<Circle>,
     rays: &mut Vec<BouncingRay2D>,
     win: &geom::Rect,
     tile_count_w: u32,
@@ -358,90 +375,21 @@ fn make_walls(
             let padding = 0.1 * side as f32;
 
             match mode {
-                0 => {
-                    if _x % 2 == 0 {
-                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                    } else {
-                        start_p = vec2(xpos + padding, ypos + padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-                    }
-                    if _x % 4 == 0 && _y % 4 == 0 {
-                        let mut r = BouncingRay2D::new();
-                        //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                        r.primary_ray.dir = Vector2::from_angle(1.0);
-                        r.primary_ray.orig = start_p;
-                        r.ray.orig = start_p;
-                        rays.push(r);
-                    } else {
-                        walls.push(start_p);
-                        walls.push(end_p);
-                    }
-                }
-                1 => {
-                    if coin > 0.5 {
-                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                    } else {
-                        start_p = vec2(xpos + padding, ypos + padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-                    }
-                    if _x % 4 == 0 && _y % 4 == 0 {
-                        let mut r = BouncingRay2D::new();
-                        r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                        r.primary_ray.orig = start_p;
-                        r.ray.orig = start_p;
-                        rays.push(r);
-                    } else {
-                        walls.push(start_p);
-                        walls.push(end_p);
-                    }
-                }
-                2 => {
-                    if coin > 0.5 {
-                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                    } else {
-                        start_p = vec2(xpos + padding, ypos + padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-                    }
-                    walls.push(start_p);
-                    walls.push(end_p);
-                }
-                3 => {
-                    if coin > 0.5 {
-                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                    } else {
-                        start_p = vec2(xpos + padding, ypos + padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-                    }
-                    if (_x == 2 && _y == 2) || (_x == 14 && _y == 14) {
-                        let mut r = BouncingRay2D::new();
-                        r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                        r.primary_ray.orig = start_p;
-                        r.ray.orig = start_p;
-                        rays.push(r);
-                    } else {
-                        walls.push(start_p);
-                        walls.push(end_p);
-                    }
-                }
                 4 => {
                     if _x % 2 == 0 && _y % 2 == 0 {
                         start_p = vec2(xpos + padding, ypos + side as f32 - padding);
                         end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                        let mut r = BouncingRay2D::new();
-                        //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                        r.primary_ray.dir = Vector2::from_angle(1.0);
-                        // r.primary_ray.orig = start_p;
-                        // r.ray.orig = start_p;
-                        let o = vec2(xpos + side as f32 / 2.0, ypos + side as f32 - padding);
-                        r.primary_ray.orig = o;
-                        r.ray.orig = o;
-                        if coin > 0.6 {
-                            rays.push(r);
-                        }
+                    // let mut r = BouncingRay2D::new();
+                    // //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                    // r.primary_ray.dir = Vector2::from_angle(1.0);
+                    // // r.primary_ray.orig = start_p;
+                    // // r.ray.orig = start_p;
+                    // let o = vec2(xpos + side as f32 / 2.0, ypos + side as f32 - padding);
+                    // r.primary_ray.orig = o;
+                    // r.ray.orig = o;
+                    // if coin > 0.6 {
+                    //     rays.push(r);
+                    // }
                     } else if _y % 2 == 0 && _x % 2 != 0 {
                         start_p = vec2(xpos + padding, ypos + padding);
                         end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
@@ -452,8 +400,12 @@ fn make_walls(
                         start_p = vec2(xpos + padding, ypos + padding);
                         end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
                     }
-                    walls.push(start_p);
-                    walls.push(end_p);
+                    walls.push(Circle {
+                        pos: start_p,
+                        radius: 50.0,
+                    });
+
+                    //}
                 }
                 _ => {}
             }
@@ -463,13 +415,17 @@ fn make_walls(
         ypos = win.bottom();
         xpos += side as f32;
     }
-    if mode == 2 {
-        let mut r = BouncingRay2D::new();
-        r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-        r.primary_ray.orig = vec2(0.0, 0.0);
-        r.ray.orig = vec2(0.0, 0.0);
-        rays.push(r);
-    }
+    let mut r = BouncingRay2D::new();
+    //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+    r.primary_ray.dir = Vector2::from_angle(1.0);
+    // r.primary_ray.orig = start_p;
+    // r.ray.orig = start_p;
+    let o = vec2(40.0, -340.0);
+    r.primary_ray.orig = o;
+    r.ray.orig = o;
+    //if coin > 0.6 {
+    println!("get {:?}", r);
+    rays.push(r);
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {

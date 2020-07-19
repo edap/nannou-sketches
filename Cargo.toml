@@ -11,6 +11,8 @@ members = [
 	"rayquad",
 	"rayquad2",
 	"rayquad3",
+	"raycircle",
+	"screeneffect",
 	"template-quad"
 ]
 

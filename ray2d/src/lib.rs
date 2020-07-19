@@ -78,4 +78,40 @@ impl Ray2D {
             None
         }
     }
+
+    pub fn intersect_circle(&self, center: Vector2, radius: f32) -> Option<f32> {
+        // let h = center - self.orig;
+        // let lf = self.dir.dot(h);
+        // let mut s = radius.powi(2) - h.dot(h) + lf.powi(2);
+
+        // if s < 0.0 {
+        //     None
+        // } else {
+        //     s = s.sqrt();
+        //     let first_collision: f32;
+        //     if lf < s && lf + s >= f32::zero() {
+        //         s = -s;
+        //         first_collision = lf + s;
+        //     } else {
+        //         first_collision = lf - s;
+        //     }
+        //     Some(first_collision)
+        // }
+
+        let l = center - self.orig;
+        let adj = l.dot(self.dir);
+        let d2 = l.dot(l) - (adj * adj);
+        let radius2 = radius * radius;
+        if d2 > radius2 {
+            return None;
+        }
+        let thc = (radius2 - d2).sqrt();
+        let t0 = adj - thc;
+        let t1 = adj + thc;
+        if t0 < 0.0 && t1 < 0.0 {
+            return None;
+        }
+        let distance = if t0 < t1 { t0 } else { t1 };
+        Some(distance)
+    }
 }
