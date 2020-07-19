@@ -21,7 +21,7 @@ impl BouncingRay2D {
             primary_ray: Ray2D::new(),
             ray: Ray2D::new(),
             bounces: 0,
-            max_bounces: 10,
+            max_bounces: 100,
             collisions,
             reflections,
             refl_intensity: refl_intensity,

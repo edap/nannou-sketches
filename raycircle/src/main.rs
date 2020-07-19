@@ -71,7 +71,7 @@ fn model(app: &App) -> Model {
     // Generate some ids for our widgets.
     let ids = Ids::new(ui.widget_id_generator());
 
-    let ray_width = 6.0;
+    let ray_width = 2.0;
     let wall_width = 2.0;
     let rotation = 0.0;
     let collision_radius = 3.0;
@@ -81,10 +81,10 @@ fn model(app: &App) -> Model {
     let palette = Palette::new();
     make_circles(&mut walls, &mut rays, &win, tile_count_w, 4);
     let show_walls = true;
-    let animation = true;
+    let animation = false;
     let animation_speed = 0.01;
     let draw_refl = true;
-    let draw_polygon = true;
+    let draw_polygon = false;
 
     Model {
         walls,
@@ -218,6 +218,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         r.collisions.clear();
         r.reflections.clear();
         r.refl_intensity.clear();
+        r.primary_ray.orig.x = (_app.time.sin() * 0.18) * 400.0;
 
         // this two are not necessary but add a line more from the ray to the destination
         // r.collisions.push(r.ray.orig);
@@ -235,24 +236,13 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                     if collision_distance < distance {
                         distance = collision_distance;
                         collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
-                        if r.primary_ray.orig.distance(c.pos) <= c.radius {
-                            println!("dentro");
-                            println!("{:?}", r.ray.orig.distance(c.pos));
-                            surface_normal = (c.pos - collision).normalize();
-                            println!("{:?} dis", r.primary_ray.orig.distance(c.pos));
-                            println!("{:?}", surface_normal);
-                        } else {
-                            println!("fuori");
-                            surface_normal = (collision - c.pos).normalize();
-                            println!("{:?}", surface_normal);
-                        }
+                        surface_normal = (collision - c.pos).normalize();
                     }
                 }
             }
             if distance < Float::infinity() {
                 // collision point
                 r.bounces += 1;
-                //println!("{:?}", r.bounces);
                 let refl = r.ray.reflect(surface_normal);
                 r.refl_intensity.push(r.ray.dir.dot(refl).abs());
                 r.ray.orig = collision + refl.with_magnitude(0.03);
@@ -294,18 +284,12 @@ fn view(app: &App, model: &Model, frame: Frame) {
     }
 
     for r in &model.rays {
-        let mut end = vec2(0.0, 0.0);
-        println!("{:?} len", r.collisions.len());
-        if r.collisions.len() > 0 {
-            end = r.collisions[0];
-        } else {
-            end = r.ray.orig + r.ray.dir.with_magnitude(20.0);
-        }
+        println!("{:?} ncoll", r.collisions.len());
         draw.arrow()
             .color(model.palette.get_scheme(model.scheme_id)[0])
             .start(r.ray.orig)
             .weight(model.ray_width * 2.0)
-            .end(end);
+            .end(r.ray.orig + r.ray.dir.with_magnitude(20.0));
         for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
             draw.ellipse()
                 .no_fill()
@@ -345,7 +329,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .start(c)
                 .end(c + r.with_magnitude(20.0))
                 .stroke_weight(model.ray_width)
-                .color(model.palette.get_scheme(model.scheme_id)[1]);
+                .color(model.palette.get_scheme(model.scheme_id)[4]);
         }
     }
 
@@ -400,10 +384,10 @@ fn make_circles(
                         start_p = vec2(xpos + padding, ypos + padding);
                         end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
                     }
-                    walls.push(Circle {
-                        pos: start_p,
-                        radius: 50.0,
-                    });
+                    // walls.push(Circle {
+                    //     pos: start_p,
+                    //     radius: 50.0,
+                    // });
 
                     //}
                 }
@@ -415,12 +399,17 @@ fn make_circles(
         ypos = win.bottom();
         xpos += side as f32;
     }
+    walls.push(Circle {
+        pos: vec2(0.0, 0.0),
+        radius: 150.0,
+    });
     let mut r = BouncingRay2D::new();
     //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
     r.primary_ray.dir = Vector2::from_angle(1.0);
     // r.primary_ray.orig = start_p;
     // r.ray.orig = start_p;
-    let o = vec2(40.0, -340.0);
+    let o = vec2(10.0, 20.0);
+    //let o = vec2(300.0, 20.0);
     r.primary_ray.orig = o;
     r.ray.orig = o;
     //if coin > 0.6 {

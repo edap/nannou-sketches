@@ -36,7 +36,7 @@ impl Ray2D {
         }
         let eta = etai / etat;
         let k = 1.0 - eta * eta * (1.0 - cosi * cosi);
-        if k < 0.0 {
+        if k < f32::zero() {
             //vec2(0.0, 0.0)
             self.dir.with_magnitude(0.0)
         } else {
@@ -111,7 +111,8 @@ impl Ray2D {
         if t0 < 0.0 && t1 < 0.0 {
             return None;
         }
-        let distance = if t0 < t1 { t0 } else { t1 };
+        let inside = self.orig.distance(center) <= radius;
+        let distance = if t0 < t1 && !inside { t0 } else { t1 };
         Some(distance)
     }
 }
