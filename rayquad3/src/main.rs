@@ -20,19 +20,23 @@ struct Model {
     collision_radius: f32,
     rotation: f32,
     scheme_id: usize,
+    max_bounces: usize,
     blend_id: usize,
     palette: Palette,
     show_walls: bool,
+    draw_tex_overlay: bool,
     animation: bool,
     animation_speed: f32,
     draw_refl: bool,
     draw_polygon: bool,
+    texture: wgpu::Texture,
 }
 
 widget_ids! {
     struct Ids {
         wall_width,
         ray_width,
+        max_bounces,
         collision_radius,
         rotation,
         scheme_id,
@@ -41,7 +45,8 @@ widget_ids! {
         draw_polygon,
         animation,
         animation_speed,
-        show_walls
+        show_walls,
+        draw_tex_overlay
     }
 }
 
@@ -68,6 +73,7 @@ fn model(app: &App) -> Model {
 
     let ray_width = 6.0;
     let wall_width = 2.0;
+    let max_bounces = 20;
     let rotation = 0.0;
     let collision_radius = 3.0;
 
@@ -80,10 +86,19 @@ fn model(app: &App) -> Model {
     let animation_speed = 0.01;
     let draw_refl = true;
     let draw_polygon = true;
+    let draw_tex_overlay = true;
+
+    // texture
+    // Load the image from disk and upload it to a GPU texture.
+    let assets = app.assets_path().unwrap();
+    let img_path = assets.join("images").join("noise-texture1-tr.png");
+    //let img_path = assets.join("images").join("grunge-halftone-tr.png");
+    let texture = wgpu::Texture::from_path(app, img_path).unwrap();
 
     Model {
         walls,
         rays,
+        max_bounces,
         draw_gui,
         ui,
         ids,
@@ -99,6 +114,8 @@ fn model(app: &App) -> Model {
         animation_speed,
         draw_refl,
         draw_polygon,
+        draw_tex_overlay,
+        texture,
     }
 }
 
@@ -132,7 +149,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.wall_width = value;
         }
 
-        for value in slider(model.collision_radius as f32, 5.0, 45.0)
+        for value in slider(model.collision_radius as f32, 3.0, 45.0)
             .down(10.0)
             .label("collision radius")
             .set(model.ids.collision_radius, ui)
@@ -146,6 +163,13 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             .set(model.ids.ray_width, ui)
         {
             model.ray_width = value;
+        }
+        for value in slider(model.max_bounces as f32, 1.0, 200.0)
+            .down(30.0)
+            .label("max_bounces")
+            .set(model.ids.max_bounces, ui)
+        {
+            model.max_bounces = value as usize;
         }
 
         for val in slider(model.rotation, -PI, PI)
@@ -186,6 +210,13 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.draw_polygon = v;
         }
 
+        for v in toggle(model.draw_tex_overlay as bool)
+            .label("Draw Overlay")
+            .set(model.ids.draw_tex_overlay, ui)
+        {
+            model.draw_tex_overlay = v;
+        }
+
         for v in toggle(model.animation as bool)
             .label("Animation")
             .set(model.ids.animation, ui)
@@ -210,6 +241,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
     }
 
     for r in model.rays.iter_mut() {
+        r.max_bounces = model.max_bounces;
         r.collisions.clear();
         r.reflections.clear();
         r.refl_intensity.clear();
@@ -331,7 +363,9 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .color(model.palette.get_scheme(model.scheme_id)[1]);
         }
     }
-
+    if model.draw_tex_overlay {
+        draw.texture(&model.texture).w_h(800.0, 800.0);
+    }
     draw.to_frame(app, &frame).unwrap();
 
     if model.draw_gui {
