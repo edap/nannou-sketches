@@ -38,7 +38,7 @@ struct Model {
     draw_polygon: bool,
     polygon_contour_weight: f32,
     texture: wgpu::Texture,
-    padding:f32,
+    padding: f32,
 }
 
 widget_ids! {
@@ -94,7 +94,7 @@ fn model(app: &App) -> Model {
     let color_off = 4;
     let palette = Palette::new();
     let padding = 0.48;
-    make_balls(&mut balls, &mut rays, &win, tile_count_w, padding, 60.0, 3);
+    make_balls(&mut balls, &mut rays, &win, tile_count_w, padding, 60.0, 6);
     let show_balls = true;
     let animation = false;
     let animation_speed = 1.0;
@@ -286,7 +286,6 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         // r.reflections.push(r.ray.dir);
         // r.refl_intensity.push(0.0);
 
-
         while !r.max_bounces_reached() {
             let mut collision: Vector2 = vec2(0.0, 0.0);
             let mut distance: f32 = Float::infinity();
@@ -321,20 +320,21 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             let side = win.w() as f32 / model.tile_count_w as f32;
             let padding = side * model.padding;
             if r.primary_ray.dir.x > 0.0 {
-                r.ray.orig.x = r.primary_ray.orig.x + side as f32 / 2.0 + (_app.time * model.animation_speed).sin() * padding;    
-            }else{
-                r.ray.orig.x = r.primary_ray.orig.x - side as f32 / 2.0 - (_app.time * model.animation_speed).sin() * padding;  
+                r.ray.orig.x = r.primary_ray.orig.x
+                    + side as f32 / 2.0
+                    + (_app.time * model.animation_speed).sin() * padding;
+            } else {
+                r.ray.orig.x = r.primary_ray.orig.x
+                    - side as f32 / 2.0
+                    - (_app.time * model.animation_speed).sin() * padding;
             }
             // if r.primary_ray.dir.x > 0.0 {
-            //     r.ray.orig.x = r.primary_ray.orig.x + side as f32 / 2.0;    
+            //     r.ray.orig.x = r.primary_ray.orig.x + side as f32 / 2.0;
             // }else{
-            //     r.ray.orig.x = r.primary_ray.orig.x - side as f32 / 2.0;  
+            //     r.ray.orig.x = r.primary_ray.orig.x - side as f32 / 2.0;
             // }
-
-            
         }
         r.ray.dir = r.ray.dir.rotate(model.rotation);
-
     }
 }
 
@@ -349,10 +349,11 @@ fn view(app: &App, model: &Model, frame: Frame) {
     // draw the balls
     if model.show_balls {
         for c in &model.balls {
-            draw.ellipse()
-                .x_y(c.pos.x, c.pos.y)
-                .w_h(c.radius * 2.0, c.radius * 2.0)
-                .color(model.palette.get_second(model.scheme_id, model.color_off));
+            draw_circle_polygon(&draw, &model, &c.pos, &c.radius);
+            // draw.ellipse()
+            //     .x_y(c.pos.x, c.pos.y)
+            //     .w_h(c.radius * 2.0, c.radius * 2.0)
+            //     .color(model.palette.get_second(model.scheme_id, model.color_off));
         }
     }
 
@@ -360,8 +361,8 @@ fn view(app: &App, model: &Model, frame: Frame) {
         draw.arrow()
             .color(model.palette.get_first(model.scheme_id, model.color_off))
             .start(r.ray.orig)
-            .stroke_weight(model.ray_width)
-            .end(r.ray.orig + r.ray.dir.with_magnitude(40.0) );
+            .stroke_weight(model.ray_width * 2.0)
+            .end(r.ray.orig + r.ray.dir.with_magnitude(20.0));
         // for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
         //     draw.ellipse()
         //         .no_fill()
@@ -425,7 +426,7 @@ fn make_balls(
     rays: &mut Vec<BouncingRay2D>,
     win: &geom::Rect,
     tile_count_w: u32,
-    pad:f32,
+    pad: f32,
     radius: f32,
     density: u8, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
 ) {
@@ -436,39 +437,35 @@ fn make_balls(
     let mut index = 2;
     for _x in 0..tile_count_w {
         for _y in 0..(win.h() as u32 / side as u32) {
-            let c_x = xpos + side as f32 /2.0;
-            let c_y =  ypos + side as f32 / 2.0;
+            let c_x = xpos + side as f32 / 2.0;
+            let c_y = ypos + side as f32 / 2.0;
             balls.push(Circle {
                 pos: vec2(c_x, c_y),
                 radius: radius,
             });
 
             let mut r_y = c_y - radius;
-            let r_padding = radius * 2.0 / density as f32;
-            for i in 0..density {
+            let r_padding = radius * 2.0 / (density as f32 + 1.0);
+            for _i in 0..density {
                 let mut r = BouncingRay2D::new();
                 //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                
                 // r.primary_ray.orig = start_p;
                 // r.ray.orig = start_p;
                 //let o = vec2(300.0, 20.0);
-    
                 //if coin > 0.6 {
                 println!("{:?}", index);
+                r_y += r_padding;
                 if index % 2 == 0 {
                     r.primary_ray.dir = Vector2::from_angle(-PI);
                     r.primary_ray.orig = vec2(c_x + padding, r_y);
-                }else{
+                } else {
                     r.primary_ray.dir = Vector2::from_angle(0.0);
-                    r.primary_ray.orig = vec2(c_x -padding, r_y);
+                    r.primary_ray.orig = vec2(c_x - padding, r_y);
                 }
-                r_y += r_padding;
-    
                 r.reset();
                 println!("{:?}", r);
                 rays.push(r);
             }
-
 
             ypos += side as f32;
             index += 1;
@@ -477,6 +474,20 @@ fn make_balls(
         ypos = win.bottom();
         xpos += side as f32;
     }
+}
+
+fn draw_circle_polygon(draw: &Draw, model: &Model, center: &Vector2, radius: &f32) {
+    let points = (0..=360).step_by(2).map(|i| {
+        let rad = deg_to_rad(i as f32);
+        (
+            *center + vec2(rad.sin() * *radius, rad.cos() * *radius),
+            model.palette.get_second(model.scheme_id, model.color_off),
+        )
+    });
+    draw.polygon()
+        .stroke_weight(model.polygon_contour_weight)
+        //.stroke()
+        .points_colored(points);
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
