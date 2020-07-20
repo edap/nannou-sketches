@@ -30,6 +30,7 @@ struct Model {
     animation_speed: f32,
     draw_refl: bool,
     draw_polygon: bool,
+    polygon_contour_weight: f32,
     texture: wgpu::Texture,
 }
 
@@ -45,6 +46,7 @@ widget_ids! {
         color_off,
         draw_refl,
         draw_polygon,
+        polygon_contour_weight,
         animation,
         animation_speed,
         show_walls,
@@ -89,7 +91,8 @@ fn model(app: &App) -> Model {
     let animation_speed = 0.01;
     let draw_refl = true;
     let draw_polygon = true;
-    let draw_tex_overlay = true;
+    let polygon_contour_weight = 5.0;
+    let draw_tex_overlay = false;
 
     // texture
     // Load the image from disk and upload it to a GPU texture.
@@ -118,6 +121,7 @@ fn model(app: &App) -> Model {
         animation_speed,
         draw_refl,
         draw_polygon,
+        polygon_contour_weight,
         draw_tex_overlay,
         texture,
     }
@@ -215,6 +219,14 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.draw_refl = v;
         }
 
+        for value in slider(model.polygon_contour_weight, 1.0, 30.0)
+            .down(10.0)
+            .label("polygon cont weight")
+            .set(model.ids.polygon_contour_weight, ui)
+        {
+            model.polygon_contour_weight = value;
+        }
+
         for v in toggle(model.draw_polygon as bool)
             .label("Draw poly")
             .set(model.ids.draw_polygon, ui)
@@ -259,9 +271,9 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         r.refl_intensity.clear();
 
         // this two are not necessary but add a line more from the ray to the destination
-        r.collisions.push(r.ray.orig);
-        r.reflections.push(r.ray.dir);
-        r.refl_intensity.push(0.0);
+        // r.collisions.push(r.ray.orig);
+        // r.reflections.push(r.ray.dir);
+        // r.refl_intensity.push(0.0);
 
         while !r.max_bounces_reached() {
             let mut collision: Vector2 = vec2(0.0, 0.0);
@@ -357,7 +369,13 @@ fn view(app: &App, model: &Model, frame: Frame) {
             });
 
         if model.draw_polygon {
-            draw.polygon().points_colored(ppp);
+            draw.polygon()
+                //.stroke(model.palette.get_fourth(model.scheme_id, model.color_off))
+                .stroke(model.palette.get_third(model.scheme_id, model.color_off))
+                //.stroke(model.palette.get_second(model.scheme_id, model.color_off))
+                .stroke_weight(model.polygon_contour_weight)
+                .join_round()
+                .points_colored(ppp);
         };
 
         draw.path()
@@ -370,7 +388,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
         for (&c, &r) in r.collisions.iter().zip(r.reflections.iter()) {
             draw.arrow()
                 .start(c)
-                .end(c + r.with_magnitude(20.0))
+                .end(c + r.with_magnitude(40.0))
                 .stroke_weight(model.ray_width)
                 .color(model.palette.get_first(model.scheme_id, model.color_off));
         }
