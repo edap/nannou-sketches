@@ -63,9 +63,9 @@ widget_ids! {
 }
 
 fn model(app: &App) -> Model {
-    let tile_count_w = 3;
+    let tile_count_w = 1;
     app.new_window()
-        .size(900, 900)
+        .size(800, 800)
         .view(view)
         .key_pressed(key_pressed)
         .build()
@@ -93,8 +93,9 @@ fn model(app: &App) -> Model {
     let blend_id = 0;
     let color_off = 4;
     let palette = Palette::new();
-    let padding = 0.38;
-    make_balls(&mut balls, &mut rays, &win, tile_count_w, padding, 80.0, 6);
+    let padding = 0.44;
+    let rad = (win.w() / tile_count_w as f32) * 0.3;
+    make_balls(&mut balls, &mut rays, &win, tile_count_w, padding, rad, 5);
     let show_balls = true;
     let animation = false;
     let animation_speed = 1.0;
@@ -182,7 +183,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         {
             model.ray_width = value;
         }
-        for value in slider(model.max_bounces as f32, 1.0, 200.0)
+        for value in slider(model.max_bounces as f32, 1.0, 50.0)
             .down(10.0)
             .label("max_bounces")
             .set(model.ids.max_bounces, ui)
@@ -318,18 +319,12 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 let padding = side * model.padding;
                 if r.primary_ray.dir.x > 0.0 {
                     r.ray.orig.x = r.primary_ray.orig.x
-                        + side as f32 / 2.0
+                        + padding
                         + (_app.time * model.animation_speed).sin() * padding;
                 } else {
-                    r.ray.orig.x = r.primary_ray.orig.x
-                        - side as f32 / 2.0
-                        - (_app.time * model.animation_speed).sin() * padding;
+                    r.ray.orig.x = r.primary_ray.orig.x - padding
+                        + (_app.time * model.animation_speed).cos() * padding;
                 }
-                // if r.primary_ray.dir.x > 0.0 {
-                //     r.ray.orig.x = r.primary_ray.orig.x + side as f32 / 2.0;
-                // }else{
-                //     r.ray.orig.x = r.primary_ray.orig.x - side as f32 / 2.0;
-                // }
             }
             r.ray.dir = r.ray.dir.rotate(model.rotation);
         }
@@ -360,7 +355,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .color(model.palette.get_first(model.scheme_id, model.color_off))
                 .start(r.ray.orig)
                 .stroke_weight(model.ray_width * 2.0)
-                .end(r.ray.orig + r.ray.dir.with_magnitude(20.0));
+                .end(r.ray.orig + r.ray.dir.with_magnitude(40.0));
             // for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
             //     draw.ellipse()
             //         .no_fill()
@@ -385,7 +380,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                     (pt2(co.x, co.y), col)
                 });
 
-            if model.draw_polygon {
+            if model.draw_polygon && ppp.len() > 3 {
                 draw.polygon()
                     //.stroke(model.palette.get_third(model.scheme_id, model.color_off))
                     .stroke(model.palette.get_second(model.scheme_id, model.color_off))
