@@ -57,7 +57,7 @@ widget_ids! {
 fn model(app: &App) -> Model {
     let tile_count_w = 6;
     app.new_window()
-        .size(800, 800)
+        .size(900, 900)
         .view(view)
         .key_pressed(key_pressed)
         .build()
@@ -173,7 +173,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.ray_width = value;
         }
         for value in slider(model.max_bounces as f32, 1.0, 200.0)
-            .down(30.0)
+            .down(10.0)
             .label("max_bounces")
             .set(model.ids.max_bounces, ui)
         {
@@ -181,7 +181,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for val in slider(model.rotation, -PI, PI)
-            .down(20.0)
+            .down(10.0)
             .label("Rotation")
             .set(model.ids.rotation, ui)
         {
@@ -189,7 +189,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for value in slider(model.scheme_id as f32, 0.0, 5.0)
-            .down(30.0)
+            .down(10.0)
             .label("scheme_id")
             .set(model.ids.scheme_id, ui)
         {
@@ -197,7 +197,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for value in slider(model.blend_id as f32, 0.0, 3.0)
-            .down(30.0)
+            .down(10.0)
             .label("blend_id")
             .set(model.ids.blend_id, ui)
         {
@@ -205,7 +205,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for value in slider(model.color_off as f32, 0.0, 4.0)
-            .down(30.0)
+            .down(10.0)
             .label("color_off")
             .set(model.ids.color_off, ui)
         {
@@ -249,7 +249,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for value in slider(model.animation_speed as f32, 0.1, 0.0001)
-            .down(30.0)
+            .down(10.0)
             .label("animation speed")
             .set(model.ids.animation_speed, ui)
         {
@@ -343,7 +343,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
         draw.arrow()
             .color(model.palette.get_first(model.scheme_id, model.color_off))
             .start(r.ray.orig)
-            .weight(model.ray_width * 2.0)
+            .weight(model.ray_width * 3.0)
             .end(r.ray.orig + r.ray.dir.with_magnitude(20.0));
         for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
             draw.ellipse()
@@ -355,24 +355,33 @@ fn view(app: &App, model: &Model, frame: Frame) {
         }
 
         let mut col = rgba(0.0, 0.0, 0.0, 0.0);
+        let mut index = 1;
         let ppp = r
             .collisions
             .iter()
             .zip(r.reflections.iter())
             .map(|(&co, &re)| {
-                if re.x > 0.0 {
-                    col = model.palette.get_third(model.scheme_id, model.color_off)
-                } else {
-                    col = model.palette.get_fourth(model.scheme_id, model.color_off)
+                index += 1;
+                if model.draw_alternate{
+                    if index % 2 == 0 {
+                        col = model.palette.get_third(model.scheme_id, model.color_off)
+                    } else {
+                        col = model.palette.get_fourth(model.scheme_id, model.color_off)
+                    }
+                }else{
+                    if re.x > 0.0 {
+                        col = model.palette.get_third(model.scheme_id, model.color_off)
+                    } else {
+                        col = model.palette.get_fourth(model.scheme_id, model.color_off)
+                    }
                 }
                 (pt2(co.x, co.y), col)
             });
 
         if model.draw_polygon {
             draw.polygon()
-                //.stroke(model.palette.get_fourth(model.scheme_id, model.color_off))
-                .stroke(model.palette.get_third(model.scheme_id, model.color_off))
-                //.stroke(model.palette.get_second(model.scheme_id, model.color_off))
+                //.stroke(model.palette.get_third(model.scheme_id, model.color_off))
+                .stroke(model.palette.get_second(model.scheme_id, model.color_off))
                 .stroke_weight(model.polygon_contour_weight)
                 .join_round()
                 .points_colored(ppp);
