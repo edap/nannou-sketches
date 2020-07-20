@@ -82,8 +82,8 @@ fn model(app: &App) -> Model {
     let collision_radius = 3.0;
 
     let scheme_id = 5;
-    let blend_id = 2;
-    let color_off = 0;
+    let blend_id = 0;
+    let color_off = 4;
     let palette = Palette::new();
     make_walls(&mut walls, &mut rays, &win, tile_count_w, 3);
     let show_walls = true;
@@ -472,7 +472,7 @@ fn make_walls(
                         let o = vec2(xpos + side as f32 / 2.0, ypos + side as f32 - padding);
                         r.primary_ray.orig = o;
                         r.ray.orig = o;
-                        if coin > 0.5 {
+                        if coin > 0.6 {
                             rays.push(r);
                         }
                     } else if _y % 2 == 0 && _x % 2 != 0 {
