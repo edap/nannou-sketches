@@ -343,8 +343,8 @@ fn view(app: &App, model: &Model, frame: Frame) {
         draw.arrow()
             .color(model.palette.get_first(model.scheme_id, model.color_off))
             .start(r.ray.orig)
-            .weight(model.ray_width * 3.0)
-            .end(r.ray.orig + r.ray.dir.with_magnitude(20.0));
+            .stroke_weight(model.ray_width)
+            .end(r.ray.orig + r.ray.dir.with_magnitude(40.0) );
         for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
             draw.ellipse()
                 .no_fill()
@@ -355,26 +355,17 @@ fn view(app: &App, model: &Model, frame: Frame) {
         }
 
         let mut col = rgba(0.0, 0.0, 0.0, 0.0);
-        let mut index = 1;
         let ppp = r
             .collisions
             .iter()
             .zip(r.reflections.iter())
             .map(|(&co, &re)| {
-                index += 1;
-                if model.draw_alternate{
-                    if index % 2 == 0 {
-                        col = model.palette.get_third(model.scheme_id, model.color_off)
-                    } else {
-                        col = model.palette.get_fourth(model.scheme_id, model.color_off)
-                    }
-                }else{
-                    if re.x > 0.0 {
-                        col = model.palette.get_third(model.scheme_id, model.color_off)
-                    } else {
-                        col = model.palette.get_fourth(model.scheme_id, model.color_off)
-                    }
+                if re.x > 0.0 {
+                    col = model.palette.get_third(model.scheme_id, model.color_off)
+                } else {
+                    col = model.palette.get_fourth(model.scheme_id, model.color_off)
                 }
+
                 (pt2(co.x, co.y), col)
             });
 
