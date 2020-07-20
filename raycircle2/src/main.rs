@@ -12,12 +12,12 @@ fn main() {
 struct Circle {
     pos: Vector2,
     radius: f32,
+    rays: Vec<BouncingRay2D>,
 }
 
 struct Model {
     tile_count_w: u32,
     balls: Vec<Circle>,
-    rays: Vec<BouncingRay2D>,
     draw_gui: bool,
     ui: Ui,
     ids: Ids,
@@ -63,7 +63,7 @@ widget_ids! {
 }
 
 fn model(app: &App) -> Model {
-    let tile_count_w = 4;
+    let tile_count_w = 3;
     app.new_window()
         .size(900, 900)
         .view(view)
@@ -85,7 +85,7 @@ fn model(app: &App) -> Model {
 
     let ray_width = 3.0;
     let wall_width = 2.0;
-    let max_bounces = 20;
+    let max_bounces = 3;
     let rotation = 0.0;
     let collision_radius = 3.0;
 
@@ -93,8 +93,8 @@ fn model(app: &App) -> Model {
     let blend_id = 0;
     let color_off = 4;
     let palette = Palette::new();
-    let padding = 0.48;
-    make_balls(&mut balls, &mut rays, &win, tile_count_w, padding, 60.0, 6);
+    let padding = 0.38;
+    make_balls(&mut balls, &mut rays, &win, tile_count_w, padding, 80.0, 6);
     let show_balls = true;
     let animation = false;
     let animation_speed = 1.0;
@@ -113,7 +113,6 @@ fn model(app: &App) -> Model {
     Model {
         tile_count_w,
         balls,
-        rays,
         max_bounces,
         draw_gui,
         ui,
@@ -274,67 +273,66 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.show_balls = v;
         }
     }
-
-    for r in model.rays.iter_mut() {
-        r.max_bounces = model.max_bounces;
-        r.collisions.clear();
-        r.reflections.clear();
-        r.refl_intensity.clear();
-
-        // this two are not necessary but add a line more from the ray to the destination
-        // r.collisions.push(r.ray.orig);
-        // r.reflections.push(r.ray.dir);
-        // r.refl_intensity.push(0.0);
-
-        while !r.max_bounces_reached() {
-            let mut collision: Vector2 = vec2(0.0, 0.0);
-            let mut distance: f32 = Float::infinity();
-            let mut surface_normal: Vector2 = vec2(0.0, 0.0);
-            // find the closest intersection point between the ray and the balls
-            for c in &model.balls {
-                if let Some(collision_distance) = r.ray.intersect_circle(c.pos, c.radius) {
+    for b in model.balls.iter_mut() {
+        for r in b.rays.iter_mut() {
+            r.max_bounces = model.max_bounces;
+            r.collisions.clear();
+            r.reflections.clear();
+            r.refl_intensity.clear();
+            // this two are not necessary but add a line more from the ray to the destination
+            r.collisions.push(r.ray.orig);
+            r.reflections.push(r.ray.dir);
+            r.refl_intensity.push(0.0);
+            while !r.max_bounces_reached() {
+                let mut collision: Vector2 = vec2(0.0, 0.0);
+                let mut distance: f32 = Float::infinity();
+                let mut surface_normal: Vector2 = vec2(0.0, 0.0);
+                // find the closest intersection point between the ray and the balls
+                //for c in &model.balls {
+                if let Some(collision_distance) = r.ray.intersect_circle(b.pos, b.radius) {
                     if collision_distance < distance {
                         distance = collision_distance;
                         collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
-                        surface_normal = (collision - c.pos).normalize();
+                        surface_normal = (collision - b.pos).normalize();
                     }
                 }
+                //}
+                if distance < Float::infinity() {
+                    // collision point
+                    r.bounces += 1;
+                    let refl = r.ray.reflect(surface_normal);
+                    r.refl_intensity.push(r.ray.dir.dot(refl).abs());
+                    r.ray.orig = collision + refl.with_magnitude(0.03);
+                    r.ray.dir = refl;
+                    r.collisions.push(collision);
+                    //r.refractions.push(r.ray.refract(surface_normal, 1.0));
+                    r.reflections.push(refl);
+                } else {
+                    break;
+                };
             }
-            if distance < Float::infinity() {
-                // collision point
-                r.bounces += 1;
-                let refl = r.ray.reflect(surface_normal);
-                r.refl_intensity.push(r.ray.dir.dot(refl).abs());
-                r.ray.orig = collision + refl.with_magnitude(0.03);
-                r.ray.dir = refl;
-                r.collisions.push(collision);
-                //r.refractions.push(r.ray.refract(surface_normal, 1.0));
-                r.reflections.push(refl);
-            } else {
-                break;
-            };
-        }
-        r.reset();
-        if model.animation {
-            let win = _app.window_rect();
-            let side = win.w() as f32 / model.tile_count_w as f32;
-            let padding = side * model.padding;
-            if r.primary_ray.dir.x > 0.0 {
-                r.ray.orig.x = r.primary_ray.orig.x
-                    + side as f32 / 2.0
-                    + (_app.time * model.animation_speed).sin() * padding;
-            } else {
-                r.ray.orig.x = r.primary_ray.orig.x
-                    - side as f32 / 2.0
-                    - (_app.time * model.animation_speed).sin() * padding;
+            r.reset();
+            if model.animation {
+                let win = _app.window_rect();
+                let side = win.w() as f32 / model.tile_count_w as f32;
+                let padding = side * model.padding;
+                if r.primary_ray.dir.x > 0.0 {
+                    r.ray.orig.x = r.primary_ray.orig.x
+                        + side as f32 / 2.0
+                        + (_app.time * model.animation_speed).sin() * padding;
+                } else {
+                    r.ray.orig.x = r.primary_ray.orig.x
+                        - side as f32 / 2.0
+                        - (_app.time * model.animation_speed).sin() * padding;
+                }
+                // if r.primary_ray.dir.x > 0.0 {
+                //     r.ray.orig.x = r.primary_ray.orig.x + side as f32 / 2.0;
+                // }else{
+                //     r.ray.orig.x = r.primary_ray.orig.x - side as f32 / 2.0;
+                // }
             }
-            // if r.primary_ray.dir.x > 0.0 {
-            //     r.ray.orig.x = r.primary_ray.orig.x + side as f32 / 2.0;
-            // }else{
-            //     r.ray.orig.x = r.primary_ray.orig.x - side as f32 / 2.0;
-            // }
+            r.ray.dir = r.ray.dir.rotate(model.rotation);
         }
-        r.ray.dir = r.ray.dir.rotate(model.rotation);
     }
 }
 
@@ -356,60 +354,61 @@ fn view(app: &App, model: &Model, frame: Frame) {
             //     .color(model.palette.get_second(model.scheme_id, model.color_off));
         }
     }
+    for c in &model.balls {
+        for r in &c.rays {
+            draw.arrow()
+                .color(model.palette.get_first(model.scheme_id, model.color_off))
+                .start(r.ray.orig)
+                .stroke_weight(model.ray_width * 2.0)
+                .end(r.ray.orig + r.ray.dir.with_magnitude(20.0));
+            // for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
+            //     draw.ellipse()
+            //         .no_fill()
+            //         .stroke(model.palette.get_third(model.scheme_id, model.color_off))
+            //         .stroke_weight(3.0)
+            //         .x_y(c.x, c.y)
+            //         .w_h(model.collision_radius * i, model.collision_radius * i);
+            // }
 
-    for r in &model.rays {
-        draw.arrow()
-            .color(model.palette.get_first(model.scheme_id, model.color_off))
-            .start(r.ray.orig)
-            .stroke_weight(model.ray_width * 2.0)
-            .end(r.ray.orig + r.ray.dir.with_magnitude(20.0));
-        // for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
-        //     draw.ellipse()
-        //         .no_fill()
-        //         .stroke(model.palette.get_third(model.scheme_id, model.color_off))
-        //         .stroke_weight(3.0)
-        //         .x_y(c.x, c.y)
-        //         .w_h(model.collision_radius * i, model.collision_radius * i);
-        // }
+            let mut col = rgba(0.0, 0.0, 0.0, 0.0);
+            let ppp = r
+                .collisions
+                .iter()
+                .zip(r.reflections.iter())
+                .map(|(&co, &re)| {
+                    if re.x > 0.0 {
+                        col = model.palette.get_third(model.scheme_id, model.color_off)
+                    } else {
+                        col = model.palette.get_fourth(model.scheme_id, model.color_off)
+                    }
 
-        let mut col = rgba(0.0, 0.0, 0.0, 0.0);
-        let ppp = r
-            .collisions
-            .iter()
-            .zip(r.reflections.iter())
-            .map(|(&co, &re)| {
-                if re.x > 0.0 {
-                    col = model.palette.get_third(model.scheme_id, model.color_off)
-                } else {
-                    col = model.palette.get_fourth(model.scheme_id, model.color_off)
-                }
+                    (pt2(co.x, co.y), col)
+                });
 
-                (pt2(co.x, co.y), col)
-            });
+            if model.draw_polygon {
+                draw.polygon()
+                    //.stroke(model.palette.get_third(model.scheme_id, model.color_off))
+                    .stroke(model.palette.get_second(model.scheme_id, model.color_off))
+                    .stroke_weight(model.polygon_contour_weight)
+                    .join_round()
+                    .points_colored(ppp);
+            };
 
-        if model.draw_polygon {
-            draw.polygon()
-                //.stroke(model.palette.get_third(model.scheme_id, model.color_off))
-                .stroke(model.palette.get_second(model.scheme_id, model.color_off))
-                .stroke_weight(model.polygon_contour_weight)
-                .join_round()
-                .points_colored(ppp);
-        };
+            draw.path()
+                .stroke()
+                .stroke_weight(model.ray_width)
+                .caps_round()
+                .points(r.collisions.iter().cloned())
+                .color(model.palette.get_first(model.scheme_id, model.color_off));
 
-        // draw.path()
-        //     .stroke()
-        //     .stroke_weight(model.ray_width)
-        //     .caps_round()
-        //     .points(r.collisions.iter().cloned())
-        //     .color(model.palette.get_first(model.scheme_id, model.color_off));
-
-        // for (&c, &r) in r.collisions.iter().zip(r.reflections.iter()) {
-        //     draw.arrow()
-        //         .start(c)
-        //         .end(c + r.with_magnitude(40.0))
-        //         .stroke_weight(model.ray_width)
-        //         .color(model.palette.get_first(model.scheme_id, model.color_off));
-        // }
+            // for (&c, &r) in r.collisions.iter().zip(r.reflections.iter()) {
+            //     draw.arrow()
+            //         .start(c)
+            //         .end(c + r.with_magnitude(40.0))
+            //         .stroke_weight(model.ray_width)
+            //         .color(model.palette.get_first(model.scheme_id, model.color_off));
+            // }
+        }
     }
     if model.draw_tex_overlay {
         draw.texture(&model.texture).w_h(800.0, 800.0);
@@ -436,16 +435,13 @@ fn make_balls(
     let padding = side as f32 * pad;
     let mut index = 2;
     for _x in 0..tile_count_w {
-        for _y in 0..(win.h() as u32 / side as u32) {
+        for _y in 0..=(win.h() as u32 / side as u32) {
             let c_x = xpos + side as f32 / 2.0;
             let c_y = ypos + side as f32 / 2.0;
-            balls.push(Circle {
-                pos: vec2(c_x, c_y),
-                radius: radius,
-            });
 
             let mut r_y = c_y - radius;
             let r_padding = radius * 2.0 / (density as f32 + 1.0);
+            let mut rays: Vec<BouncingRay2D> = Vec::new();
             for _i in 0..density {
                 let mut r = BouncingRay2D::new();
                 //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
@@ -466,6 +462,11 @@ fn make_balls(
                 println!("{:?}", r);
                 rays.push(r);
             }
+            balls.push(Circle {
+                pos: vec2(c_x, c_y),
+                radius: radius,
+                rays: rays,
+            });
 
             ypos += side as f32;
             index += 1;
