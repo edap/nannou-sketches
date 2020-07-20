@@ -9,8 +9,14 @@ fn main() {
     nannou::app(model).update(update).run();
 }
 
+struct Circle {
+    pos: Vector2,
+    radius: f32,
+}
+
 struct Model {
-    walls: Vec<Vector2>,
+    tile_count_w: u32,
+    balls: Vec<Circle>,
     rays: Vec<BouncingRay2D>,
     draw_gui: bool,
     ui: Ui,
@@ -24,7 +30,7 @@ struct Model {
     blend_id: usize,
     color_off: usize,
     palette: Palette,
-    show_walls: bool,
+    show_balls: bool,
     draw_tex_overlay: bool,
     animation: bool,
     animation_speed: f32,
@@ -32,6 +38,7 @@ struct Model {
     draw_polygon: bool,
     polygon_contour_weight: f32,
     texture: wgpu::Texture,
+    padding:f32,
 }
 
 widget_ids! {
@@ -48,14 +55,15 @@ widget_ids! {
         draw_polygon,
         polygon_contour_weight,
         animation,
+        padding,
         animation_speed,
-        show_walls,
+        show_balls,
         draw_tex_overlay
     }
 }
 
 fn model(app: &App) -> Model {
-    let tile_count_w = 6;
+    let tile_count_w = 4;
     app.new_window()
         .size(900, 900)
         .view(view)
@@ -63,7 +71,7 @@ fn model(app: &App) -> Model {
         .build()
         .unwrap();
 
-    let mut walls: Vec<Vector2> = Vec::new();
+    let mut balls: Vec<Circle> = Vec::new();
     let mut rays: Vec<BouncingRay2D> = Vec::new();
     let win = app.window_rect();
 
@@ -75,7 +83,7 @@ fn model(app: &App) -> Model {
     // Generate some ids for our widgets.
     let ids = Ids::new(ui.widget_id_generator());
 
-    let ray_width = 6.0;
+    let ray_width = 3.0;
     let wall_width = 2.0;
     let max_bounces = 20;
     let rotation = 0.0;
@@ -85,12 +93,13 @@ fn model(app: &App) -> Model {
     let blend_id = 0;
     let color_off = 4;
     let palette = Palette::new();
-    make_walls(&mut walls, &mut rays, &win, tile_count_w, 3);
-    let show_walls = true;
-    let animation = true;
-    let animation_speed = 0.01;
+    let padding = 0.48;
+    make_balls(&mut balls, &mut rays, &win, tile_count_w, padding, 60.0, 3);
+    let show_balls = true;
+    let animation = false;
+    let animation_speed = 1.0;
     let draw_refl = true;
-    let draw_polygon = true;
+    let draw_polygon = false;
     let polygon_contour_weight = 5.0;
     let draw_tex_overlay = false;
 
@@ -102,7 +111,8 @@ fn model(app: &App) -> Model {
     let texture = wgpu::Texture::from_path(app, img_path).unwrap();
 
     Model {
-        walls,
+        tile_count_w,
+        balls,
         rays,
         max_bounces,
         draw_gui,
@@ -116,11 +126,12 @@ fn model(app: &App) -> Model {
         blend_id,
         color_off,
         palette,
-        show_walls,
+        show_balls,
         animation,
         animation_speed,
         draw_refl,
         draw_polygon,
+        padding,
         polygon_contour_weight,
         draw_tex_overlay,
         texture,
@@ -248,7 +259,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.animation = v;
         }
 
-        for value in slider(model.animation_speed as f32, 0.1, 0.0001)
+        for value in slider(model.animation_speed as f32, 2.0, 0.1)
             .down(10.0)
             .label("animation speed")
             .set(model.ids.animation_speed, ui)
@@ -256,11 +267,11 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.animation_speed = value;
         }
 
-        for v in toggle(model.show_walls as bool)
+        for v in toggle(model.show_balls as bool)
             .label("Show wall")
-            .set(model.ids.show_walls, ui)
+            .set(model.ids.show_balls, ui)
         {
-            model.show_walls = v;
+            model.show_balls = v;
         }
     }
 
@@ -275,23 +286,18 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         // r.reflections.push(r.ray.dir);
         // r.refl_intensity.push(0.0);
 
+
         while !r.max_bounces_reached() {
             let mut collision: Vector2 = vec2(0.0, 0.0);
             let mut distance: f32 = Float::infinity();
             let mut surface_normal: Vector2 = vec2(0.0, 0.0);
-            // find the closest intersection point between the ray and the walls
-            for index in (0..model.walls.len()).step_by(2) {
-                if let Some(collision_distance) = r.ray.intersect_segment(
-                    model.walls[index].x,
-                    model.walls[index].y,
-                    model.walls[index + 1].x,
-                    model.walls[index + 1].y,
-                ) {
+            // find the closest intersection point between the ray and the balls
+            for c in &model.balls {
+                if let Some(collision_distance) = r.ray.intersect_circle(c.pos, c.radius) {
                     if collision_distance < distance {
                         distance = collision_distance;
                         collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
-                        let segment_dir = (model.walls[index] - model.walls[index + 1]).normalize();
-                        surface_normal = vec2(segment_dir.y, -segment_dir.x);
+                        surface_normal = (collision - c.pos).normalize();
                     }
                 }
             }
@@ -311,10 +317,24 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
         r.reset();
         if model.animation {
-            r.ray.dir = r.ray.dir.rotate(_app.time * model.animation_speed);
-        } else {
-            r.ray.dir = r.ray.dir.rotate(model.rotation);
+            let win = _app.window_rect();
+            let side = win.w() as f32 / model.tile_count_w as f32;
+            let padding = side * model.padding;
+            if r.primary_ray.dir.x > 0.0 {
+                r.ray.orig.x = r.primary_ray.orig.x + side as f32 / 2.0 + (_app.time * model.animation_speed).sin() * padding;    
+            }else{
+                r.ray.orig.x = r.primary_ray.orig.x - side as f32 / 2.0 - (_app.time * model.animation_speed).sin() * padding;  
+            }
+            // if r.primary_ray.dir.x > 0.0 {
+            //     r.ray.orig.x = r.primary_ray.orig.x + side as f32 / 2.0;    
+            // }else{
+            //     r.ray.orig.x = r.primary_ray.orig.x - side as f32 / 2.0;  
+            // }
+
+            
         }
+        r.ray.dir = r.ray.dir.rotate(model.rotation);
+
     }
 }
 
@@ -326,16 +346,13 @@ fn view(app: &App, model: &Model, frame: Frame) {
     draw.background()
         .color(model.palette.get_fifth(model.scheme_id, model.color_off));
 
-    // draw the walls
-    if model.show_walls {
-        let size = model.walls.len();
-        for index in (0..size).step_by(2) {
-            draw.line()
-                .weight(model.wall_width)
-                .color(model.palette.get_second(model.scheme_id, model.color_off))
-                .start(model.walls[index])
-                .caps_round()
-                .end(model.walls[index + 1]);
+    // draw the balls
+    if model.show_balls {
+        for c in &model.balls {
+            draw.ellipse()
+                .x_y(c.pos.x, c.pos.y)
+                .w_h(c.radius * 2.0, c.radius * 2.0)
+                .color(model.palette.get_second(model.scheme_id, model.color_off));
         }
     }
 
@@ -345,14 +362,14 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .start(r.ray.orig)
             .stroke_weight(model.ray_width)
             .end(r.ray.orig + r.ray.dir.with_magnitude(40.0) );
-        for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
-            draw.ellipse()
-                .no_fill()
-                .stroke(model.palette.get_third(model.scheme_id, model.color_off))
-                .stroke_weight(3.0)
-                .x_y(c.x, c.y)
-                .w_h(model.collision_radius * i, model.collision_radius * i);
-        }
+        // for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
+        //     draw.ellipse()
+        //         .no_fill()
+        //         .stroke(model.palette.get_third(model.scheme_id, model.color_off))
+        //         .stroke_weight(3.0)
+        //         .x_y(c.x, c.y)
+        //         .w_h(model.collision_radius * i, model.collision_radius * i);
+        // }
 
         let mut col = rgba(0.0, 0.0, 0.0, 0.0);
         let ppp = r
@@ -378,20 +395,20 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .points_colored(ppp);
         };
 
-        draw.path()
-            .stroke()
-            .stroke_weight(model.ray_width)
-            .caps_round()
-            .points(r.collisions.iter().cloned())
-            .color(model.palette.get_first(model.scheme_id, model.color_off));
+        // draw.path()
+        //     .stroke()
+        //     .stroke_weight(model.ray_width)
+        //     .caps_round()
+        //     .points(r.collisions.iter().cloned())
+        //     .color(model.palette.get_first(model.scheme_id, model.color_off));
 
-        for (&c, &r) in r.collisions.iter().zip(r.reflections.iter()) {
-            draw.arrow()
-                .start(c)
-                .end(c + r.with_magnitude(40.0))
-                .stroke_weight(model.ray_width)
-                .color(model.palette.get_first(model.scheme_id, model.color_off));
-        }
+        // for (&c, &r) in r.collisions.iter().zip(r.reflections.iter()) {
+        //     draw.arrow()
+        //         .start(c)
+        //         .end(c + r.with_magnitude(40.0))
+        //         .stroke_weight(model.ray_width)
+        //         .color(model.palette.get_first(model.scheme_id, model.color_off));
+        // }
     }
     if model.draw_tex_overlay {
         draw.texture(&model.texture).w_h(800.0, 800.0);
@@ -403,96 +420,60 @@ fn view(app: &App, model: &Model, frame: Frame) {
     }
 }
 
-fn make_walls(
-    walls: &mut Vec<Vector2>,
+fn make_balls(
+    balls: &mut Vec<Circle>,
     rays: &mut Vec<BouncingRay2D>,
     win: &geom::Rect,
     tile_count_w: u32,
-    mode: u8, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
+    pad:f32,
+    radius: f32,
+    density: u8, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
 ) {
     let side = win.w() as u32 / tile_count_w;
     let mut xpos = win.left();
     let mut ypos = win.bottom();
-
+    let padding = side as f32 * pad;
+    let mut index = 2;
     for _x in 0..tile_count_w {
         for _y in 0..(win.h() as u32 / side as u32) {
-            let coin = random_range(0.0, 1.0);
-            let start_p;
-            let end_p;
-            let padding = 0.1 * side as f32;
+            let c_x = xpos + side as f32 /2.0;
+            let c_y =  ypos + side as f32 / 2.0;
+            balls.push(Circle {
+                pos: vec2(c_x, c_y),
+                radius: radius,
+            });
 
-            match mode {
-                1 => {
-                    if coin > 0.4 {
-                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                    } else {
-                        start_p = vec2(xpos + padding, ypos + padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-                    }
-                    if _x % 2 == 0 && _y % 2 == 0 {
-                        let mut r = BouncingRay2D::new();
-                        r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                        r.primary_ray.orig = start_p;
-                        r.ray.orig = start_p;
-                        rays.push(r);
-                    } else {
-                        walls.push(start_p);
-                        walls.push(end_p);
-                    }
+            let mut r_y = c_y - radius;
+            let r_padding = radius * 2.0 / density as f32;
+            for i in 0..density {
+                let mut r = BouncingRay2D::new();
+                //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                
+                // r.primary_ray.orig = start_p;
+                // r.ray.orig = start_p;
+                //let o = vec2(300.0, 20.0);
+    
+                //if coin > 0.6 {
+                println!("{:?}", index);
+                if index % 2 == 0 {
+                    r.primary_ray.dir = Vector2::from_angle(-PI);
+                    r.primary_ray.orig = vec2(c_x + padding, r_y);
+                }else{
+                    r.primary_ray.dir = Vector2::from_angle(0.0);
+                    r.primary_ray.orig = vec2(c_x -padding, r_y);
                 }
-                2 => {
-                    if coin > 0.5 {
-                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                    } else {
-                        start_p = vec2(xpos + padding, ypos + padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-                    }
-                    if (_x == 2 && _y == 2) || (_x == 14 && _y == 14) {
-                        let mut r = BouncingRay2D::new();
-                        r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                        r.primary_ray.orig = start_p;
-                        r.ray.orig = start_p;
-                        rays.push(r);
-                    } else {
-                        walls.push(start_p);
-                        walls.push(end_p);
-                    }
-                }
-                3 => {
-                    if _x % 2 == 0 && _y % 2 == 0 {
-                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                        let mut r = BouncingRay2D::new();
-                        //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                        r.primary_ray.dir = Vector2::from_angle(1.0);
-                        // r.primary_ray.orig = start_p;
-                        // r.ray.orig = start_p;
-                        let o = vec2(xpos + side as f32 / 2.0, ypos + side as f32 - padding);
-                        r.primary_ray.orig = o;
-                        r.ray.orig = o;
-                        if coin > 0.4 {
-                            rays.push(r);
-                        }
-                    } else if _y % 2 == 0 && _x % 2 != 0 {
-                        start_p = vec2(xpos + padding, ypos + padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-                    } else if _x % 2 != 0 && _y % 2 != 0 {
-                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                    } else {
-                        start_p = vec2(xpos + padding, ypos + padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-                    }
-                    walls.push(start_p);
-                    walls.push(end_p);
-                }
-                _ => {}
+                r_y += r_padding;
+    
+                r.reset();
+                println!("{:?}", r);
+                rays.push(r);
             }
 
+
             ypos += side as f32;
+            index += 1;
         }
+        index += 1;
         ypos = win.bottom();
         xpos += side as f32;
     }
