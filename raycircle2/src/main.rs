@@ -284,6 +284,8 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             r.collisions.push(r.ray.orig);
             r.reflections.push(r.ray.dir);
             r.refl_intensity.push(0.0);
+
+            // for each ray, check if it touches the sphere
             while !r.max_bounces_reached() {
                 let mut collision: Vector2 = vec2(0.0, 0.0);
                 let mut distance: f32 = Float::infinity();
@@ -295,6 +297,13 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                         distance = collision_distance;
                         collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
                         surface_normal = (collision - b.pos).normalize();
+
+                        let refl = r.ray.reflect(surface_normal);
+                        r.refl_intensity.push(r.ray.dir.dot(refl).abs());
+
+                        // cast a new ray for the refraction, continue with the reflection
+
+                        // chek if the refraction hit the sphere, decide what to do (and how many refraction do you want)
                     }
                 }
                 //}
@@ -318,12 +327,16 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 let side = win.w() as f32 / model.tile_count_w as f32;
                 let padding = side * model.padding;
                 if r.primary_ray.dir.x > 0.0 {
-                    r.ray.orig.x = r.primary_ray.orig.x
-                        + padding
-                        + (_app.time * model.animation_speed).sin() * padding;
+                    // r.ray.orig.x = r.primary_ray.orig.x
+                    //     + padding
+                    //     + (_app.time * model.animation_speed).sin() * padding;
+                    r.ray.orig.y = r.primary_ray.orig.y
+                        + (_app.time * model.animation_speed).sin() * (padding / 2.0);
                 } else {
-                    r.ray.orig.x = r.primary_ray.orig.x - padding
-                        + (_app.time * model.animation_speed).cos() * padding;
+                    // r.ray.orig.x = r.primary_ray.orig.x - padding
+                    //     + (_app.time * model.animation_speed).cos() * padding;
+                    r.ray.orig.y = r.primary_ray.orig.y
+                        + (_app.time * model.animation_speed).cos() * (padding / 2.0);
                 }
             }
             r.ray.dir = r.ray.dir.rotate(model.rotation);

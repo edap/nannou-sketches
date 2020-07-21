@@ -2,6 +2,7 @@
 
 [workspace]
 members = [
+	"svg",
 	"ray2d",
 	"edapx-colors",
 	"lines-vector",
@@ -14,6 +15,7 @@ members = [
 	"raycircle",
 	"raycircle2",
 	"screeneffect",
+	"svg-easy",
 	"template-quad"
 ]
 
