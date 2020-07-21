@@ -331,12 +331,12 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                     //     + padding
                     //     + (_app.time * model.animation_speed).sin() * padding;
                     r.ray.orig.y = r.primary_ray.orig.y
-                        + (_app.time * model.animation_speed).sin() * (padding / 2.0);
+                        + (_app.time * model.animation_speed).sin() * (padding / 4.0);
                 } else {
                     // r.ray.orig.x = r.primary_ray.orig.x - padding
                     //     + (_app.time * model.animation_speed).cos() * padding;
                     r.ray.orig.y = r.primary_ray.orig.y
-                        + (_app.time * model.animation_speed).cos() * (padding / 2.0);
+                        + (_app.time * model.animation_speed).cos() * (padding / 4.0);
                 }
             }
             r.ray.dir = r.ray.dir.rotate(model.rotation);
