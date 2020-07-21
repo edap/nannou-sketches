@@ -63,7 +63,7 @@ widget_ids! {
 }
 
 fn model(app: &App) -> Model {
-    let tile_count_w = 1;
+    let tile_count_w = 3;
     app.new_window()
         .size(800, 800)
         .view(view)
@@ -277,50 +277,63 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
     for b in model.balls.iter_mut() {
         for r in b.rays.iter_mut() {
             r.max_bounces = model.max_bounces;
-            r.collisions.clear();
-            r.reflections.clear();
-            r.refl_intensity.clear();
-            // this two are not necessary but add a line more from the ray to the destination
+            r.collisions.clear(); // qui salvo i punti che mi disegnano i primi raggi che sbattono sulla supericie del cerchio
+            r.reflections.clear(); // qui salvo la posizione della collisione tra i raggi sopra e la superficie del cerchio
+            r.refl_intensity.clear(); // qui salvo l'intensita' per ognuno di questi
+            r.refractions.clear(); // qui salvo i raggi intrappolati all'interno del cerchio
+                                   // this two are not necessary but add a line more from the ray to the destination
             r.collisions.push(r.ray.orig);
-            r.reflections.push(r.ray.dir);
-            r.refl_intensity.push(0.0);
 
             // for each ray, check if it touches the sphere
-            while !r.max_bounces_reached() {
-                let mut collision: Vector2 = vec2(0.0, 0.0);
-                let mut distance: f32 = Float::infinity();
-                let mut surface_normal: Vector2 = vec2(0.0, 0.0);
-                // find the closest intersection point between the ray and the balls
-                //for c in &model.balls {
-                if let Some(collision_distance) = r.ray.intersect_circle(b.pos, b.radius) {
-                    if collision_distance < distance {
-                        distance = collision_distance;
+
+            let mut collision: Vector2 = vec2(0.0, 0.0);
+            let mut distance: f32 = Float::infinity();
+            let mut surface_normal: Vector2 = vec2(0.0, 0.0);
+            // find the closest intersection point between the ray and the balls
+            //for c in &model.balls {
+            if let Some(collision_distance) = r.ray.intersect_circle(b.pos, b.radius) {
+                collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
+                r.collisions.push(collision);
+                r.reflections.push(collision);
+
+                surface_normal = (collision - b.pos).normalize();
+                let refl = r.ray.reflect(surface_normal);
+                r.refl_intensity.push(r.ray.dir.dot(refl).abs());
+                let end_of_first_reflection = collision + refl.with_magnitude(200.0);
+                // i push this in the collisions too, although tecnically speaking it is not
+                r.collisions.push(end_of_first_reflection);
+
+                // uso la refracted direction per settare la direzione della rifrazione
+                let refraction = r.ray.refract(surface_normal, 1.1);
+                r.ray.orig = collision + refraction.with_magnitude(0.03);
+                r.ray.dir = refraction.normalize();
+
+                r.refractions.push(r.ray.orig);
+                r.bounces += 1;
+
+                // The ray continue to bounce along the refraction surface
+                // refractions bounce n times inside the sphere
+                // bounces are used only for the refractions
+                let mut refraction: Vector2 = vec2(0.0, 0.0);
+                while !r.max_bounces_reached() {
+                    if let Some(collision_distance) = r.ray.intersect_circle(b.pos, b.radius) {
                         collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
-                        surface_normal = (collision - b.pos).normalize();
-
+                        r.refractions.push(collision);
+                        surface_normal = (b.pos - collision).normalize();
+                        // ora usi la reflected light per rimbalzare all'esterno
                         let refl = r.ray.reflect(surface_normal);
-                        r.refl_intensity.push(r.ray.dir.dot(refl).abs());
+                        r.ray.orig = collision + refraction.with_magnitude(0.03);
+                        r.ray.dir = refraction.normalize();
 
-                        // cast a new ray for the refraction, continue with the reflection
-
-                        // chek if the refraction hit the sphere, decide what to do (and how many refraction do you want)
+                        r.bounces += 1;
+                    } else {
+                        break;
                     }
                 }
-                //}
-                if distance < Float::infinity() {
-                    // collision point
-                    r.bounces += 1;
-                    let refl = r.ray.reflect(surface_normal);
-                    r.refl_intensity.push(r.ray.dir.dot(refl).abs());
-                    r.ray.orig = collision + refl.with_magnitude(0.03);
-                    r.ray.dir = refl;
-                    r.collisions.push(collision);
-                    //r.refractions.push(r.ray.refract(surface_normal, 1.0));
-                    r.reflections.push(refl);
-                } else {
-                    break;
-                };
+
+                // chek if the refraction hit the sphere, decide what to do (and how many refraction do you want)
             }
+
             r.reset();
             if model.animation {
                 let win = _app.window_rect();
@@ -369,14 +382,15 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .start(r.ray.orig)
                 .stroke_weight(model.ray_width * 2.0)
                 .end(r.ray.orig + r.ray.dir.with_magnitude(40.0));
-            // for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
-            //     draw.ellipse()
-            //         .no_fill()
-            //         .stroke(model.palette.get_third(model.scheme_id, model.color_off))
-            //         .stroke_weight(3.0)
-            //         .x_y(c.x, c.y)
-            //         .w_h(model.collision_radius * i, model.collision_radius * i);
-            // }
+            // prime collisioni sul bordo
+            for (&r, &i) in r.reflections.iter().zip(r.refl_intensity.iter()) {
+                draw.ellipse()
+                    .no_fill()
+                    .stroke(model.palette.get_third(model.scheme_id, model.color_off))
+                    .stroke_weight(3.0)
+                    .x_y(r.x, r.y)
+                    .w_h(model.collision_radius * i, model.collision_radius * i);
+            }
 
             let mut col = rgba(0.0, 0.0, 0.0, 0.0);
             let ppp = r
@@ -400,6 +414,25 @@ fn view(app: &App, model: &Model, frame: Frame) {
                     .stroke_weight(model.polygon_contour_weight)
                     .join_round()
                     .points_colored(ppp);
+            };
+
+            let rrr = r.refractions.iter().map(|(&re)| {
+                if re.x > 0.0 {
+                    col = model.palette.get_third(model.scheme_id, model.color_off)
+                } else {
+                    col = model.palette.get_fourth(model.scheme_id, model.color_off)
+                }
+
+                (pt2(re.x, re.y), col)
+            });
+
+            if model.draw_polygon && rrr.len() > 3 {
+                draw.polygon()
+                    //.stroke(model.palette.get_third(model.scheme_id, model.color_off))
+                    .stroke(model.palette.get_second(model.scheme_id, model.color_off))
+                    .stroke_weight(model.polygon_contour_weight)
+                    .join_round()
+                    .points_colored(rrr);
             };
 
             draw.path()
