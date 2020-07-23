@@ -11,6 +11,8 @@ fn main() {
 
 struct Model {
     walls: Vec<Vector2>,
+    tile_count_w: u32,
+    wall_mode: u32,
     rays: Vec<BouncingRay2D>,
     draw_gui: bool,
     ui: Ui,
@@ -37,6 +39,9 @@ struct Model {
 widget_ids! {
     struct Ids {
         wall_width,
+        tile_count_w,
+        button,
+        wall_mode,
         ray_width,
         max_bounces,
         collision_radius,
@@ -77,6 +82,7 @@ fn model(app: &App) -> Model {
 
     let ray_width = 6.0;
     let wall_width = 2.0;
+    let wall_mode = 3;
     let max_bounces = 20;
     let rotation = 0.0;
     let collision_radius = 3.0;
@@ -85,7 +91,7 @@ fn model(app: &App) -> Model {
     let blend_id = 0;
     let color_off = 4;
     let palette = Palette::new();
-    make_walls(&mut walls, &mut rays, &win, tile_count_w, 3);
+    make_walls(&mut walls, &mut rays, &win, tile_count_w, wall_mode);
     let show_walls = true;
     let animation = true;
     let animation_speed = 0.01;
@@ -103,6 +109,8 @@ fn model(app: &App) -> Model {
 
     Model {
         walls,
+        wall_mode,
+        tile_count_w,
         rays,
         max_bounces,
         draw_gui,
@@ -155,6 +163,36 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             .set(model.ids.wall_width, ui)
         {
             model.wall_width = value;
+        }
+
+        for value in slider(model.wall_mode as f32, 1.0, 3.0)
+            .down(10.0)
+            .label("wall_mode ")
+            .set(model.ids.wall_mode , ui)
+        {
+            model.wall_mode  = value as u32;
+        }
+
+        for value in slider(model.tile_count_w as f32, 1.0, 6.0)
+            .down(10.0)
+            .label("tile_count_w")
+            .set(model.ids.tile_count_w, ui)
+        {
+            model.tile_count_w = value as u32;
+        }
+
+        for _click in widget::Button::new()
+        .down(10.0)
+        .w_h(200.0, 60.0)
+        .label("Regenerate Walls")
+        .label_font_size(15)
+        .rgb(0.3, 0.3, 0.3)
+        .label_rgb(1.0, 1.0, 1.0)
+        .border(0.0)
+        .set(model.ids.button, ui)
+        {
+            let win = _app.window_rect();
+            make_walls(&mut model.walls, &mut model.rays, &win, model.tile_count_w, model.wall_mode);
         }
 
         for value in slider(model.collision_radius as f32, 3.0, 85.0)
@@ -408,8 +446,10 @@ fn make_walls(
     rays: &mut Vec<BouncingRay2D>,
     win: &geom::Rect,
     tile_count_w: u32,
-    mode: u8, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
+    mode: u32, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
 ) {
+    walls.clear();
+    rays.clear();
     let side = win.w() as u32 / tile_count_w;
     let mut xpos = win.left();
     let mut ypos = win.bottom();
@@ -487,6 +527,9 @@ fn make_walls(
                     }
                     walls.push(start_p);
                     walls.push(end_p);
+                },
+                4 => {
+                    let step = win.w() as f32 / 20.0;
                 }
                 _ => {}
             }
