@@ -9,6 +9,14 @@ fn main() {
     nannou::app(model).update(update).run();
 }
 
+#[derive(Copy, Clone)]
+struct Square {
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+}
+
 struct Model {
     walls: Vec<Vector2>,
     tile_count_w: u32,
@@ -82,7 +90,7 @@ fn model(app: &App) -> Model {
 
     let ray_width = 6.0;
     let wall_width = 2.0;
-    let wall_mode = 3;
+    let wall_mode = 4;
     let max_bounces = 20;
     let rotation = 0.0;
     let collision_radius = 3.0;
@@ -165,7 +173,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.wall_width = value;
         }
 
-        for value in slider(model.wall_mode as f32, 1.0, 3.0)
+        for value in slider(model.wall_mode as f32, 1.0, 4.0)
             .down(10.0)
             .label("wall_mode ")
             .set(model.ids.wall_mode , ui)
@@ -529,7 +537,27 @@ fn make_walls(
                     walls.push(end_p);
                 },
                 4 => {
-                    let step = win.w() as f32 / 20.0;
+                    //let step = win.w() as f32 / 20.0;
+                    let step = 200;
+                    let mut squares: Vec<Square> = Vec::new();
+                    squares.push(Square{
+                        x: 0.0,
+                        y: 0.0,
+                        width: win.w() as f32,
+                        height: win.h() as f32,
+                    });
+                    println!("{:?}", win.left());
+                    println!("{:?}", win.right());
+                    for i in (win.left() as i8 /2..win.right() as i8 / 2).step_by(step){
+                        println!("{:?}", i);
+                        split_squares(Some(i as f32), None, &mut squares);
+                        split_squares(None,Some(i as f32), &mut squares);
+                    }
+                    for square in squares{
+                        create_wall_from_square(square, walls);
+                    }
+                    // println!("{:?}", walls.len());
+                    // println!("{:?}", walls);
                 }
                 _ => {}
             }
@@ -540,6 +568,109 @@ fn make_walls(
         xpos += side as f32;
     }
 }
+
+fn create_wall_from_square(square:Square, walls: &mut Vec<Vector2>){
+    let padding = square.width * 0.1;
+    walls.push(vec2(square.x, square.y));
+    walls.push(vec2(square.x + square.width - padding, square.y));
+
+}
+
+fn split_squares(x: Option<f32>, y: Option<f32>, squares: &mut Vec<Square> ){
+    for i in (0..squares.len()).rev(){
+        let square = squares[i].clone();
+        if let Some(x_val) = x{
+            println!("{}", x_val);
+            if x_val > square.x && x_val < square.x + square.width {
+                if random_range(0.0, 1.0) > 0.0{
+                    split_on_x(i, squares, x_val);
+                }
+            }
+        }
+        // if let Some(y_val) = y{
+        //     if y_val > square.y && y_val < square.y + square.height {
+        //         if random_range(0.0, 1.0) > 0.5{
+        //             split_on_y(i, squares, y_val);
+        //         }
+        //     }
+        // }
+    }
+}
+
+fn split_on_x(square_index: usize, squares: &mut Vec<Square>, split_at: f32) {
+    let square = &squares[square_index];
+    let square_a = Square{
+        x: square.x,
+        y: square.y,
+        width: square.width - (square.width - split_at + square.x),
+        height: square.height,
+    };
+    let square_b = Square{
+        x: square.x,
+        y: square.y,
+        width: square.width - split_at + square.x,
+        height: square.height,
+    };
+    // make a copy
+    let mut copy_squares: Vec<Square> = Vec::new();
+    for square in squares.iter_mut(){
+        copy_squares.push(Square{
+            x: square.x,
+            y: square.y,
+            width: square.width,
+            height: square.height,            
+        });
+    }
+    squares.clear();
+
+    for i in (0..copy_squares.len()).rev(){
+        if i == square_index{
+            squares.push(square_a);
+            squares.push(square_b);
+        }else{
+            squares.push(copy_squares[i]);
+        }
+    }
+}
+
+  fn split_on_y(square_index: usize, squares: &mut Vec<Square>, split_at: f32) {
+    let square = &squares[square_index];
+    let square_a = Square{
+        x: square.x,
+        y: square.y,
+        width: square.width,
+        height: square.height - (square.height - split_at + square.y),
+    };
+    let square_b = Square{
+        x: square.x,
+        y: square.y,
+        width: square.width,
+        height: square.height - split_at + square.y,
+    };
+    // make a copy
+    let mut copy_squares: Vec<Square> = Vec::new();
+    for square in squares.iter_mut(){
+        copy_squares.push(Square{
+            x: square.x,
+            y: square.y,
+            width: square.width,
+            height: square.height,            
+        });
+    }
+    squares.clear();
+
+
+    for i in (0..copy_squares.len()).rev(){
+        if i == square_index{
+            squares.push(square_a);
+            squares.push(square_b);
+        }else{
+            squares.push(copy_squares[i]);
+        }
+    }
+    println!("{:?}", squares.len());
+  }
+
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
     match key {
@@ -552,3 +683,5 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
         _other_key => {}
     }
 }
+
+
