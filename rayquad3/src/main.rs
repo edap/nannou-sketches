@@ -3,18 +3,13 @@ use nannou::prelude::*;
 use nannou::ui::prelude::*;
 
 mod bouncing;
+mod mondrian;
 pub use crate::bouncing::BouncingRay2D;
+use crate::mondrian::split_squares;
+pub use crate::mondrian::Square;
 
 fn main() {
     nannou::app(model).update(update).run();
-}
-
-#[derive(Copy, Clone, Debug)]
-struct Square {
-    x: f32,
-    y: f32,
-    width: f32,
-    height: f32,
 }
 
 struct Model {
@@ -586,7 +581,7 @@ fn make_walls(
         height: win.h() as f32,
     });
     for i in (win.left() as i32..win.right() as i32).step_by(step) {
-        split_squares_together(i as f32, i as f32, &mut squares);
+        split_squares(i as f32, i as f32, &mut squares, 0.5);
     }
     for square in &squares {
         create_wall_from_square(&square, walls);
@@ -599,101 +594,6 @@ fn create_wall_from_square(square: &Square, walls: &mut Vec<Vector2>) {
     //let padding = square.width * 0.1;
     walls.push(vec2(square.x, square.y));
     walls.push(vec2(square.x + square.width, square.y + square.height));
-}
-
-fn split_squares_together(x_val: f32, y_val: f32, squares: &mut Vec<Square>) {
-    for i in (0..squares.len()).rev() {
-        println!("{:?}", i);
-        let square = squares[i].clone();
-        // println!("X");
-        // println!("x_val {}", x_val);
-        // println!("square.x {}", square.x);
-        // println!("square.width{}", square.width);
-        // println!("prima{}", x_val > square.x);
-        // println!("seconda{}", x_val <= square.x + square.width);
-        println!("x");
-        if x_val > square.x && x_val < square.x + square.width {
-            if random_range(0.0, 1.0) > 0.0 {
-                //println!("Split XXXX");
-                split_on_x(i, squares, x_val);
-                println!("SPLIT x: {}", squares.len());
-            }
-        }
-    }
-
-    for i in (0..squares.len()).rev() {
-        let square = squares[i].clone();
-
-        println!("Y {}", squares.len());
-        println!("{}", y_val < square.y + square.height);
-        println!("y_val {}", y_val);
-        println!("square.y {}", square.y);
-        println!("square.height {}", square.height);
-        if y_val > square.y && (y_val < square.y + square.height) {
-            if random_range(0.0, 1.0) > 0.0 {
-                split_on_y(i, squares, y_val);
-                println!("SPLIT y: {}", squares.len());
-            }
-        }
-    }
-}
-
-fn split_on_x(square_index: usize, squares: &mut Vec<Square>, split_at: f32) {
-    let square = &squares[square_index];
-    let square_a = Square {
-        x: square.x,
-        y: square.y,
-        width: square.width - (square.width - split_at + square.x),
-        //width: square.width / 2.0,
-        height: square.height,
-    };
-    let square_b = Square {
-        x: split_at,
-        y: square.y,
-        width: square.width - split_at + square.x,
-        //width: square.width / 2.0,
-        height: square.height,
-    };
-    let copy_squares = squares.clone();
-    squares.clear();
-
-    for i in 0..copy_squares.len() {
-        if i == square_index {
-            squares.push(square_a);
-            squares.push(square_b);
-        } else {
-            squares.push(copy_squares[i]);
-        }
-    }
-}
-
-fn split_on_y(square_index: usize, squares: &mut Vec<Square>, split_at: f32) {
-    let square = &squares[square_index];
-    let square_a = Square {
-        x: square.x,
-        y: square.y,
-        width: square.width,
-        height: square.height - (square.height - split_at + square.y),
-        //height: square.height / 2.0,
-    };
-    let square_b = Square {
-        x: square.x,
-        y: split_at,
-        width: square.width,
-        height: square.height - split_at + square.y,
-        //height: square.height / 2.0,
-    };
-    // make a copy
-    let copy_squares = squares.clone();
-    squares.clear();
-    for i in 0..copy_squares.len() {
-        if i == square_index {
-            squares.push(square_a);
-            squares.push(square_b);
-        } else {
-            squares.push(copy_squares[i]);
-        }
-    }
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
