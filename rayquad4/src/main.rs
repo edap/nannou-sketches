@@ -63,9 +63,9 @@ widget_ids! {
 }
 
 fn model(app: &App) -> Model {
-    let tile_count_w = 6;
+    let tile_count_w = 8;
     app.new_window()
-        .size(800, 900)
+        .size(800, 800)
         .view(view)
         .key_pressed(key_pressed)
         .build()
@@ -469,7 +469,7 @@ fn make_walls(
         height: win.h() as f32,
     });
     for i in (win.left() as i32..win.right() as i32).step_by(step as usize) {
-        split_squares(i as f32, i as f32, &mut squares, 0.0);
+        split_squares(i as f32, i as f32, &mut squares, 0.5);
     }
 
     // match mode {
@@ -491,6 +491,7 @@ fn make_walls(
     for square in &squares {
         match mode {
             1 => {
+                let padding = step as f32 * 0.08;
                 let mut r = BouncingRay2D::new();
                 r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
                 r.primary_ray.orig = vec2(
@@ -499,9 +500,10 @@ fn make_walls(
                 );
                 r.reset();
                 rays.push(r);
-                create_wall_from_square(&square, walls, mode);
+                create_wall_from_square(&square, walls, mode, padding);
             }
             2 => {
+                let padding = step as f32 * 0.1;
                 let mut r = BouncingRay2D::new();
                 //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
                 r.primary_ray.dir = Vector2::from_angle(PI);
@@ -511,7 +513,7 @@ fn make_walls(
                 );
                 r.reset();
                 rays.push(r);
-                create_wall_from_square(&square, walls, mode);
+                create_wall_from_square(&square, walls, mode, padding);
             }
             _ => {}
         }
@@ -520,8 +522,8 @@ fn make_walls(
     println!("{:?}", squares);
 }
 
-fn create_wall_from_square(square: &Square, walls: &mut Vec<Vector2>, mode: u32) {
-    let padding = square.width * 0.25;
+fn create_wall_from_square(square: &Square, walls: &mut Vec<Vector2>, mode: u32, padding: f32) {
+    //let padding = square.width * 0.1;
     match mode {
         1 => {
             walls.push(vec2(square.x + padding, square.y + padding));
@@ -530,26 +532,45 @@ fn create_wall_from_square(square: &Square, walls: &mut Vec<Vector2>, mode: u32)
                 square.y - padding + square.height - padding,
             ));
         }
+        // closed square
         2 => {
             let x = square.x + padding;
             let y = square.y + padding;
             let w = square.width - padding;
             let h = square.height - padding;
             // bottom
-            walls.push(vec2(x, y));
-            walls.push(vec2(x + square.width - padding, square.y));
+            walls.push(vec2(square.x + padding, square.y + padding));
+            walls.push(vec2(
+                square.x + square.width - padding * 2.0,
+                square.y + padding,
+            ));
 
             // top
-            walls.push(vec2(x, y + h));
-            walls.push(vec2(x + square.width - padding, square.y + h));
+            walls.push(vec2(
+                square.x + padding,
+                square.y + square.height - padding * 2.0,
+            ));
+            walls.push(vec2(
+                square.x + square.width - padding * 2.0,
+                square.y + square.height - padding * 2.0,
+            ));
 
             // left
-            walls.push(vec2(x, y + padding));
-            walls.push(vec2(x, square.y + h));
+            walls.push(vec2(
+                square.x + square.width - padding * 2.0,
+                square.y + padding,
+            ));
+            walls.push(vec2(
+                square.x + square.width - padding * 2.0,
+                square.y + square.height - padding * 2.0,
+            ));
 
             // right
-            walls.push(vec2(x + square.width - padding, y + padding));
-            walls.push(vec2(x + square.width - padding, square.y + h));
+            walls.push(vec2(square.x + padding, square.y + padding));
+            walls.push(vec2(
+                square.x + padding,
+                square.y + square.height - padding * 2.0,
+            ));
         }
         _ => {}
     }
