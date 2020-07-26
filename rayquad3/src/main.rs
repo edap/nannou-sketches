@@ -9,7 +9,7 @@ fn main() {
     nannou::app(model).update(update).run();
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 struct Square {
     x: f32,
     y: f32,
@@ -70,7 +70,7 @@ widget_ids! {
 fn model(app: &App) -> Model {
     let tile_count_w = 6;
     app.new_window()
-        .size(900, 900)
+        .size(400, 400)
         .view(view)
         .key_pressed(key_pressed)
         .build()
@@ -176,9 +176,9 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         for value in slider(model.wall_mode as f32, 1.0, 4.0)
             .down(10.0)
             .label("wall_mode ")
-            .set(model.ids.wall_mode , ui)
+            .set(model.ids.wall_mode, ui)
         {
-            model.wall_mode  = value as u32;
+            model.wall_mode = value as u32;
         }
 
         for value in slider(model.tile_count_w as f32, 1.0, 6.0)
@@ -190,17 +190,23 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for _click in widget::Button::new()
-        .down(10.0)
-        .w_h(200.0, 60.0)
-        .label("Regenerate Walls")
-        .label_font_size(15)
-        .rgb(0.3, 0.3, 0.3)
-        .label_rgb(1.0, 1.0, 1.0)
-        .border(0.0)
-        .set(model.ids.button, ui)
+            .down(10.0)
+            .w_h(200.0, 60.0)
+            .label("Regenerate Walls")
+            .label_font_size(15)
+            .rgb(0.3, 0.3, 0.3)
+            .label_rgb(1.0, 1.0, 1.0)
+            .border(0.0)
+            .set(model.ids.button, ui)
         {
             let win = _app.window_rect();
-            make_walls(&mut model.walls, &mut model.rays, &win, model.tile_count_w, model.wall_mode);
+            make_walls(
+                &mut model.walls,
+                &mut model.rays,
+                &win,
+                model.tile_count_w,
+                model.wall_mode,
+            );
         }
 
         for value in slider(model.collision_radius as f32, 3.0, 85.0)
@@ -390,7 +396,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .color(model.palette.get_first(model.scheme_id, model.color_off))
             .start(r.ray.orig)
             .stroke_weight(model.ray_width)
-            .end(r.ray.orig + r.ray.dir.with_magnitude(40.0) );
+            .end(r.ray.orig + r.ray.dir.with_magnitude(40.0));
         for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
             draw.ellipse()
                 .no_fill()
@@ -459,218 +465,236 @@ fn make_walls(
     walls.clear();
     rays.clear();
     let side = win.w() as u32 / tile_count_w;
-    let mut xpos = win.left();
-    let mut ypos = win.bottom();
+    // let mut xpos = win.left();
+    // let mut ypos = win.bottom();
 
-    for _x in 0..tile_count_w {
-        for _y in 0..(win.h() as u32 / side as u32) {
-            let coin = random_range(0.0, 1.0);
-            let start_p;
-            let end_p;
-            let padding = 0.1 * side as f32;
+    // for _x in 0..tile_count_w {
+    //     for _y in 0..(win.h() as u32 / side as u32) {
+    //         let coin = random_range(0.0, 1.0);
+    //         let start_p;
+    //         let end_p;
+    //         let padding = 0.1 * side as f32;
 
-            match mode {
-                1 => {
-                    if coin > 0.4 {
-                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                    } else {
-                        start_p = vec2(xpos + padding, ypos + padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-                    }
-                    if _x % 2 == 0 && _y % 2 == 0 {
-                        let mut r = BouncingRay2D::new();
-                        r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                        r.primary_ray.orig = start_p;
-                        r.ray.orig = start_p;
-                        rays.push(r);
-                    } else {
-                        walls.push(start_p);
-                        walls.push(end_p);
-                    }
-                }
-                2 => {
-                    if coin > 0.5 {
-                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                    } else {
-                        start_p = vec2(xpos + padding, ypos + padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-                    }
-                    if (_x == 2 && _y == 2) || (_x == 14 && _y == 14) {
-                        let mut r = BouncingRay2D::new();
-                        r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                        r.primary_ray.orig = start_p;
-                        r.ray.orig = start_p;
-                        rays.push(r);
-                    } else {
-                        walls.push(start_p);
-                        walls.push(end_p);
-                    }
-                }
-                3 => {
-                    if _x % 2 == 0 && _y % 2 == 0 {
-                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                        let mut r = BouncingRay2D::new();
-                        //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                        r.primary_ray.dir = Vector2::from_angle(1.0);
-                        // r.primary_ray.orig = start_p;
-                        // r.ray.orig = start_p;
-                        let o = vec2(xpos + side as f32 / 2.0, ypos + side as f32 - padding);
-                        r.primary_ray.orig = o;
-                        r.ray.orig = o;
-                        if coin > 0.4 {
-                            rays.push(r);
-                        }
-                    } else if _y % 2 == 0 && _x % 2 != 0 {
-                        start_p = vec2(xpos + padding, ypos + padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-                    } else if _x % 2 != 0 && _y % 2 != 0 {
-                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                    } else {
-                        start_p = vec2(xpos + padding, ypos + padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-                    }
-                    walls.push(start_p);
-                    walls.push(end_p);
-                },
-                4 => {
-                    //let step = win.w() as f32 / 20.0;
-                    let step = 200;
-                    let mut squares: Vec<Square> = Vec::new();
-                    squares.push(Square{
-                        x: 0.0,
-                        y: 0.0,
-                        width: win.w() as f32,
-                        height: win.h() as f32,
-                    });
-                    println!("{:?}", win.left());
-                    println!("{:?}", win.right());
-                    for i in (win.left() as i8 /2..win.right() as i8 / 2).step_by(step){
-                        println!("{:?}", i);
-                        split_squares(Some(i as f32), None, &mut squares);
-                        split_squares(None,Some(i as f32), &mut squares);
-                    }
-                    for square in squares{
-                        create_wall_from_square(square, walls);
-                    }
-                    // println!("{:?}", walls.len());
-                    // println!("{:?}", walls);
-                }
-                _ => {}
-            }
+    //         match mode {
+    //             1 => {
+    //                 if coin > 0.4 {
+    //                     start_p = vec2(xpos + padding, ypos + side as f32 - padding);
+    //                     end_p = vec2(xpos + side as f32 - padding, ypos + padding);
+    //                 } else {
+    //                     start_p = vec2(xpos + padding, ypos + padding);
+    //                     end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
+    //                 }
+    //                 if _x % 2 == 0 && _y % 2 == 0 {
+    //                     let mut r = BouncingRay2D::new();
+    //                     r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+    //                     r.primary_ray.orig = start_p;
+    //                     r.ray.orig = start_p;
+    //                     rays.push(r);
+    //                 } else {
+    //                     walls.push(start_p);
+    //                     walls.push(end_p);
+    //                 }
+    //             }
+    //             2 => {
+    //                 if coin > 0.5 {
+    //                     start_p = vec2(xpos + padding, ypos + side as f32 - padding);
+    //                     end_p = vec2(xpos + side as f32 - padding, ypos + padding);
+    //                 } else {
+    //                     start_p = vec2(xpos + padding, ypos + padding);
+    //                     end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
+    //                 }
+    //                 if (_x == 2 && _y == 2) || (_x == 14 && _y == 14) {
+    //                     let mut r = BouncingRay2D::new();
+    //                     r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+    //                     r.primary_ray.orig = start_p;
+    //                     r.ray.orig = start_p;
+    //                     rays.push(r);
+    //                 } else {
+    //                     walls.push(start_p);
+    //                     walls.push(end_p);
+    //                 }
+    //             }
+    //             3 => {
+    //                 if _x % 2 == 0 && _y % 2 == 0 {
+    //                     start_p = vec2(xpos + padding, ypos + side as f32 - padding);
+    //                     end_p = vec2(xpos + side as f32 - padding, ypos + padding);
+    //                     let mut r = BouncingRay2D::new();
+    //                     //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+    //                     r.primary_ray.dir = Vector2::from_angle(1.0);
+    //                     // r.primary_ray.orig = start_p;
+    //                     // r.ray.orig = start_p;
+    //                     let o = vec2(xpos + side as f32 / 2.0, ypos + side as f32 - padding);
+    //                     r.primary_ray.orig = o;
+    //                     r.ray.orig = o;
+    //                     if coin > 0.4 {
+    //                         rays.push(r);
+    //                     }
+    //                 } else if _y % 2 == 0 && _x % 2 != 0 {
+    //                     start_p = vec2(xpos + padding, ypos + padding);
+    //                     end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
+    //                 } else if _x % 2 != 0 && _y % 2 != 0 {
+    //                     start_p = vec2(xpos + padding, ypos + side as f32 - padding);
+    //                     end_p = vec2(xpos + side as f32 - padding, ypos + padding);
+    //                 } else {
+    //                     start_p = vec2(xpos + padding, ypos + padding);
+    //                     end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
+    //                 }
+    //                 walls.push(start_p);
+    //                 walls.push(end_p);
+    //             }
+    //             4 => {
+    //                 //let step = win.w() as f32 / 20.0;
+    //                 let step = 200;
+    //                 let mut squares: Vec<Square> = Vec::new();
+    //                 squares.push(Square {
+    //                     x: win.left(),
+    //                     y: win.bottom(),
+    //                     width: win.right() as f32,
+    //                     height: win.top() as f32,
+    //                 });
+    //                 println!("L {:?}", win.left());
+    //                 println!("B {:?}", win.bottom());
+    //                 println!("R {:?}", win.right());
+    //                 println!("T {:?}", win.top());
+    //                 for i in (win.left() as i32..=win.right() as i32).step_by(step) {
+    //                     println!("current {:?}", i);
+    //                     split_squares(Some(i as f32), None, &mut squares);
+    //                     split_squares(None, Some(i as f32), &mut squares);
+    //                 }
+    //                 for square in squares {
+    //                     create_wall_from_square(square, walls);
+    //                 }
+    //                 //println!("{:?}", walls.len());
+    //                 println!("{:?}", walls);
+    //             }
+    //             _ => {}
+    //         }
 
-            ypos += side as f32;
-        }
-        ypos = win.bottom();
-        xpos += side as f32;
+    //         ypos += side as f32;
+    //     }
+    //     ypos = win.bottom();
+    //     xpos += side as f32;
+    // }
+
+    //let step = win.w() as f32 / 20.0;
+    let step = 50;
+    let mut squares: Vec<Square> = Vec::new();
+    squares.push(Square {
+        x: win.left(),
+        y: win.bottom(),
+        width: win.w() as f32,
+        height: win.h() as f32,
+    });
+    for i in (win.left() as i32..win.right() as i32).step_by(step) {
+        split_squares_together(i as f32, i as f32, &mut squares);
     }
+    for square in &squares {
+        create_wall_from_square(&square, walls);
+    }
+    //println!("{:?}", walls.len());
+    println!("{:?}", squares);
 }
 
-fn create_wall_from_square(square:Square, walls: &mut Vec<Vector2>){
-    let padding = square.width * 0.1;
+fn create_wall_from_square(square: &Square, walls: &mut Vec<Vector2>) {
+    //let padding = square.width * 0.1;
     walls.push(vec2(square.x, square.y));
-    walls.push(vec2(square.x + square.width - padding, square.y));
-
+    walls.push(vec2(square.x + square.width, square.y + square.height));
 }
 
-fn split_squares(x: Option<f32>, y: Option<f32>, squares: &mut Vec<Square> ){
-    for i in (0..squares.len()).rev(){
+fn split_squares_together(x_val: f32, y_val: f32, squares: &mut Vec<Square>) {
+    for i in (0..squares.len()).rev() {
+        println!("{:?}", i);
         let square = squares[i].clone();
-        if let Some(x_val) = x{
-            println!("{}", x_val);
-            if x_val > square.x && x_val < square.x + square.width {
-                if random_range(0.0, 1.0) > 0.0{
-                    split_on_x(i, squares, x_val);
-                }
+        // println!("X");
+        // println!("x_val {}", x_val);
+        // println!("square.x {}", square.x);
+        // println!("square.width{}", square.width);
+        // println!("prima{}", x_val > square.x);
+        // println!("seconda{}", x_val <= square.x + square.width);
+        println!("x");
+        if x_val > square.x && x_val < square.x + square.width {
+            if random_range(0.0, 1.0) > 0.0 {
+                //println!("Split XXXX");
+                split_on_x(i, squares, x_val);
+                println!("SPLIT x: {}", squares.len());
             }
         }
-        // if let Some(y_val) = y{
-        //     if y_val > square.y && y_val < square.y + square.height {
-        //         if random_range(0.0, 1.0) > 0.5{
-        //             split_on_y(i, squares, y_val);
-        //         }
-        //     }
-        // }
+    }
+
+    for i in (0..squares.len()).rev() {
+        let square = squares[i].clone();
+
+        println!("Y {}", squares.len());
+        println!("{}", y_val < square.y + square.height);
+        println!("y_val {}", y_val);
+        println!("square.y {}", square.y);
+        println!("square.height {}", square.height);
+        if y_val > square.y && (y_val < square.y + square.height) {
+            if random_range(0.0, 1.0) > 0.0 {
+                split_on_y(i, squares, y_val);
+                println!("SPLIT y: {}", squares.len());
+            }
+        }
     }
 }
 
 fn split_on_x(square_index: usize, squares: &mut Vec<Square>, split_at: f32) {
     let square = &squares[square_index];
-    let square_a = Square{
+    let square_a = Square {
         x: square.x,
         y: square.y,
         width: square.width - (square.width - split_at + square.x),
+        //width: square.width / 2.0,
         height: square.height,
     };
-    let square_b = Square{
-        x: square.x,
+    let square_b = Square {
+        x: split_at,
         y: square.y,
         width: square.width - split_at + square.x,
+        //width: square.width / 2.0,
         height: square.height,
     };
-    // make a copy
-    let mut copy_squares: Vec<Square> = Vec::new();
-    for square in squares.iter_mut(){
-        copy_squares.push(Square{
-            x: square.x,
-            y: square.y,
-            width: square.width,
-            height: square.height,            
-        });
-    }
+    let copy_squares = squares.clone();
     squares.clear();
 
-    for i in (0..copy_squares.len()).rev(){
-        if i == square_index{
+    for i in 0..copy_squares.len() {
+        if i == square_index {
             squares.push(square_a);
             squares.push(square_b);
-        }else{
+        } else {
             squares.push(copy_squares[i]);
         }
     }
 }
 
-  fn split_on_y(square_index: usize, squares: &mut Vec<Square>, split_at: f32) {
+fn split_on_y(square_index: usize, squares: &mut Vec<Square>, split_at: f32) {
     let square = &squares[square_index];
-    let square_a = Square{
+    let square_a = Square {
         x: square.x,
         y: square.y,
         width: square.width,
         height: square.height - (square.height - split_at + square.y),
+        //height: square.height / 2.0,
     };
-    let square_b = Square{
+    let square_b = Square {
         x: square.x,
-        y: square.y,
+        y: split_at,
         width: square.width,
         height: square.height - split_at + square.y,
+        //height: square.height / 2.0,
     };
     // make a copy
-    let mut copy_squares: Vec<Square> = Vec::new();
-    for square in squares.iter_mut(){
-        copy_squares.push(Square{
-            x: square.x,
-            y: square.y,
-            width: square.width,
-            height: square.height,            
-        });
-    }
+    let copy_squares = squares.clone();
     squares.clear();
-
-
-    for i in (0..copy_squares.len()).rev(){
-        if i == square_index{
+    for i in 0..copy_squares.len() {
+        if i == square_index {
             squares.push(square_a);
             squares.push(square_b);
-        }else{
+        } else {
             squares.push(copy_squares[i]);
         }
     }
-    println!("{:?}", squares.len());
-  }
-
+}
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
     match key {
@@ -683,5 +707,3 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
         _other_key => {}
     }
 }
-
-

@@ -311,7 +311,6 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             }
             if distance < Float::infinity() && distance < sensibility {
                 // there was a close collision, draw it
-
                 *c = coll;
             } else {
                 let cc = r.orig + r.dir.with_magnitude(sensibility);
