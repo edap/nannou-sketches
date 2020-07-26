@@ -3,7 +3,10 @@ use nannou::prelude::*;
 use nannou::ui::prelude::*;
 
 mod bouncing;
+mod mondrian;
 pub use crate::bouncing::BouncingRay2D;
+use crate::mondrian::split_squares;
+pub use crate::mondrian::Square;
 
 fn main() {
     nannou::app(model).update(update).run();
@@ -165,7 +168,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.wall_width = value;
         }
 
-        for value in slider(model.wall_mode as f32, 1.0, 3.0)
+        for value in slider(model.wall_mode as f32, 1.0, 4.0)
             .down(10.0)
             .label("wall_mode ")
             .set(model.ids.wall_mode, ui)
@@ -456,92 +459,54 @@ fn make_walls(
 ) {
     walls.clear();
     rays.clear();
-    let side = win.w() as u32 / tile_count_w;
-    let mut xpos = win.left();
-    let mut ypos = win.bottom();
-
-    for _x in 0..tile_count_w {
-        for _y in 0..(win.h() as u32 / side as u32) {
-            let coin = random_range(0.0, 1.0);
-            let start_p;
-            let end_p;
-            let padding = 0.1 * side as f32;
-
-            match mode {
-                1 => {
-                    if coin > 0.4 {
-                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                    } else {
-                        start_p = vec2(xpos + padding, ypos + padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-                    }
-                    if _x % 2 == 0 && _y % 2 == 0 {
-                        let mut r = BouncingRay2D::new();
-                        r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                        r.primary_ray.orig = start_p;
-                        r.ray.orig = start_p;
-                        rays.push(r);
-                    } else {
-                        walls.push(start_p);
-                        walls.push(end_p);
-                    }
-                }
-                2 => {
-                    if coin > 0.5 {
-                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                    } else {
-                        start_p = vec2(xpos + padding, ypos + padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-                    }
-                    if (_x == 2 && _y == 2) || (_x == 14 && _y == 14) {
-                        let mut r = BouncingRay2D::new();
-                        r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                        r.primary_ray.orig = start_p;
-                        r.ray.orig = start_p;
-                        rays.push(r);
-                    } else {
-                        walls.push(start_p);
-                        walls.push(end_p);
-                    }
-                }
-                3 => {
-                    if _x % 2 == 0 && _y % 2 == 0 {
-                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                        let mut r = BouncingRay2D::new();
-                        //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                        r.primary_ray.dir = Vector2::from_angle(1.0);
-                        // r.primary_ray.orig = start_p;
-                        // r.ray.orig = start_p;
-                        let o = vec2(xpos + side as f32 / 2.0, ypos + side as f32 - padding);
-                        r.primary_ray.orig = o;
-                        r.ray.orig = o;
-                        if coin > 0.4 {
-                            rays.push(r);
-                        }
-                    } else if _y % 2 == 0 && _x % 2 != 0 {
-                        start_p = vec2(xpos + padding, ypos + padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-                    } else if _x % 2 != 0 && _y % 2 != 0 {
-                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                    } else {
-                        start_p = vec2(xpos + padding, ypos + padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-                    }
-                    walls.push(start_p);
-                    walls.push(end_p);
-                }
-                _ => {}
-            }
-
-            ypos += side as f32;
-        }
-        ypos = win.bottom();
-        xpos += side as f32;
+    let step = win.w() as u32 / tile_count_w;
+    //let step = 200;
+    let mut squares: Vec<Square> = Vec::new();
+    squares.push(Square {
+        x: win.left(),
+        y: win.bottom(),
+        width: win.w() as f32,
+        height: win.h() as f32,
+    });
+    for i in (win.left() as i32..win.right() as i32).step_by(step as usize) {
+        split_squares(i as f32, i as f32, &mut squares, 0.0);
     }
+
+    // match mode {
+    //     1 => {
+    //         for square in &squares {
+    //             // let mut r = BouncingRay2D::new();
+    //             // r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+    //             // r.primary_ray.orig = vec2(
+    //             //     square.x + square.width * 0.3,
+    //             //     square.y + square.height * 0.3,
+    //             // );
+    //             // r.reset();
+    //             // rays.push(r);
+    //             create_wall_from_square(&square, walls);
+    //         }
+    //     }
+    //     _ => {}
+    // }
+    for square in &squares {
+        let mut r = BouncingRay2D::new();
+        r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+        r.primary_ray.orig = vec2(
+            square.x + square.width * 0.8,
+            square.y + square.height * 0.3,
+        );
+        r.reset();
+        rays.push(r);
+        create_wall_from_square(&square, walls);
+    }
+    //println!("{:?}", walls.len());
+    println!("{:?}", squares);
+}
+
+fn create_wall_from_square(square: &Square, walls: &mut Vec<Vector2>) {
+    //let padding = square.width * 0.1;
+    walls.push(vec2(square.x, square.y));
+    walls.push(vec2(square.x + square.width, square.y + square.height));
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {

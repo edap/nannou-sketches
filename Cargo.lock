@@ -1930,6 +1930,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rayquad4"
+version = "0.1.0"
+dependencies = [
+ "edapx-colors 0.1.0",
+ "nannou 0.14.1 (git+https://github.com/nannou-org/nannou)",
+ "ray2d 0.1.0",
+]
+
+[[package]]
 name = "rctree"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
