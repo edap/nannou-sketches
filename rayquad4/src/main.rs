@@ -22,6 +22,7 @@ struct Model {
     ids: Ids,
     ray_width: f32,
     wall_width: f32,
+    wall_split: f32,
     collision_radius: f32,
     rotation: f32,
     scheme_id: usize,
@@ -42,6 +43,7 @@ struct Model {
 widget_ids! {
     struct Ids {
         wall_width,
+        wall_split,
         tile_count_w,
         button,
         wall_mode,
@@ -85,6 +87,7 @@ fn model(app: &App) -> Model {
 
     let ray_width = 1.0;
     let wall_width = 2.0;
+    let wall_split = 0.3;
     let wall_mode = 2;
     let max_bounces = 2;
     let rotation = 0.0;
@@ -94,7 +97,14 @@ fn model(app: &App) -> Model {
     let blend_id = 0;
     let color_off = 4;
     let palette = Palette::new();
-    make_walls(&mut walls, &mut rays, &win, tile_count_w, wall_mode);
+    make_walls(
+        &mut walls,
+        &mut rays,
+        &win,
+        tile_count_w,
+        wall_split,
+        wall_mode,
+    );
     let show_walls = true;
     let animation = true;
     let animation_speed = 0.01;
@@ -120,6 +130,7 @@ fn model(app: &App) -> Model {
         ui,
         ids,
         wall_width,
+        wall_split,
         collision_radius,
         ray_width,
         rotation,
@@ -168,6 +179,14 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.wall_width = value;
         }
 
+        for value in slider(model.wall_split as f32, 0.0, 1.0)
+            .down(10.0)
+            .label("wall split")
+            .set(model.ids.wall_split, ui)
+        {
+            model.wall_split = value;
+        }
+
         for value in slider(model.wall_mode as f32, 1.0, 4.0)
             .down(10.0)
             .label("wall_mode ")
@@ -200,6 +219,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 &mut model.rays,
                 &win,
                 model.tile_count_w,
+                model.wall_split,
                 model.wall_mode,
             );
         }
@@ -417,12 +437,14 @@ fn view(app: &App, model: &Model, frame: Frame) {
             });
 
         if model.draw_polygon {
-            draw.polygon()
-                //.stroke(model.palette.get_third(model.scheme_id, model.color_off))
-                .stroke(model.palette.get_second(model.scheme_id, model.color_off))
-                .stroke_weight(model.polygon_contour_weight)
-                .join_round()
-                .points_colored(ppp);
+            if ppp.len() > 3 {
+                draw.polygon()
+                    //.stroke(model.palette.get_third(model.scheme_id, model.color_off))
+                    .stroke(model.palette.get_second(model.scheme_id, model.color_off))
+                    .stroke_weight(model.polygon_contour_weight)
+                    .join_round()
+                    .points_colored(ppp);
+            }
         };
 
         draw.path()
@@ -455,6 +477,7 @@ fn make_walls(
     rays: &mut Vec<BouncingRay2D>,
     win: &geom::Rect,
     tile_count_w: u32,
+    wall_split: f32,
     mode: u32, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
 ) {
     walls.clear();
@@ -469,7 +492,7 @@ fn make_walls(
         height: win.h() as f32,
     });
     for i in (win.left() as i32..win.right() as i32).step_by(step as usize) {
-        split_squares(i as f32, i as f32, &mut squares, 0.5);
+        split_squares(i as f32, i as f32, &mut squares, wall_split);
     }
 
     // match mode {
