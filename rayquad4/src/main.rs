@@ -65,7 +65,7 @@ widget_ids! {
 fn model(app: &App) -> Model {
     let tile_count_w = 6;
     app.new_window()
-        .size(400, 400)
+        .size(800, 900)
         .view(view)
         .key_pressed(key_pressed)
         .build()
@@ -83,10 +83,10 @@ fn model(app: &App) -> Model {
     // Generate some ids for our widgets.
     let ids = Ids::new(ui.widget_id_generator());
 
-    let ray_width = 6.0;
+    let ray_width = 1.0;
     let wall_width = 2.0;
-    let wall_mode = 3;
-    let max_bounces = 20;
+    let wall_mode = 2;
+    let max_bounces = 2;
     let rotation = 0.0;
     let collision_radius = 3.0;
 
@@ -99,7 +99,7 @@ fn model(app: &App) -> Model {
     let animation = true;
     let animation_speed = 0.01;
     let draw_refl = true;
-    let draw_polygon = true;
+    let draw_polygon = false;
     let polygon_contour_weight = 5.0;
     let draw_tex_overlay = false;
 
@@ -489,24 +489,70 @@ fn make_walls(
     //     _ => {}
     // }
     for square in &squares {
-        let mut r = BouncingRay2D::new();
-        r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-        r.primary_ray.orig = vec2(
-            square.x + square.width * 0.8,
-            square.y + square.height * 0.3,
-        );
-        r.reset();
-        rays.push(r);
-        create_wall_from_square(&square, walls);
+        match mode {
+            1 => {
+                let mut r = BouncingRay2D::new();
+                r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                r.primary_ray.orig = vec2(
+                    square.x + square.width * 0.8,
+                    square.y + square.height * 0.3,
+                );
+                r.reset();
+                rays.push(r);
+                create_wall_from_square(&square, walls, mode);
+            }
+            2 => {
+                let mut r = BouncingRay2D::new();
+                //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                r.primary_ray.dir = Vector2::from_angle(PI);
+                r.primary_ray.orig = vec2(
+                    square.x + square.width * 0.5,
+                    square.y + square.height * 0.5,
+                );
+                r.reset();
+                rays.push(r);
+                create_wall_from_square(&square, walls, mode);
+            }
+            _ => {}
+        }
     }
     //println!("{:?}", walls.len());
     println!("{:?}", squares);
 }
 
-fn create_wall_from_square(square: &Square, walls: &mut Vec<Vector2>) {
-    //let padding = square.width * 0.1;
-    walls.push(vec2(square.x, square.y));
-    walls.push(vec2(square.x + square.width, square.y + square.height));
+fn create_wall_from_square(square: &Square, walls: &mut Vec<Vector2>, mode: u32) {
+    let padding = square.width * 0.25;
+    match mode {
+        1 => {
+            walls.push(vec2(square.x + padding, square.y + padding));
+            walls.push(vec2(
+                square.x + square.width,
+                square.y - padding + square.height - padding,
+            ));
+        }
+        2 => {
+            let x = square.x + padding;
+            let y = square.y + padding;
+            let w = square.width - padding;
+            let h = square.height - padding;
+            // bottom
+            walls.push(vec2(x, y));
+            walls.push(vec2(x + square.width - padding, square.y));
+
+            // top
+            walls.push(vec2(x, y + h));
+            walls.push(vec2(x + square.width - padding, square.y + h));
+
+            // left
+            walls.push(vec2(x, y + padding));
+            walls.push(vec2(x, square.y + h));
+
+            // right
+            walls.push(vec2(x + square.width - padding, y + padding));
+            walls.push(vec2(x + square.width - padding, square.y + h));
+        }
+        _ => {}
+    }
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
