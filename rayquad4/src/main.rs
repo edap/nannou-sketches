@@ -195,7 +195,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.wall_mode = value as u32;
         }
 
-        for value in slider(model.tile_count_w as f32, 1.0, 6.0)
+        for value in slider(model.tile_count_w as f32, 1.0, 20.0)
             .down(10.0)
             .label("tile_count_w")
             .set(model.ids.tile_count_w, ui)
@@ -514,7 +514,7 @@ fn make_walls(
     for square in &squares {
         match mode {
             1 => {
-                let padding = step as f32 * 0.08;
+                let padding = step as f32 * 0.02;
                 let mut r = BouncingRay2D::new();
                 r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
                 r.primary_ray.orig = vec2(
@@ -526,7 +526,7 @@ fn make_walls(
                 create_wall_from_square(&square, walls, mode, padding);
             }
             2 => {
-                let padding = step as f32 * 0.1;
+                let padding = step as f32 * 0.03;
                 let mut r = BouncingRay2D::new();
                 //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
                 r.primary_ray.dir = Vector2::from_angle(PI);
