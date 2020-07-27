@@ -36,7 +36,7 @@ struct Model {
     draw_tex_overlay: bool,
     animation: bool,
     animation_speed: f32,
-    draw_refl: bool,
+    animation_time: f32,
     draw_polygon: bool,
     polygon_contour_weight: f32,
     texture: wgpu::Texture,
@@ -58,7 +58,7 @@ widget_ids! {
         scheme_id,
         blend_id,
         color_off,
-        draw_refl,
+        animation_time,
         draw_polygon,
         polygon_contour_weight,
         animation,
@@ -116,7 +116,7 @@ fn model(app: &App) -> Model {
     let show_walls = true;
     let animation = true;
     let animation_speed = 0.01;
-    let draw_refl = true;
+    let animation_time = 0.0;
     let draw_polygon = false;
     let polygon_contour_weight = 5.0;
     let draw_tex_overlay = false;
@@ -151,7 +151,7 @@ fn model(app: &App) -> Model {
         show_walls,
         animation,
         animation_speed,
-        draw_refl,
+        animation_time,
         draw_polygon,
         polygon_contour_weight,
         draw_tex_overlay,
@@ -190,7 +190,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for value in slider(model.wall_split as f32, 0.0, 1.0)
-            .down(10.0)
+            .down(3.0)
             .label("wall split")
             .set(model.ids.wall_split, ui)
         {
@@ -198,7 +198,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for value in slider(model.wall_padding as f32, 0.2, 0.02)
-            .down(10.0)
+            .down(3.0)
             .label("wall padding")
             .set(model.ids.wall_padding, ui)
         {
@@ -206,7 +206,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for value in slider(model.hole_pct as f32, 0.0, 0.8)
-            .down(10.0)
+            .down(3.0)
             .label("hole")
             .set(model.ids.hole_pct, ui)
         {
@@ -214,7 +214,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for value in slider(model.wall_mode as f32, 1.0, 4.0)
-            .down(10.0)
+            .down(3.0)
             .label("wall_mode ")
             .set(model.ids.wall_mode, ui)
         {
@@ -222,7 +222,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for value in slider(model.tile_count_w as f32, 1.0, 20.0)
-            .down(10.0)
+            .down(3.0)
             .label("tile_count_w")
             .set(model.ids.tile_count_w, ui)
         {
@@ -230,7 +230,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for _click in widget::Button::new()
-            .down(10.0)
+            .down(3.0)
             .w_h(200.0, 60.0)
             .label("Regenerate Walls")
             .label_font_size(15)
@@ -253,7 +253,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for value in slider(model.collision_radius as f32, 3.0, 85.0)
-            .down(10.0)
+            .down(3.0)
             .label("collision radius")
             .set(model.ids.collision_radius, ui)
         {
@@ -261,14 +261,14 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for value in slider(model.ray_width, 1.0, 10.0)
-            .down(10.0)
+            .down(3.0)
             .label("ray width")
             .set(model.ids.ray_width, ui)
         {
             model.ray_width = value;
         }
         for value in slider(model.max_bounces as f32, 1.0, 200.0)
-            .down(10.0)
+            .down(3.0)
             .label("max_bounces")
             .set(model.ids.max_bounces, ui)
         {
@@ -276,7 +276,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for val in slider(model.rotation, -PI, PI)
-            .down(10.0)
+            .down(3.0)
             .label("Rotation")
             .set(model.ids.rotation, ui)
         {
@@ -284,7 +284,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for value in slider(model.scheme_id as f32, 0.0, 5.0)
-            .down(10.0)
+            .down(3.0)
             .label("scheme_id")
             .set(model.ids.scheme_id, ui)
         {
@@ -292,7 +292,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for value in slider(model.blend_id as f32, 0.0, 3.0)
-            .down(10.0)
+            .down(3.0)
             .label("blend_id")
             .set(model.ids.blend_id, ui)
         {
@@ -300,7 +300,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for value in slider(model.color_off as f32, 0.0, 4.0)
-            .down(10.0)
+            .down(3.0)
             .label("color_off")
             .set(model.ids.color_off, ui)
         {
@@ -308,7 +308,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for value in slider(model.polygon_contour_weight, 1.0, 30.0)
-            .down(10.0)
+            .down(3.0)
             .label("polygon cont weight")
             .set(model.ids.polygon_contour_weight, ui)
         {
@@ -337,7 +337,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for value in slider(model.animation_speed as f32, 0.1, 0.0001)
-            .down(10.0)
+            .down(3.0)
             .label("animation speed")
             .set(model.ids.animation_speed, ui)
         {
@@ -399,10 +399,9 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
         r.reset();
         if model.animation {
-            r.ray.dir = r.ray.dir.rotate(_app.time * model.animation_speed);
-        } else {
-            r.ray.dir = r.ray.dir.rotate(model.rotation);
+            model.animation_time = _app.time * model.animation_speed;
         }
+        r.ray.dir = r.ray.dir.rotate(model.animation_time + model.rotation);
     }
 }
 
@@ -550,6 +549,7 @@ fn make_walls(
             }
             2 => {
                 let padding = step as f32 * perc_padding;
+                let hole = (step as f32 / 2.0) * hole_pct;
                 let mut r = BouncingRay2D::new();
                 //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
                 r.primary_ray.dir = Vector2::from_angle(PI);
@@ -559,7 +559,7 @@ fn make_walls(
                 );
                 r.reset();
                 rays.push(r);
-                create_wall_from_square(&square, walls, mode, padding, hole_pct);
+                create_wall_from_square(&square, walls, mode, padding, hole);
             }
             _ => {}
         }
@@ -573,7 +573,7 @@ fn create_wall_from_square(
     walls: &mut Vec<Vector2>,
     mode: u32,
     padding: f32,
-    hole_pct: f32,
+    hole: f32,
 ) {
     //let padding = square.width * 0.1;
     match mode {
@@ -591,37 +591,37 @@ fn create_wall_from_square(
             let w = square.width - padding;
             let h = square.height - padding;
             // bottom
-            walls.push(vec2(square.x + padding, square.y + padding));
+            walls.push(vec2(square.x + padding + hole, square.y + padding));
             walls.push(vec2(
-                square.x + square.width - padding * 2.0,
+                square.x - hole + square.width - padding * 2.0,
                 square.y + padding,
             ));
 
             // top
             walls.push(vec2(
-                square.x + padding,
+                square.x + padding + hole,
                 square.y + square.height - padding * 2.0,
             ));
             walls.push(vec2(
-                square.x + square.width - padding * 2.0,
+                square.x - hole + square.width - padding * 2.0,
                 square.y + square.height - padding * 2.0,
             ));
 
             // left
             walls.push(vec2(
                 square.x + square.width - padding * 2.0,
-                square.y + padding,
+                square.y + padding + hole,
             ));
             walls.push(vec2(
                 square.x + square.width - padding * 2.0,
-                square.y + square.height - padding * 2.0,
+                square.y - hole + square.height - padding * 2.0,
             ));
 
             // right
-            walls.push(vec2(square.x + padding, square.y + padding));
+            walls.push(vec2(square.x + padding, square.y + padding + hole));
             walls.push(vec2(
                 square.x + padding,
-                square.y + square.height - padding * 2.0,
+                square.y - hole + square.height - padding * 2.0,
             ));
         }
         _ => {}
