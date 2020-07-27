@@ -23,6 +23,7 @@ struct Model {
     ray_width: f32,
     wall_width: f32,
     wall_split: f32,
+    hole_pct: f32,
     wall_padding: f32,
     collision_radius: f32,
     rotation: f32,
@@ -46,6 +47,7 @@ widget_ids! {
         wall_width,
         wall_split,
         wall_padding,
+        hole_pct,
         tile_count_w,
         button,
         wall_mode,
@@ -91,6 +93,7 @@ fn model(app: &App) -> Model {
     let wall_width = 2.0;
     let wall_split = 0.3;
     let wall_padding = 0.07;
+    let hole_pct = 0.2;
     let wall_mode = 2;
     let max_bounces = 2;
     let rotation = 0.0;
@@ -107,6 +110,7 @@ fn model(app: &App) -> Model {
         tile_count_w,
         wall_split,
         wall_padding,
+        hole_pct,
         wall_mode,
     );
     let show_walls = true;
@@ -136,6 +140,7 @@ fn model(app: &App) -> Model {
         wall_width,
         wall_split,
         wall_padding,
+        hole_pct,
         collision_radius,
         ray_width,
         rotation,
@@ -200,6 +205,14 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.wall_padding = value;
         }
 
+        for value in slider(model.hole_pct as f32, 0.0, 0.8)
+            .down(10.0)
+            .label("hole")
+            .set(model.ids.hole_pct, ui)
+        {
+            model.hole_pct = value;
+        }
+
         for value in slider(model.wall_mode as f32, 1.0, 4.0)
             .down(10.0)
             .label("wall_mode ")
@@ -234,6 +247,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 model.tile_count_w,
                 model.wall_split,
                 model.wall_padding,
+                model.hole_pct,
                 model.wall_mode,
             );
         }
@@ -308,12 +322,12 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.draw_polygon = v;
         }
 
-        for v in toggle(model.draw_tex_overlay as bool)
-            .label("Draw Overlay")
-            .set(model.ids.draw_tex_overlay, ui)
-        {
-            model.draw_tex_overlay = v;
-        }
+        // for v in toggle(model.draw_tex_overlay as bool)
+        //     .label("Draw Overlay")
+        //     .set(model.ids.draw_tex_overlay, ui)
+        // {
+        //     model.draw_tex_overlay = v;
+        // }
 
         for v in toggle(model.animation as bool)
             .label("Animation")
@@ -486,6 +500,7 @@ fn make_walls(
     tile_count_w: u32,
     wall_split: f32,
     perc_padding: f32,
+    hole_pct: f32,
     mode: u32, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
 ) {
     walls.clear();
@@ -531,7 +546,7 @@ fn make_walls(
                 );
                 r.reset();
                 rays.push(r);
-                create_wall_from_square(&square, walls, mode, padding);
+                create_wall_from_square(&square, walls, mode, padding, hole_pct);
             }
             2 => {
                 let padding = step as f32 * perc_padding;
@@ -544,7 +559,7 @@ fn make_walls(
                 );
                 r.reset();
                 rays.push(r);
-                create_wall_from_square(&square, walls, mode, padding);
+                create_wall_from_square(&square, walls, mode, padding, hole_pct);
             }
             _ => {}
         }
@@ -553,7 +568,13 @@ fn make_walls(
     println!("{:?}", squares);
 }
 
-fn create_wall_from_square(square: &Square, walls: &mut Vec<Vector2>, mode: u32, padding: f32) {
+fn create_wall_from_square(
+    square: &Square,
+    walls: &mut Vec<Vector2>,
+    mode: u32,
+    padding: f32,
+    hole_pct: f32,
+) {
     //let padding = square.width * 0.1;
     match mode {
         1 => {
