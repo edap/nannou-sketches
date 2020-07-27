@@ -442,6 +442,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
         }
 
         let mut col = rgba(0.0, 0.0, 0.0, 0.0);
+        let win = app.window_rect();
         let ppp = r
             .collisions
             .iter()
@@ -452,18 +453,21 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 } else {
                     col = model.palette.get_fourth(model.scheme_id, model.color_off)
                 }
-
-                (pt2(co.x, co.y), col)
+                let xc = map_range(co.x, win.left(), win.right(), 0.0, 1.0);
+                let xy = map_range(co.y, win.bottom(), win.top(), 0.0, 1.0);
+                let tex_coords = [xc, xy];
+                (pt2(co.x, co.y), tex_coords)
+                //(pt2(co.x, co.y), col)
             });
 
         if model.draw_polygon {
             if ppp.len() > 3 {
                 draw.polygon()
-                    //.stroke(model.palette.get_third(model.scheme_id, model.color_off))
-                    .stroke(model.palette.get_second(model.scheme_id, model.color_off))
-                    .stroke_weight(model.polygon_contour_weight)
-                    .join_round()
-                    .points_colored(ppp);
+                    //.stroke(model.palette.get_second(model.scheme_id, model.color_off))
+                    //.stroke_weight(model.polygon_contour_weight)
+                    //.join_round()
+                    .points_textured(&model.texture, ppp);
+                //.points_colored(ppp);
             }
         };
 
