@@ -23,6 +23,7 @@ struct Model {
     ray_width: f32,
     wall_width: f32,
     wall_split: f32,
+    wall_padding: f32,
     collision_radius: f32,
     rotation: f32,
     scheme_id: usize,
@@ -44,6 +45,7 @@ widget_ids! {
     struct Ids {
         wall_width,
         wall_split,
+        wall_padding,
         tile_count_w,
         button,
         wall_mode,
@@ -88,6 +90,7 @@ fn model(app: &App) -> Model {
     let ray_width = 1.0;
     let wall_width = 2.0;
     let wall_split = 0.3;
+    let wall_padding = 0.07;
     let wall_mode = 2;
     let max_bounces = 2;
     let rotation = 0.0;
@@ -103,6 +106,7 @@ fn model(app: &App) -> Model {
         &win,
         tile_count_w,
         wall_split,
+        wall_padding,
         wall_mode,
     );
     let show_walls = true;
@@ -131,6 +135,7 @@ fn model(app: &App) -> Model {
         ids,
         wall_width,
         wall_split,
+        wall_padding,
         collision_radius,
         ray_width,
         rotation,
@@ -187,6 +192,14 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.wall_split = value;
         }
 
+        for value in slider(model.wall_padding as f32, 0.2, 0.02)
+            .down(10.0)
+            .label("wall padding")
+            .set(model.ids.wall_padding, ui)
+        {
+            model.wall_padding = value;
+        }
+
         for value in slider(model.wall_mode as f32, 1.0, 4.0)
             .down(10.0)
             .label("wall_mode ")
@@ -220,6 +233,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 &win,
                 model.tile_count_w,
                 model.wall_split,
+                model.wall_padding,
                 model.wall_mode,
             );
         }
@@ -277,13 +291,6 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             .set(model.ids.color_off, ui)
         {
             model.color_off = value as usize;
-        }
-
-        for v in toggle(model.draw_refl as bool)
-            .label("Draw reflection")
-            .set(model.ids.draw_refl, ui)
-        {
-            model.draw_refl = v;
         }
 
         for value in slider(model.polygon_contour_weight, 1.0, 30.0)
@@ -478,6 +485,7 @@ fn make_walls(
     win: &geom::Rect,
     tile_count_w: u32,
     wall_split: f32,
+    perc_padding: f32,
     mode: u32, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
 ) {
     walls.clear();
@@ -514,7 +522,7 @@ fn make_walls(
     for square in &squares {
         match mode {
             1 => {
-                let padding = step as f32 * 0.02;
+                let padding = step as f32 * perc_padding;
                 let mut r = BouncingRay2D::new();
                 r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
                 r.primary_ray.orig = vec2(
@@ -526,7 +534,7 @@ fn make_walls(
                 create_wall_from_square(&square, walls, mode, padding);
             }
             2 => {
-                let padding = step as f32 * 0.03;
+                let padding = step as f32 * perc_padding;
                 let mut r = BouncingRay2D::new();
                 //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
                 r.primary_ray.dir = Vector2::from_angle(PI);
