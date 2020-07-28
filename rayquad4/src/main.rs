@@ -124,7 +124,8 @@ fn model(app: &App) -> Model {
     // texture
     // Load the image from disk and upload it to a GPU texture.
     let assets = app.assets_path().unwrap();
-    let img_path = assets.join("images").join("noise-texture1-tr.png");
+    //let img_path = assets.join("images").join("noise-texture1-tr.png");
+    let img_path = assets.join("images").join("water.png");
     //let img_path = assets.join("images").join("grunge-halftone-tr.png");
     let texture = wgpu::Texture::from_path(app, img_path).unwrap();
 
