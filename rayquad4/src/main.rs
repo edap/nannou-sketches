@@ -317,6 +317,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for v in toggle(model.draw_polygon as bool)
+            .down(3.0)
             .label("Draw poly")
             .set(model.ids.draw_polygon, ui)
         {
@@ -331,6 +332,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         // }
 
         for v in toggle(model.animation as bool)
+            .down(3.0)
             .label("Animation")
             .set(model.ids.animation, ui)
         {
@@ -346,6 +348,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for v in toggle(model.show_walls as bool)
+            .down(3.0)
             .label("Show wall")
             .set(model.ids.show_walls, ui)
         {
@@ -486,10 +489,11 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .stroke_weight(model.ray_width)
                 .color(model.palette.get_first(model.scheme_id, model.color_off));
         }
+        if model.draw_tex_overlay {
+            draw.texture(&model.texture).w_h(800.0, 800.0);
+        }
     }
-    if model.draw_tex_overlay {
-        draw.texture(&model.texture).w_h(800.0, 800.0);
-    }
+
     draw.to_frame(app, &frame).unwrap();
 
     if model.draw_gui {
@@ -555,15 +559,17 @@ fn make_walls(
             2 => {
                 let padding = step as f32 * perc_padding;
                 let hole = (step as f32 / 2.0) * hole_pct;
-                let mut r = BouncingRay2D::new();
-                //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                r.primary_ray.dir = Vector2::from_angle(PI);
-                r.primary_ray.orig = vec2(
-                    square.x + square.width * 0.5,
-                    square.y + square.height * 0.5,
-                );
-                r.reset();
-                rays.push(r);
+                if random_range(0.0, 1.0) > 0.45 {
+                    let mut r = BouncingRay2D::new();
+                    //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                    r.primary_ray.dir = Vector2::from_angle(PI);
+                    r.primary_ray.orig = vec2(
+                        square.x + square.width * 0.5,
+                        square.y + square.height * 0.5,
+                    );
+                    r.reset();
+                    rays.push(r);
+                }
                 create_wall_from_square(&square, walls, mode, padding, hole);
             }
             _ => {}
@@ -591,10 +597,6 @@ fn create_wall_from_square(
         }
         // closed square
         2 => {
-            let x = square.x + padding;
-            let y = square.y + padding;
-            let w = square.width - padding;
-            let h = square.height - padding;
             // bottom
             walls.push(vec2(square.x + padding + hole, square.y + padding));
             walls.push(vec2(
