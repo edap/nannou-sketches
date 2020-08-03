@@ -34,6 +34,7 @@ struct Model {
     color_off: usize,
     palette: Palette,
     show_walls: bool,
+    draw_arrows: bool,
     draw_tex_overlay: bool,
     animation: bool,
     animation_speed: f32,
@@ -62,6 +63,7 @@ widget_ids! {
         color_off,
         animation_time,
         draw_polygon,
+        draw_arrows,
         polygon_contour_weight,
         animation,
         animation_speed,
@@ -73,7 +75,7 @@ widget_ids! {
 fn model(app: &App) -> Model {
     let tile_count_w = 8;
     app.new_window()
-        .size(1200, 800)
+        .size(1280, 720)
         .view(view)
         .key_pressed(key_pressed)
         .build()
@@ -91,16 +93,16 @@ fn model(app: &App) -> Model {
     // Generate some ids for our widgets.
     let ids = Ids::new(ui.widget_id_generator());
 
-    let ray_width = 1.0;
+    let ray_width = 3.0;
     let wall_width = 2.0;
     let wall_split = 0.3;
     let wall_padding = 0.07;
-    let hole_pct = 0.2;
+    let hole_pct = 0.0;
     let wall_mode = 2;
-    let max_bounces = 2;
+    let max_bounces = 4;
     let rotation = 0.0;
     let collision_radius = 3.0;
-    let rays_prob = 0.5;
+    let rays_prob = 0.0;
 
     let scheme_id = 5;
     let blend_id = 0;
@@ -118,18 +120,19 @@ fn model(app: &App) -> Model {
         wall_mode,
     );
     let show_walls = true;
-    let animation = true;
+    let animation = false;
+    let draw_arrows = true;
     let animation_speed = 0.01;
     let animation_time = 0.0;
-    let draw_polygon = false;
+    let draw_polygon = true;
     let polygon_contour_weight = 5.0;
     let draw_tex_overlay = false;
 
     // texture
     // Load the image from disk and upload it to a GPU texture.
     let assets = app.assets_path().unwrap();
-    //let img_path = assets.join("images").join("noise-texture1-tr.png");
-    let img_path = assets.join("images").join("water.png");
+    let img_path = assets.join("images").join("noise-texture1-tr.png");
+    //let img_path = assets.join("images").join("water.png");
     //let img_path = assets.join("images").join("grunge-halftone-tr.png");
     let texture = wgpu::Texture::from_path(app, img_path).unwrap();
 
@@ -159,6 +162,7 @@ fn model(app: &App) -> Model {
         animation_speed,
         animation_time,
         draw_polygon,
+        draw_arrows,
         polygon_contour_weight,
         draw_tex_overlay,
         texture,
@@ -188,7 +192,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
 
         for value in slider(model.wall_width as f32, 1.0, 15.0)
-            .top_left_with_margin(20.0)
+            .top_left_with_margin(10.0)
             .label("wall width")
             .set(model.ids.wall_width, ui)
         {
@@ -237,7 +241,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
 
         for _click in widget::Button::new()
             .down(3.0)
-            .w_h(200.0, 60.0)
+            //.w_h(200.0, 60.0)
             .label("Regenerate Walls")
             .label_font_size(15)
             .rgb(0.3, 0.3, 0.3)
@@ -259,7 +263,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             );
         }
 
-        for value in slider(model.collision_radius as f32, 3.0, 85.0)
+        for value in slider(model.collision_radius as f32, 3.0, 185.0)
             .down(3.0)
             .label("collision radius")
             .set(model.ids.collision_radius, ui)
@@ -274,7 +278,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         {
             model.ray_width = value;
         }
-        for value in slider(model.rays_prob as f32, 0.1, 1.0)
+        for value in slider(model.rays_prob as f32, 0.0, 1.0)
             .down(3.0)
             .label("rays prob.")
             .set(model.ids.rays_prob, ui)
@@ -337,7 +341,16 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.draw_polygon = v;
         }
 
+        for v in toggle(model.draw_arrows as bool)
+            .down(3.0)
+            .label("Draw Arrows")
+            .set(model.ids.draw_arrows, ui)
+        {
+            model.draw_arrows = v;
+        }
+
         for v in toggle(model.draw_tex_overlay as bool)
+            .down(3.0)
             .label("Draw Overlay")
             .set(model.ids.draw_tex_overlay, ui)
         {
@@ -444,19 +457,26 @@ fn view(app: &App, model: &Model, frame: Frame) {
     }
 
     for r in &model.rays {
-        draw.arrow()
+        if(model.draw_arrows){
+            draw.arrow()
             .color(model.palette.get_first(model.scheme_id, model.color_off))
             .start(r.ray.orig)
             .stroke_weight(model.ray_width)
             .end(r.ray.orig + r.ray.dir.with_magnitude(40.0));
-        for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
-            draw.ellipse()
-                .no_fill()
-                .stroke(model.palette.get_third(model.scheme_id, model.color_off))
-                .stroke_weight(3.0)
-                .x_y(c.x, c.y)
-                .w_h(model.collision_radius * i, model.collision_radius * i);
         }
+
+        if r.collisions.len() > 3 {
+            for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
+                draw.ellipse()
+                    .no_fill()
+                    .stroke(model.palette.get_third(model.scheme_id, model.color_off))
+                    .stroke_weight(3.0)
+                    .x_y(c.x, c.y)
+                    .w_h(model.collision_radius * i, model.collision_radius * i);
+            }
+
+        }
+
 
         let mut col = rgba(0.0, 0.0, 0.0, 0.0);
         let win = app.window_rect();
@@ -493,20 +513,27 @@ fn view(app: &App, model: &Model, frame: Frame) {
         //         draw.polygon().points_textured(&model.texture, ppp);
         //     }
         // }
-
-        draw.path()
+        
+        if(r.collisions.len() > 3){
+            draw.path()
             .stroke()
-            .stroke_weight(model.ray_width)
             .caps_round()
+            .stroke_weight(model.ray_width)
             .points(r.collisions.iter().cloned())
             .color(model.palette.get_first(model.scheme_id, model.color_off));
 
+        }
+
+
         for (&c, &r) in r.collisions.iter().zip(r.reflections.iter()) {
-            draw.arrow()
+            if model.draw_arrows {
+                draw.arrow()
                 .start(c)
                 .end(c + r.with_magnitude(40.0))
                 .stroke_weight(model.ray_width)
                 .color(model.palette.get_first(model.scheme_id, model.color_off));
+            }
+
         }
         if model.draw_tex_overlay {
             draw.texture(&model.texture).w_h(800.0, 800.0);
@@ -580,7 +607,7 @@ fn make_walls(
         }
     }
     //println!("{:?}", walls.len());
-    println!("{:?}", squares);
+    //println!("{:?}", squares);
 }
 
 fn create_wall_from_square(
@@ -635,6 +662,7 @@ fn create_wall_from_square(
                 square.y - hole + square.height - padding * 2.0,
             ));
         }
+        // un modo coi rombi e con alcuni muri aperti.
         _ => {}
     }
 }
