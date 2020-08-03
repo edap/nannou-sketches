@@ -21,6 +21,7 @@ struct Model {
     ui: Ui,
     ids: Ids,
     ray_width: f32,
+    rays_prob: f32,
     wall_width: f32,
     wall_split: f32,
     hole_pct: f32,
@@ -52,6 +53,7 @@ widget_ids! {
         button,
         wall_mode,
         ray_width,
+        rays_prob,
         max_bounces,
         collision_radius,
         rotation,
@@ -71,7 +73,7 @@ widget_ids! {
 fn model(app: &App) -> Model {
     let tile_count_w = 8;
     app.new_window()
-        .size(800, 800)
+        .size(1200, 800)
         .view(view)
         .key_pressed(key_pressed)
         .build()
@@ -98,6 +100,7 @@ fn model(app: &App) -> Model {
     let max_bounces = 2;
     let rotation = 0.0;
     let collision_radius = 3.0;
+    let rays_prob = 0.5;
 
     let scheme_id = 5;
     let blend_id = 0;
@@ -111,6 +114,7 @@ fn model(app: &App) -> Model {
         wall_split,
         wall_padding,
         hole_pct,
+        rays_prob,
         wall_mode,
     );
     let show_walls = true;
@@ -144,6 +148,7 @@ fn model(app: &App) -> Model {
         hole_pct,
         collision_radius,
         ray_width,
+        rays_prob,
         rotation,
         scheme_id,
         blend_id,
@@ -249,6 +254,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 model.wall_split,
                 model.wall_padding,
                 model.hole_pct,
+                model.rays_prob,
                 model.wall_mode,
             );
         }
@@ -267,6 +273,13 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             .set(model.ids.ray_width, ui)
         {
             model.ray_width = value;
+        }
+        for value in slider(model.rays_prob as f32, 0.1, 1.0)
+            .down(3.0)
+            .label("rays prob.")
+            .set(model.ids.rays_prob, ui)
+        {
+            model.rays_prob = value;
         }
         for value in slider(model.max_bounces as f32, 1.0, 200.0)
             .down(3.0)
@@ -324,12 +337,12 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.draw_polygon = v;
         }
 
-        // for v in toggle(model.draw_tex_overlay as bool)
-        //     .label("Draw Overlay")
-        //     .set(model.ids.draw_tex_overlay, ui)
-        // {
-        //     model.draw_tex_overlay = v;
-        // }
+        for v in toggle(model.draw_tex_overlay as bool)
+            .label("Draw Overlay")
+            .set(model.ids.draw_tex_overlay, ui)
+        {
+            model.draw_tex_overlay = v;
+        }
 
         for v in toggle(model.animation as bool)
             .down(3.0)
@@ -457,23 +470,29 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 } else {
                     col = model.palette.get_fourth(model.scheme_id, model.color_off)
                 }
-                let xc = map_range(co.x, win.left(), win.right(), 0.0, 1.0);
-                let xy = map_range(co.y, win.bottom(), win.top(), 0.0, 1.0);
-                let tex_coords = [xc, xy];
-                (pt2(co.x, co.y), tex_coords)
-                //(pt2(co.x, co.y), col)
+                // let xc = map_range(co.x, win.left(), win.right(), 0.0, 1.0);
+                // let xy = map_range(co.y, win.bottom(), win.top(), 0.0, 1.0);
+                // let tex_coords = [xc, xy];
+                // (pt2(co.x, co.y), tex_coords)
+                (pt2(co.x, co.y), col)
             });
 
         if model.draw_polygon {
             if ppp.len() > 3 {
                 draw.polygon()
-                    //.stroke(model.palette.get_second(model.scheme_id, model.color_off))
-                    //.stroke_weight(model.polygon_contour_weight)
-                    //.join_round()
-                    .points_textured(&model.texture, ppp);
-                //.points_colored(ppp);
+                    .stroke(model.palette.get_second(model.scheme_id, model.color_off))
+                    .stroke_weight(model.polygon_contour_weight)
+                    .join_round()
+                    .points_colored(ppp);
+                //draw.polygon().points_textured(&model.texture, ppp);
             }
         };
+
+        // if model.draw_tex_overlay {
+        //     if ppp.len() > 3 {
+        //         draw.polygon().points_textured(&model.texture, ppp);
+        //     }
+        // }
 
         draw.path()
             .stroke()
@@ -509,6 +528,7 @@ fn make_walls(
     wall_split: f32,
     perc_padding: f32,
     hole_pct: f32,
+    rays_prob: f32,
     mode: u32, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
 ) {
     walls.clear();
@@ -526,22 +546,6 @@ fn make_walls(
         split_squares(i as f32, i as f32, &mut squares, wall_split);
     }
 
-    // match mode {
-    //     1 => {
-    //         for square in &squares {
-    //             // let mut r = BouncingRay2D::new();
-    //             // r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-    //             // r.primary_ray.orig = vec2(
-    //             //     square.x + square.width * 0.3,
-    //             //     square.y + square.height * 0.3,
-    //             // );
-    //             // r.reset();
-    //             // rays.push(r);
-    //             create_wall_from_square(&square, walls);
-    //         }
-    //     }
-    //     _ => {}
-    // }
     for square in &squares {
         match mode {
             1 => {
@@ -559,7 +563,7 @@ fn make_walls(
             2 => {
                 let padding = step as f32 * perc_padding;
                 let hole = (step as f32 / 2.0) * hole_pct;
-                if random_range(0.0, 1.0) > 0.45 {
+                if random_range(0.0, 1.0) > rays_prob {
                     let mut r = BouncingRay2D::new();
                     //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
                     r.primary_ray.dir = Vector2::from_angle(PI);
