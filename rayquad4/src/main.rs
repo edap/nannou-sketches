@@ -223,7 +223,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.hole_pct = value;
         }
 
-        for value in slider(model.wall_mode as f32, 1.0, 4.0)
+        for value in slider(model.wall_mode as f32, 1.0, 5.0)
             .down(3.0)
             .label("wall_mode ")
             .set(model.ids.wall_mode, ui)
@@ -457,12 +457,12 @@ fn view(app: &App, model: &Model, frame: Frame) {
     }
 
     for r in &model.rays {
-        if(model.draw_arrows){
+        if (model.draw_arrows) {
             draw.arrow()
-            .color(model.palette.get_first(model.scheme_id, model.color_off))
-            .start(r.ray.orig)
-            .stroke_weight(model.ray_width)
-            .end(r.ray.orig + r.ray.dir.with_magnitude(40.0));
+                .color(model.palette.get_first(model.scheme_id, model.color_off))
+                .start(r.ray.orig)
+                .stroke_weight(model.ray_width)
+                .end(r.ray.orig + r.ray.dir.with_magnitude(40.0));
         }
 
         if r.collisions.len() > 3 {
@@ -474,9 +474,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                     .x_y(c.x, c.y)
                     .w_h(model.collision_radius * i, model.collision_radius * i);
             }
-
         }
-
 
         let mut col = rgba(0.0, 0.0, 0.0, 0.0);
         let win = app.window_rect();
@@ -513,27 +511,24 @@ fn view(app: &App, model: &Model, frame: Frame) {
         //         draw.polygon().points_textured(&model.texture, ppp);
         //     }
         // }
-        
-        if(r.collisions.len() > 3){
+
+        if (r.collisions.len() > 3) {
             draw.path()
-            .stroke()
-            .caps_round()
-            .stroke_weight(model.ray_width)
-            .points(r.collisions.iter().cloned())
-            .color(model.palette.get_first(model.scheme_id, model.color_off));
-
+                .stroke()
+                .caps_round()
+                .stroke_weight(model.ray_width)
+                .points(r.collisions.iter().cloned())
+                .color(model.palette.get_first(model.scheme_id, model.color_off));
         }
-
 
         for (&c, &r) in r.collisions.iter().zip(r.reflections.iter()) {
             if model.draw_arrows {
                 draw.arrow()
-                .start(c)
-                .end(c + r.with_magnitude(40.0))
-                .stroke_weight(model.ray_width)
-                .color(model.palette.get_first(model.scheme_id, model.color_off));
+                    .start(c)
+                    .end(c + r.with_magnitude(40.0))
+                    .stroke_weight(model.ray_width)
+                    .color(model.palette.get_first(model.scheme_id, model.color_off));
             }
-
         }
         if model.draw_tex_overlay {
             draw.texture(&model.texture).w_h(800.0, 800.0);
@@ -562,48 +557,136 @@ fn make_walls(
     rays.clear();
     let step = win.w() as u32 / tile_count_w;
     //let step = 200;
-    let mut squares: Vec<Square> = Vec::new();
-    squares.push(Square {
-        x: win.left(),
-        y: win.bottom(),
-        width: win.w() as f32,
-        height: win.h() as f32,
-    });
-    for i in (win.left() as i32..win.right() as i32).step_by(step as usize) {
-        split_squares(i as f32, i as f32, &mut squares, wall_split);
-    }
-
-    for square in &squares {
-        match mode {
-            1 => {
-                let padding = step as f32 * perc_padding;
-                let mut r = BouncingRay2D::new();
-                r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                r.primary_ray.orig = vec2(
-                    square.x + square.width * 0.8,
-                    square.y + square.height * 0.3,
-                );
-                r.reset();
-                rays.push(r);
-                create_wall_from_square(&square, walls, mode, padding, hole_pct);
-            }
-            2 => {
-                let padding = step as f32 * perc_padding;
-                let hole = (step as f32 / 2.0) * hole_pct;
-                if random_range(0.0, 1.0) > rays_prob {
+    if mode <= 2 {
+        let mut squares: Vec<Square> = Vec::new();
+        squares.push(Square {
+            x: win.left(),
+            y: win.bottom(),
+            width: win.w() as f32,
+            height: win.h() as f32,
+        });
+        for i in (win.left() as i32..win.right() as i32).step_by(step as usize) {
+            split_squares(i as f32, i as f32, &mut squares, wall_split);
+        }
+        for square in &squares {
+            match mode {
+                1 => {
+                    let padding = step as f32 * perc_padding;
                     let mut r = BouncingRay2D::new();
-                    //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                    r.primary_ray.dir = Vector2::from_angle(PI);
+                    r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
                     r.primary_ray.orig = vec2(
-                        square.x + square.width * 0.5,
-                        square.y + square.height * 0.5,
+                        square.x + square.width * 0.8,
+                        square.y + square.height * 0.3,
                     );
                     r.reset();
                     rays.push(r);
+                    create_wall_from_square(&square, walls, mode, padding, hole_pct);
                 }
-                create_wall_from_square(&square, walls, mode, padding, hole);
+                2 => {
+                    let padding = step as f32 * perc_padding;
+                    let hole = (step as f32 / 2.0) * hole_pct;
+                    if random_range(0.0, 1.0) > rays_prob {
+                        let mut r = BouncingRay2D::new();
+                        //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                        r.primary_ray.dir = Vector2::from_angle(PI);
+                        r.primary_ray.orig = vec2(
+                            square.x + square.width * 0.5,
+                            square.y + square.height * 0.5,
+                        );
+                        r.reset();
+                        rays.push(r);
+                    }
+                    create_wall_from_square(&square, walls, mode, padding, hole);
+                }
+                _ => {}
             }
-            _ => {}
+        }
+    } else {
+        let mut xpos = win.left();
+        let mut ypos = win.bottom();
+        for _x in 0..tile_count_w {
+            for _y in 0..(win.h() as u32 / step as u32) {
+                let coin = random_range(0.0, 1.0);
+                let start_p;
+                let end_p;
+                let padding = 0.1 * step as f32;
+                match mode {
+                    3 => {
+                        if coin > 0.4 {
+                            start_p = vec2(xpos + padding, ypos + step as f32 - padding);
+                            end_p = vec2(xpos + step as f32 - padding, ypos + padding);
+                        } else {
+                            start_p = vec2(xpos + padding, ypos + padding);
+                            end_p =
+                                vec2(xpos + step as f32 - padding, ypos + step as f32 - padding);
+                        }
+                        if _x % 2 == 0 && _y % 2 == 0 {
+                            let mut r = BouncingRay2D::new();
+                            r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                            r.primary_ray.orig = start_p;
+                            r.ray.orig = start_p;
+                            rays.push(r);
+                        } else {
+                            walls.push(start_p);
+                            walls.push(end_p);
+                        }
+                    }
+                    4 => {
+                        if coin > 0.5 {
+                            start_p = vec2(xpos + padding, ypos + step as f32 - padding);
+                            end_p = vec2(xpos + step as f32 - padding, ypos + padding);
+                        } else {
+                            start_p = vec2(xpos + padding, ypos + padding);
+                            end_p =
+                                vec2(xpos + step as f32 - padding, ypos + step as f32 - padding);
+                        }
+                        if (_x == 2 && _y == 2) || (_x == 14 && _y == 14) {
+                            let mut r = BouncingRay2D::new();
+                            r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                            r.primary_ray.orig = start_p;
+                            r.ray.orig = start_p;
+                            rays.push(r);
+                        } else {
+                            walls.push(start_p);
+                            walls.push(end_p);
+                        }
+                    }
+                    5 => {
+                        if _x % 2 == 0 && _y % 2 == 0 {
+                            start_p = vec2(xpos + padding, ypos + step as f32 - padding);
+                            end_p = vec2(xpos + step as f32 - padding, ypos + padding);
+                            let mut r = BouncingRay2D::new();
+                            //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                            r.primary_ray.dir = Vector2::from_angle(1.0);
+                            // r.primary_ray.orig = start_p;
+                            // r.ray.orig = start_p;
+                            let o = vec2(xpos + step as f32 / 2.0, ypos + step as f32 - padding);
+                            r.primary_ray.orig = o;
+                            r.ray.orig = o;
+                            if coin > 0.4 {
+                                rays.push(r);
+                            }
+                        } else if _y % 2 == 0 && _x % 2 != 0 {
+                            start_p = vec2(xpos + padding, ypos + padding);
+                            end_p =
+                                vec2(xpos + step as f32 - padding, ypos + step as f32 - padding);
+                        } else if _x % 2 != 0 && _y % 2 != 0 {
+                            start_p = vec2(xpos + padding, ypos + step as f32 - padding);
+                            end_p = vec2(xpos + step as f32 - padding, ypos + padding);
+                        } else {
+                            start_p = vec2(xpos + padding, ypos + padding);
+                            end_p =
+                                vec2(xpos + step as f32 - padding, ypos + step as f32 - padding);
+                        }
+                        walls.push(start_p);
+                        walls.push(end_p);
+                    }
+                    _ => {}
+                }
+                ypos += step as f32;
+            }
+            ypos = win.bottom();
+            xpos += step as f32;
         }
     }
     //println!("{:?}", walls.len());
