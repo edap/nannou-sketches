@@ -97,7 +97,7 @@ fn model(app: &App) -> Model {
     let wall_width = 2.0;
     let wall_split = 0.3;
     let wall_padding = 0.07;
-    let hole_pct = 0.0;
+    let hole_pct = 0.2;
     let wall_mode = 2;
     let max_bounces = 4;
     let rotation = 0.0;
