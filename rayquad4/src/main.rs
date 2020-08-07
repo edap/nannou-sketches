@@ -75,7 +75,9 @@ widget_ids! {
 fn model(app: &App) -> Model {
     let tile_count_w = 8;
     app.new_window()
-        .size(1280, 720)
+        //.size(1280, 720)
+        .size(1600, 900)
+        //.size(900, 900)
         .view(view)
         .key_pressed(key_pressed)
         .build()
@@ -97,7 +99,7 @@ fn model(app: &App) -> Model {
     let wall_width = 2.0;
     let wall_split = 0.3;
     let wall_padding = 0.07;
-    let hole_pct = 0.2;
+    let hole_pct = 0.3;
     let wall_mode = 2;
     let max_bounces = 4;
     let rotation = 0.0;
@@ -263,7 +265,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             );
         }
 
-        for value in slider(model.collision_radius as f32, 3.0, 185.0)
+        for value in slider(model.collision_radius as f32, 0.0, 185.0)
             .down(3.0)
             .label("collision radius")
             .set(model.ids.collision_radius, ui)
@@ -465,7 +467,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .end(r.ray.orig + r.ray.dir.with_magnitude(40.0));
         }
 
-        if r.collisions.len() > 3 {
+        if r.collisions.len() > 3 && model.collision_radius > 0.0{
             for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
                 draw.ellipse()
                     .no_fill()
@@ -512,7 +514,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
         //     }
         // }
 
-        if (r.collisions.len() > 3) {
+        if r.collisions.len() > 3 {
             draw.path()
                 .stroke()
                 .caps_round()
