@@ -467,7 +467,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .end(r.ray.orig + r.ray.dir.with_magnitude(40.0));
         }
 
-        if r.collisions.len() > 3 && model.collision_radius > 0.0{
+        if r.collisions.len() > 3 && model.collision_radius > 0.0 {
             for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
                 draw.ellipse()
                     .no_fill()
@@ -557,15 +557,17 @@ fn make_walls(
 ) {
     walls.clear();
     rays.clear();
-    let step = win.w() as u32 / tile_count_w;
+    let margin: i32 = 80;
+    let step = (win.w() as f32) as u32 / tile_count_w;
+
     //let step = 200;
     if mode <= 2 {
         let mut squares: Vec<Square> = Vec::new();
         squares.push(Square {
             x: win.left(),
-            y: win.bottom(),
-            width: win.w() as f32,
-            height: win.h() as f32,
+            y: win.bottom() + margin as f32,
+            width: (win.w() - margin as f32) as f32,
+            height: (win.h() - margin as f32) as f32,
         });
         for i in (win.left() as i32..win.right() as i32).step_by(step as usize) {
             split_squares(i as f32, i as f32, &mut squares, wall_split);
