@@ -440,10 +440,9 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
 fn view(app: &App, model: &Model, frame: Frame) {
     let blends = [BLEND_NORMAL, BLEND_ADD, BLEND_SUBTRACT, BLEND_LIGHTEST];
     let draw = app.draw().color_blend(blends[model.blend_id].clone());
-    frame.clear(model.palette.get_scheme(model.scheme_id)[4]);
-    //let draw = app.draw();
-    draw.background()
-        .color(model.palette.get_fifth(model.scheme_id, model.color_off));
+    // frame.clear(model.palette.get_fifth(model.scheme_id, model.color_off));
+    // test black BG
+    frame.clear(BLACK);
 
     // draw the walls
     if model.show_walls {
