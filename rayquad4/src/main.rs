@@ -76,8 +76,11 @@ fn model(app: &App) -> Model {
     let tile_count_w = 8;
     app.new_window()
         //.size(1280, 720)
-        .size(1600, 900)
-        //.size(900, 900)
+        //.size(1600, 900)
+        .size(1777, 1000)
+        //.size(1920,1080)
+        // .size( 3840,2160)
+        // .size(2560, 1440) // 16:9
         .view(view)
         .key_pressed(key_pressed)
         .build()
@@ -420,7 +423,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 r.bounces += 1;
                 let refl = r.ray.reflect(surface_normal);
                 r.refl_intensity.push(r.ray.dir.dot(refl).abs());
-                r.ray.orig = collision + refl.with_magnitude(0.03);
+                r.ray.orig = collision + refl.with_magnitude(EPSILON); // avoid self intersection bouncing a bit more far away
                 r.ray.dir = refl;
                 r.collisions.push(collision);
                 //r.refractions.push(r.ray.refract(surface_normal, 1.0));
@@ -440,10 +443,11 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
 fn view(app: &App, model: &Model, frame: Frame) {
     let blends = [BLEND_NORMAL, BLEND_ADD, BLEND_SUBTRACT, BLEND_LIGHTEST];
     let draw = app.draw().color_blend(blends[model.blend_id].clone());
-    frame.clear(model.palette.get_scheme(model.scheme_id)[4]);
+    frame.clear(model.palette.get_fifth(model.scheme_id, model.color_off));
+    //frame.clear(BLACK);
     //let draw = app.draw();
-    draw.background()
-        .color(model.palette.get_fifth(model.scheme_id, model.color_off));
+    // draw.background()
+    //     .color(model.palette.get_fifth(model.scheme_id, model.color_off));
 
     // draw the walls
     if model.show_walls {
@@ -459,7 +463,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     }
 
     for r in &model.rays {
-        if (model.draw_arrows) {
+        if model.draw_arrows {
             draw.arrow()
                 .color(model.palette.get_first(model.scheme_id, model.color_off))
                 .start(r.ray.orig)
@@ -479,7 +483,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
         }
 
         let mut col = rgba(0.0, 0.0, 0.0, 0.0);
-        let win = app.window_rect();
+        //let win = app.window_rect();
         let ppp = r
             .collisions
             .iter()
@@ -557,17 +561,17 @@ fn make_walls(
 ) {
     walls.clear();
     rays.clear();
-    let margin: i32 = 80;
+    let margin: i32 = 100;
     let step = (win.w() as f32) as u32 / tile_count_w;
 
     //let step = 200;
     if mode <= 2 {
         let mut squares: Vec<Square> = Vec::new();
         squares.push(Square {
-            x: win.left(),
-            y: win.bottom() + margin as f32,
-            width: (win.w() - margin as f32) as f32,
-            height: (win.h() - margin as f32) as f32,
+            x: win.left() + (margin as f32 /2.0),
+            y: win.bottom() + (margin as f32 /2.0),
+            width: (win.w() - margin as f32),
+            height: (win.h() - margin as f32),
         });
         for i in (win.left() as i32..win.right() as i32).step_by(step as usize) {
             split_squares(i as f32, i as f32, &mut squares, wall_split);
