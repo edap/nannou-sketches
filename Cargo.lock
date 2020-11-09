@@ -1875,6 +1875,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "raycircle3"
+version = "0.1.0"
+dependencies = [
+ "edapx-colors 0.1.0",
+ "nannou 0.15.0 (git+https://github.com/nannou-org/nannou)",
+ "ray2d 0.1.0",
+]
+
+[[package]]
 name = "rayon"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

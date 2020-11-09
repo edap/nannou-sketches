@@ -15,6 +15,7 @@ members = [
 	"rayquad4",
 	"raycircle",
 	"raycircle2",
+	"raycircle3",
 	"screeneffect",
 	"svg-easy",
 	"template-quad"
