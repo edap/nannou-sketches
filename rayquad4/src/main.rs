@@ -75,8 +75,8 @@ widget_ids! {
 fn model(app: &App) -> Model {
     let tile_count_w = 8;
     app.new_window()
-        //.size(1280, 720)
-        .size(1600, 900)
+        .size(1280, 720)
+        //.size(1600, 900)
         //.size(900, 900)
         .view(view)
         .key_pressed(key_pressed)
