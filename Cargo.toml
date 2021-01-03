@@ -13,6 +13,7 @@ members = [
 	"rayquad2",
 	"rayquad3",
 	"rayquad4",
+	"rayquad5",
 	"raycircle",
 	"raycircle2",
 	"screeneffect",

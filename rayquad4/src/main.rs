@@ -105,7 +105,7 @@ fn model(app: &App) -> Model {
     let wall_split = 0.3;
     let wall_padding = 0.07;
     let hole_pct = 0.3;
-    let wall_mode = 2;
+    let wall_mode = 3;
     let max_bounces = 4;
     let rotation = 0.0;
     let collision_radius = 3.0;
@@ -127,7 +127,7 @@ fn model(app: &App) -> Model {
         wall_mode,
     );
     let show_walls = true;
-    let animation = false;
+    let animation = true;
     let draw_arrows = true;
     let animation_speed = 0.01;
     let animation_time = 0.0;

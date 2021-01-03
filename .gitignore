@@ -1,3 +1,5 @@
 /target
+screenshots
 **/*.rs.bk
+**/target
 *.png
