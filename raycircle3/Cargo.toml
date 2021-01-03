@@ -1,0 +1,12 @@
+[package]
+name = "raycircle3"
+version = "0.1.0"
+authors = ["Davide Prati <lastexxit@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+nannou = { git = "https://github.com/nannou-org/nannou", branch = "master" }
+edapx-colors = { path = "../edapx-colors" }
+ray2d = { path = "../ray2d" }
