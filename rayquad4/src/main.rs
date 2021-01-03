@@ -8,6 +8,8 @@ pub use crate::bouncing::BouncingRay2D;
 use crate::mondrian::split_squares;
 pub use crate::mondrian::Square;
 
+const EPSILON:f32 = 0.5; 
+
 fn main() {
     nannou::app(model).update(update).run();
 }
@@ -76,8 +78,8 @@ fn model(app: &App) -> Model {
     let tile_count_w = 8;
     app.new_window()
         //.size(1280, 720)
-        //.size(1600, 900)
-        .size(1777, 1000)
+        .size(1600, 900)
+        //.size(1777, 1000)
         //.size(1920,1080)
         // .size( 3840,2160)
         // .size(2560, 1440) // 16:9
