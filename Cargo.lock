@@ -1947,7 +1947,7 @@ name = "rayquad5"
 version = "0.1.0"
 dependencies = [
  "edapx-colors 0.1.0",
- "nannou 0.14.1 (git+https://github.com/nannou-org/nannou)",
+ "nannou 0.15.0 (git+https://github.com/nannou-org/nannou)",
  "ray2d 0.1.0",
 ]
 

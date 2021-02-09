@@ -8,7 +8,8 @@ pub use crate::bouncing::BouncingRay2D;
 use crate::mondrian::split_squares;
 pub use crate::mondrian::Square;
 
-const EPSILON:f32 = 0.5; 
+const EPSILON:f32 = 0.5;
+const ARROW_LENGTH:f32 = 40.0;
 
 fn main() {
     nannou::app(model).update(update).run();
@@ -44,6 +45,7 @@ struct Model {
     draw_polygon: bool,
     polygon_contour_weight: f32,
     texture: wgpu::Texture,
+    clear_interval: usize,
 }
 
 widget_ids! {
@@ -70,7 +72,8 @@ widget_ids! {
         animation,
         animation_speed,
         show_walls,
-        draw_tex_overlay
+        draw_tex_overlay,
+        clear_interval
     }
 }
 
@@ -115,6 +118,7 @@ fn model(app: &App) -> Model {
     let blend_id = 0;
     let color_off = 4;
     let palette = Palette::new();
+    let clear_interval = 6;
     make_walls(
         &mut walls,
         &mut rays,
@@ -172,6 +176,7 @@ fn model(app: &App) -> Model {
         draw_arrows,
         polygon_contour_weight,
         draw_tex_overlay,
+        clear_interval,
         texture,
     }
 }
@@ -299,6 +304,13 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         {
             model.max_bounces = value as usize;
         }
+        for value in slider(model.clear_interval as f32, 5.0, 20.0)
+            .down(3.0)
+            .label("clear_interval")
+            .set(model.ids.clear_interval, ui)
+        {
+            model.clear_interval = value as usize;
+        }
 
         for val in slider(model.rotation, -PI, PI)
             .down(3.0)
@@ -389,55 +401,21 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
     }
 
+
+
     for r in model.rays.iter_mut() {
         r.max_bounces = model.max_bounces;
+        if _app.elapsed_frames() % (model.clear_interval as u64 *100) == 0{
+            r.collisions.clear();
+            r.reflections.clear();
+            r.refl_intensity.clear();
+        }
 
-
-        // this two are not necessary but add a line more from the ray to the destination
-        // r.collisions.push(r.ray.orig);
-        // r.reflections.push(r.ray.dir);
-        // r.refl_intensity.push(0.0);
-
-        // while !r.max_bounces_reached() {
-        //     let mut collision: Vector2 = vec2(0.0, 0.0);
-        //     let mut distance: f32 = Float::infinity();
-        //     let mut surface_normal: Vector2 = vec2(0.0, 0.0);
-        //     // find the closest intersection point between the ray and the walls
-        //     for index in (0..model.walls.len()).step_by(2) {
-        //         if let Some(collision_distance) = r.ray.intersect_segment(
-        //             model.walls[index].x,
-        //             model.walls[index].y,
-        //             model.walls[index + 1].x,
-        //             model.walls[index + 1].y,
-        //         ) {
-        //             if collision_distance < distance {
-        //                 distance = collision_distance;
-        //                 collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
-        //                 let segment_dir = (model.walls[index] - model.walls[index + 1]).normalize();
-        //                 surface_normal = vec2(segment_dir.y, -segment_dir.x);
-        //             }
-        //         }
-        //     }
-        //     if distance < Float::infinity() {
-        //         // collision point
-        //         r.bounces += 1;
-        //         let refl = r.ray.reflect(surface_normal);
-        //         r.refl_intensity.push(r.ray.dir.dot(refl).abs());
-        //         r.ray.orig = collision + refl.with_magnitude(EPSILON); // avoid self intersection bouncing a bit more far away
-        //         r.ray.dir = refl;
-        //         r.collisions.push(collision);
-        //         //r.refractions.push(r.ray.refract(surface_normal, 1.0));
-        //         r.reflections.push(refl);
-        //     } else {
-        //         break;
-        //     };
-        // }
-        // r.reset();
         // if model.animation {
         //     model.animation_time = _app.time * model.animation_speed;
         // }
-        // r.ray.dir = r.ray.dir.rotate(model.animation_time + model.rotation);
-        r.primary_ray.dir = r.primary_ray.dir.rotate(model.animation_time + model.rotation);
+        r.primary_ray.dir = r.ray.dir.rotate(model.rotation);
+        //r.primary_ray.dir = r.primary_ray.dir.rotate(model.animation_time + model.rotation);
 
             let mut collision: Vector2 = vec2(0.0, 0.0);
             let mut distance: f32 = Float::infinity();
@@ -460,7 +438,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             }
 
             if r.bounces < r.max_bounces {
-                if distance < EPSILON + model.animation_speed {
+                if (distance - ARROW_LENGTH) < EPSILON + model.animation_speed {
                     collision = r.ray.orig + r.ray.dir.with_magnitude(distance);
                     r.bounces += 1;
                     let refl = r.ray.reflect(surface_normal);
@@ -514,7 +492,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .color(model.palette.get_first(model.scheme_id, model.color_off))
                 .start(r.ray.orig)
                 .stroke_weight(model.ray_width)
-                .end(r.ray.orig + r.ray.dir.with_magnitude(40.0));
+                .end(r.ray.orig + r.ray.dir.with_magnitude(ARROW_LENGTH));
         }
 
         if r.collisions.len() > 3 && model.collision_radius > 0.0 {
