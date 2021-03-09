@@ -79,6 +79,23 @@ impl Ray2D {
         }
     }
 
+    pub fn intersect_line(&self, points: &Vec<Vector2>) -> Option<f32> {
+        let mut distance: f32 = Float::infinity();
+        // find the closest intersection point between the ray and the walls
+        for index in (0..points.len()).step_by(2) {
+            if let Some(collision_distance) = self.intersect_segment(
+                points[index].x,
+                points[index].y,
+                points[index + 1].x,
+                points[index + 1].y,
+            ) {
+                if collision_distance < distance {
+                    distance = collision_distance;
+                }
+            }
+        }
+    }
+
     pub fn intersect_circle(&self, center: Vector2, radius: f32) -> Option<f32> {
         // let h = center - self.orig;
         // let lf = self.dir.dot(h);
