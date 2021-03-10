@@ -429,9 +429,9 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             let mut distance: f32 = Float::infinity();
             let mut surface_normal: Vector2 = vec2(0.0, 0.0);
             // find the closest intersection point between the ray and the walls
-            for index in 0..model.walls.len()-1 {
+            for curve in model.walls.iter() {
                 if let Some(collision) = r.ray.intersect_polyline(
-                    &model.walls[index].points,
+                    &curve.points,
                 ) {
                     // save the closest possible collision
                     if collision.0 < distance {
@@ -479,12 +479,12 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     // draw the walls
     if model.show_walls {
-        for index in 0..model.walls.len()-1 {
+        for curve in model.walls.iter() {
             draw.polyline()
                 .weight(model.wall_width)
                 .color(model.palette.get_second(model.scheme_id, model.color_off))
                 // look at points_colored
-                .points(model.walls[index].points.clone());
+                .points(curve.points.clone());
                 //.caps_round();
         }
     }
