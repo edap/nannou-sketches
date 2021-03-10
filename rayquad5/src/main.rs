@@ -8,7 +8,7 @@ pub use crate::bouncing::BouncingRay2D;
 use crate::mondrian::split_squares;
 pub use crate::mondrian::Square;
 
-const EPSILON:f32 = 0.5;
+const EPSILON:f32 = 0.2;
 const ARROW_LENGTH:f32 = 40.0;
 
 fn main() {
@@ -118,7 +118,7 @@ fn model(app: &App) -> Model {
     let blend_id = 0;
     let color_off = 4;
     let palette = Palette::new();
-    let clear_interval = 6;
+    let clear_interval = 14;
     make_walls(
         &mut walls,
         &mut rays,
@@ -128,6 +128,7 @@ fn model(app: &App) -> Model {
         wall_padding,
         hole_pct,
         rays_prob,
+        rotation,
         wall_mode,
     );
     let show_walls = true;
@@ -271,6 +272,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 model.wall_padding,
                 model.hole_pct,
                 model.rays_prob,
+                model.rotation,
                 model.wall_mode,
             );
         }
@@ -297,7 +299,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         {
             model.rays_prob = value;
         }
-        for value in slider(model.max_bounces as f32, 1.0, 200.0)
+        for value in slider(model.max_bounces as f32, 1.0, 400.0)
             .down(3.0)
             .label("max_bounces")
             .set(model.ids.max_bounces, ui)
@@ -402,10 +404,9 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
     }
 
 
-
     for r in model.rays.iter_mut() {
         r.max_bounces = model.max_bounces;
-        if _app.elapsed_frames() % (model.clear_interval as u64 *100) == 0{
+        if _app.time.round() as usize % model.clear_interval == 0 && model.animation {
             r.collisions.clear();
             r.reflections.clear();
             r.refl_intensity.clear();
@@ -414,8 +415,11 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         // if model.animation {
         //     model.animation_time = _app.time * model.animation_speed;
         // }
-        r.primary_ray.dir = r.ray.dir.rotate(model.rotation);
-        //r.primary_ray.dir = r.primary_ray.dir.rotate(model.animation_time + model.rotation);
+        //r.primary_ray.dir = r.ray.dir.rotate(model.rotation);
+        
+        r.primary_ray.set_dir_from_angle(model.rotation);
+        // println!("{:?}", r.primary_ray.dir.x);
+        // r.primary_ray.dir = r.primary_ray.dir.rotate(model.animation_time + model.rotation);
 
             let mut collision: Vector2 = vec2(0.0, 0.0);
             let mut distance: f32 = Float::infinity();
@@ -581,6 +585,7 @@ fn make_walls(
     perc_padding: f32,
     hole_pct: f32,
     rays_prob: f32,
+    rot: f32,
     mode: u32, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
 ) {
     walls.clear();
@@ -620,7 +625,8 @@ fn make_walls(
                     if random_range(0.0, 1.0) > rays_prob {
                         let mut r = BouncingRay2D::new();
                         //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                        r.primary_ray.dir = Vector2::from_angle(PI);
+                        r.primary_ray.dir = Vector2::from_angle(rot);
+                        //r.primary_ray.set_dir_from_angle(model.rotation);
                         r.primary_ray.orig = vec2(
                             square.x + square.width * 0.5,
                             square.y + square.height * 0.5,
