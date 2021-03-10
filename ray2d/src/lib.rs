@@ -79,10 +79,11 @@ impl Ray2D {
         }
     }
 
-    pub fn intersect_line(&self, points: &Vec<Vector2>) -> Option<f32> {
+    pub fn intersect_polyline(&self, points: &Vec<Vector2>) -> Option<(f32, Vector2)> {
         let mut distance: f32 = Float::infinity();
+        let mut surface_normal: Vector2 = vec2(0.0, 0.0);
         // find the closest intersection point between the ray and the walls
-        for index in (0..points.len()).step_by(2) {
+        for index in (0..points.len()-1).step_by(2) {
             if let Some(collision_distance) = self.intersect_segment(
                 points[index].x,
                 points[index].y,
@@ -90,9 +91,16 @@ impl Ray2D {
                 points[index + 1].y,
             ) {
                 if collision_distance < distance {
+                    let segment_dir = (points[index] - points[index + 1]).normalize();
+                    surface_normal = vec2(segment_dir.y, -segment_dir.x);
                     distance = collision_distance;
                 }
             }
+        }
+        if distance < Float::infinity() {
+            return Some((distance, surface_normal))
+        } else {
+            return None
         }
     }
 

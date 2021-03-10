@@ -8,6 +8,9 @@ pub use crate::bouncing::BouncingRay2D;
 use crate::mondrian::split_squares;
 pub use crate::mondrian::Square;
 
+const EPSILON:f32 = 0.01;
+const ARROW_LENGTH:f32 = 40.0;
+
 fn main() {
     nannou::app(model).update(update).run();
 }
@@ -17,7 +20,7 @@ struct Curve {
 }
 
 struct Model {
-    walls: Vec<Vector2>,
+    walls: Vec<Curve>,
     tile_count_w: u32,
     wall_mode: u32,
     rays: Vec<BouncingRay2D>,
@@ -46,6 +49,7 @@ struct Model {
     draw_polygon: bool,
     polygon_contour_weight: f32,
     texture: wgpu::Texture,
+    clear_interval: usize,
 }
 
 widget_ids! {
@@ -72,7 +76,8 @@ widget_ids! {
         animation,
         animation_speed,
         show_walls,
-        draw_tex_overlay
+        draw_tex_overlay,
+        clear_interval
     }
 }
 
@@ -80,14 +85,17 @@ fn model(app: &App) -> Model {
     let tile_count_w = 8;
     app.new_window()
         //.size(1280, 720)
-        //.size(1600, 900)
-        .size(900, 900)
+        .size(1600, 900)
+        //.size(1777, 1000)
+        //.size(1920,1080)
+        // .size( 3840,2160)
+        // .size(2560, 1440) // 16:9
         .view(view)
         .key_pressed(key_pressed)
         .build()
         .unwrap();
 
-    let mut walls: Vec<Vector2> = Vec::new();
+    let mut walls: Vec<Curve> = Vec::new();
     let mut rays: Vec<BouncingRay2D> = Vec::new();
     let win = app.window_rect();
 
@@ -103,9 +111,9 @@ fn model(app: &App) -> Model {
     let wall_width = 2.0;
     let wall_split = 0.3;
     let wall_padding = 0.07;
-    let hole_pct = 0.3;
+    let hole_pct = 0.0;
     let wall_mode = 2;
-    let max_bounces = 4;
+    let max_bounces = 10;
     let rotation = 0.0;
     let collision_radius = 3.0;
     let rays_prob = 0.0;
@@ -114,6 +122,7 @@ fn model(app: &App) -> Model {
     let blend_id = 0;
     let color_off = 4;
     let palette = Palette::new();
+    let clear_interval = 14;
     make_walls(
         &mut walls,
         &mut rays,
@@ -123,12 +132,13 @@ fn model(app: &App) -> Model {
         wall_padding,
         hole_pct,
         rays_prob,
+        rotation,
         wall_mode,
     );
     let show_walls = true;
-    let animation = false;
+    let animation = true;
     let draw_arrows = true;
-    let animation_speed = 0.01;
+    let animation_speed = 2.0;
     let animation_time = 0.0;
     let draw_polygon = true;
     let polygon_contour_weight = 5.0;
@@ -171,6 +181,7 @@ fn model(app: &App) -> Model {
         draw_arrows,
         polygon_contour_weight,
         draw_tex_overlay,
+        clear_interval,
         texture,
     }
 }
@@ -265,6 +276,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 model.wall_padding,
                 model.hole_pct,
                 model.rays_prob,
+                model.rotation,
                 model.wall_mode,
             );
         }
@@ -291,12 +303,19 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         {
             model.rays_prob = value;
         }
-        for value in slider(model.max_bounces as f32, 1.0, 200.0)
+        for value in slider(model.max_bounces as f32, 1.0, 400.0)
             .down(3.0)
             .label("max_bounces")
             .set(model.ids.max_bounces, ui)
         {
             model.max_bounces = value as usize;
+        }
+        for value in slider(model.clear_interval as f32, 5.0, 20.0)
+            .down(3.0)
+            .label("clear_interval")
+            .set(model.ids.clear_interval, ui)
+        {
+            model.clear_interval = value as usize;
         }
 
         for val in slider(model.rotation, -PI, PI)
@@ -371,7 +390,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.animation = v;
         }
 
-        for value in slider(model.animation_speed as f32, 0.1, 0.0001)
+        for value in slider(model.animation_speed as f32, 80.0, 0.01)
             .down(3.0)
             .label("animation speed")
             .set(model.ids.animation_speed, ui)
@@ -388,157 +407,166 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
     }
 
+
     for r in model.rays.iter_mut() {
         r.max_bounces = model.max_bounces;
-        r.collisions.clear();
-        r.reflections.clear();
-        r.refl_intensity.clear();
+        if _app.time.round() as usize % model.clear_interval == 0 && model.animation {
+            r.collisions.clear();
+            r.reflections.clear();
+            r.refl_intensity.clear();
+        }
 
-        // this two are not necessary but add a line more from the ray to the destination
-        // r.collisions.push(r.ray.orig);
-        // r.reflections.push(r.ray.dir);
-        // r.refl_intensity.push(0.0);
+        // if model.animation {
+        //     model.animation_time = _app.time * model.animation_speed;
+        // }
+        //r.primary_ray.dir = r.ray.dir.rotate(model.rotation);
+        
+        r.primary_ray.set_dir_from_angle(model.rotation);
+        // println!("{:?}", r.primary_ray.dir.x);
+        // r.primary_ray.dir = r.primary_ray.dir.rotate(model.animation_time + model.rotation);
 
-        while !r.max_bounces_reached() {
             let mut collision: Vector2 = vec2(0.0, 0.0);
             let mut distance: f32 = Float::infinity();
             let mut surface_normal: Vector2 = vec2(0.0, 0.0);
             // find the closest intersection point between the ray and the walls
-            for index in (0..model.walls.len()).step_by(2) {
-                if let Some(collision_distance) = r.ray.intersect_segment(
-                    model.walls[index].x,
-                    model.walls[index].y,
-                    model.walls[index + 1].x,
-                    model.walls[index + 1].y,
+            for index in 0..model.walls.len()-1 {
+                if let Some(collision) = r.ray.intersect_polyline(
+                    &model.walls[index].points,
                 ) {
-                    if collision_distance < distance {
-                        distance = collision_distance;
-                        collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
-                        let segment_dir = (model.walls[index] - model.walls[index + 1]).normalize();
-                        surface_normal = vec2(segment_dir.y, -segment_dir.x);
+                    // save the closest possible collision
+                    if collision.0 < distance {
+                        distance = collision.0 ;
+                        surface_normal = collision.1;
                     }
                 }
             }
-            if distance < Float::infinity() {
-                // collision point
-                r.bounces += 1;
-                let refl = r.ray.reflect(surface_normal);
-                r.refl_intensity.push(r.ray.dir.dot(refl).abs());
-                r.ray.orig = collision + refl.with_magnitude(0.03);
-                r.ray.dir = refl;
-                r.collisions.push(collision);
-                //r.refractions.push(r.ray.refract(surface_normal, 1.0));
-                r.reflections.push(refl);
-            } else {
-                break;
-            };
-        }
-        r.reset();
-        if model.animation {
-            model.animation_time = _app.time * model.animation_speed;
-        }
-        r.ray.dir = r.ray.dir.rotate(model.animation_time + model.rotation);
+
+            if r.bounces < r.max_bounces {
+                if (distance - ARROW_LENGTH) < EPSILON + model.animation_speed {
+                    collision = r.ray.orig + r.ray.dir.with_magnitude(distance);
+                    r.bounces += 1;
+                    let refl = r.ray.reflect(surface_normal);
+                    r.refl_intensity.push(r.ray.dir.dot(refl).abs());
+                    r.ray.orig = collision + refl.with_magnitude(EPSILON); // avoid self intersection bouncing a bit more far away
+                    r.ray.dir = refl;
+                    r.collisions.push(collision);
+                    //r.refractions.push(r.ray.refract(surface_normal, 1.0));
+                    r.reflections.push(refl);
+                } else {
+                   if distance < Float::infinity() {
+                    r.ray.orig = r.ray.orig + r.ray.dir.with_magnitude(model.animation_speed);
+                   }else{
+                       r.reset();
+                   } 
+                }
+
+            }else{
+                r.reset();
+            } 
+        
+
     }
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
     let blends = [BLEND_NORMAL, BLEND_ADD, BLEND_SUBTRACT, BLEND_LIGHTEST];
     let draw = app.draw().color_blend(blends[model.blend_id].clone());
-    // frame.clear(model.palette.get_fifth(model.scheme_id, model.color_off));
-    // test black BG
-    frame.clear(BLACK);
+    frame.clear(model.palette.get_fifth(model.scheme_id, model.color_off));
+    //frame.clear(BLACK);
+    //let draw = app.draw();
+    // draw.background()
+    //     .color(model.palette.get_fifth(model.scheme_id, model.color_off));
 
-    // // draw the walls
-    // if model.show_walls {
-    //     let size = model.walls.len();
-    //     for index in (0..size).step_by(2) {
-    //         draw.line()
-    //             .weight(model.wall_width)
-    //             .color(model.palette.get_second(model.scheme_id, model.color_off))
-    //             .start(model.walls[index])
-    //             .caps_round()
-    //             .end(model.walls[index + 1]);
-    //     }
-    // }
+    // draw the walls
+    if model.show_walls {
+        for index in 0..model.walls.len()-1 {
+            draw.polyline()
+                .weight(model.wall_width)
+                .color(model.palette.get_second(model.scheme_id, model.color_off))
+                // look at points_colored
+                .points(model.walls[index].points.clone());
+                //.caps_round();
+        }
+    }
 
-    // for r in &model.rays {
-    //     if (model.draw_arrows) {
-    //         draw.arrow()
-    //             .color(model.palette.get_first(model.scheme_id, model.color_off))
-    //             .start(r.ray.orig)
-    //             .stroke_weight(model.ray_width)
-    //             .end(r.ray.orig + r.ray.dir.with_magnitude(40.0));
-    //     }
+    for r in &model.rays {
+        if model.draw_arrows {
+            draw.arrow()
+                .color(model.palette.get_first(model.scheme_id, model.color_off))
+                .start(r.ray.orig)
+                .stroke_weight(model.ray_width)
+                .end(r.ray.orig + r.ray.dir.with_magnitude(ARROW_LENGTH));
+        }
 
-    //     if r.collisions.len() > 3 && model.collision_radius > 0.0 {
-    //         for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
-    //             draw.ellipse()
-    //                 .no_fill()
-    //                 .stroke(model.palette.get_third(model.scheme_id, model.color_off))
-    //                 .stroke_weight(3.0)
-    //                 .x_y(c.x, c.y)
-    //                 .w_h(model.collision_radius * i, model.collision_radius * i);
-    //         }
-    //     }
+        if r.collisions.len() > 3 && model.collision_radius > 0.0 {
+            for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
+                draw.ellipse()
+                    .no_fill()
+                    .stroke(model.palette.get_third(model.scheme_id, model.color_off))
+                    .stroke_weight(3.0)
+                    .x_y(c.x, c.y)
+                    .w_h(model.collision_radius * i, model.collision_radius * i);
+            }
+        }
 
-    //     let mut col = rgba(0.0, 0.0, 0.0, 0.0);
-    //     let win = app.window_rect();
-    //     let ppp = r
-    //         .collisions
-    //         .iter()
-    //         .zip(r.reflections.iter())
-    //         .map(|(&co, &re)| {
-    //             if re.x > 0.0 {
-    //                 col = model.palette.get_third(model.scheme_id, model.color_off)
-    //             } else {
-    //                 col = model.palette.get_fourth(model.scheme_id, model.color_off)
-    //             }
-    //             // let xc = map_range(co.x, win.left(), win.right(), 0.0, 1.0);
-    //             // let xy = map_range(co.y, win.bottom(), win.top(), 0.0, 1.0);
-    //             // let tex_coords = [xc, xy];
-    //             // (pt2(co.x, co.y), tex_coords)
-    //             (pt2(co.x, co.y), col)
-    //         });
+        let mut col = rgba(0.0, 0.0, 0.0, 0.0);
+        //let win = app.window_rect();
+        let ppp = r
+            .collisions
+            .iter()
+            .zip(r.reflections.iter())
+            .map(|(&co, &re)| {
+                if re.x > 0.0 {
+                    col = model.palette.get_third(model.scheme_id, model.color_off)
+                } else {
+                    col = model.palette.get_fourth(model.scheme_id, model.color_off)
+                }
+                // let xc = map_range(co.x, win.left(), win.right(), 0.0, 1.0);
+                // let xy = map_range(co.y, win.bottom(), win.top(), 0.0, 1.0);
+                // let tex_coords = [xc, xy];
+                // (pt2(co.x, co.y), tex_coords)
+                (pt2(co.x, co.y), col)
+            });
 
-    //     if model.draw_polygon {
-    //         if ppp.len() > 3 {
-    //             draw.polygon()
-    //                 .stroke(model.palette.get_second(model.scheme_id, model.color_off))
-    //                 .stroke_weight(model.polygon_contour_weight)
-    //                 .join_round()
-    //                 .points_colored(ppp);
-    //             //draw.polygon().points_textured(&model.texture, ppp);
-    //         }
-    //     };
+        if model.draw_polygon {
+            if ppp.len() > 3 {
+                draw.polygon()
+                    .stroke(model.palette.get_second(model.scheme_id, model.color_off))
+                    .stroke_weight(model.polygon_contour_weight)
+                    .join_round()
+                    .points_colored(ppp);
+                //draw.polygon().points_textured(&model.texture, ppp);
+            }
+        };
 
-    //     // if model.draw_tex_overlay {
-    //     //     if ppp.len() > 3 {
-    //     //         draw.polygon().points_textured(&model.texture, ppp);
-    //     //     }
-    //     // }
+        // if model.draw_tex_overlay {
+        //     if ppp.len() > 3 {
+        //         draw.polygon().points_textured(&model.texture, ppp);
+        //     }
+        // }
 
-    //     if r.collisions.len() > 3 {
-    //         draw.path()
-    //             .stroke()
-    //             .caps_round()
-    //             .stroke_weight(model.ray_width)
-    //             .points(r.collisions.iter().cloned())
-    //             .color(model.palette.get_first(model.scheme_id, model.color_off));
-    //     }
+        if r.collisions.len() > 3 {
+            draw.path()
+                .stroke()
+                .caps_round()
+                .stroke_weight(model.ray_width)
+                .points(r.collisions.iter().cloned())
+                .color(model.palette.get_first(model.scheme_id, model.color_off));
+        }
 
-    //     for (&c, &r) in r.collisions.iter().zip(r.reflections.iter()) {
-    //         if model.draw_arrows {
-    //             draw.arrow()
-    //                 .start(c)
-    //                 .end(c + r.with_magnitude(40.0))
-    //                 .stroke_weight(model.ray_width)
-    //                 .color(model.palette.get_first(model.scheme_id, model.color_off));
-    //         }
-    //     }
-    //     if model.draw_tex_overlay {
-    //         draw.texture(&model.texture).w_h(800.0, 800.0);
-    //     }
-    // }
+        for (&c, &r) in r.collisions.iter().zip(r.reflections.iter()) {
+            if model.draw_arrows {
+                draw.arrow()
+                    .start(c)
+                    .end(c + r.with_magnitude(40.0))
+                    .stroke_weight(model.ray_width)
+                    .color(model.palette.get_first(model.scheme_id, model.color_off));
+            }
+        }
+        if model.draw_tex_overlay {
+            draw.texture(&model.texture).w_h(800.0, 800.0);
+        }
+    }
 
     draw.to_frame(app, &frame).unwrap();
 
@@ -548,7 +576,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
 }
 
 fn make_walls(
-    walls: &mut Vec<Vector2>,
+    walls: &mut Vec<Curve>,
     rays: &mut Vec<BouncingRay2D>,
     win: &geom::Rect,
     tile_count_w: u32,
@@ -556,206 +584,230 @@ fn make_walls(
     perc_padding: f32,
     hole_pct: f32,
     rays_prob: f32,
+    rot: f32,
     mode: u32, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
 ) {
     walls.clear();
     rays.clear();
-    let margin: i32 = 80;
+    let margin: i32 = 100;
     let step = (win.w() as f32) as u32 / tile_count_w;
 
+
     //let step = 200;
-    if mode <= 2 {
-        let mut squares: Vec<Square> = Vec::new();
-        squares.push(Square {
-            x: win.left(),
-            y: win.bottom() + margin as f32,
-            width: (win.w() - margin as f32) as f32,
-            height: (win.h() - margin as f32) as f32,
-        });
-        for i in (win.left() as i32..win.right() as i32).step_by(step as usize) {
-            split_squares(i as f32, i as f32, &mut squares, wall_split);
-        }
-        for square in &squares {
-            match mode {
-                1 => {
-                    let padding = step as f32 * perc_padding;
+
+    let mut squares: Vec<Square> = Vec::new();
+    squares.push(Square {
+        x: win.left() + (margin as f32 /2.0),
+        y: win.bottom() + (margin as f32 /2.0),
+        width: (win.w() - margin as f32),
+        height: (win.h() - margin as f32),
+    });
+    for i in (win.left() as i32..win.right() as i32).step_by(step as usize) {
+        split_squares(i as f32, i as f32, &mut squares, wall_split);
+    }
+    for square in &squares {
+        match mode {
+            1 => {
+                let padding = step as f32 * perc_padding;
+                let mut r = BouncingRay2D::new();
+                r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                r.primary_ray.orig = vec2(
+                    square.x + square.width * 0.8,
+                    square.y + square.height * 0.3,
+                );
+                r.reset();
+                rays.push(r);
+                create_curvedwalls_from_square(&square, walls, mode, padding, hole_pct);
+            }
+            2 => {
+                let padding = step as f32 * perc_padding;
+                let hole = (step as f32 / 2.0) * hole_pct;
+                if random_range(0.0, 1.0) > rays_prob {
                     let mut r = BouncingRay2D::new();
-                    r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                    //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                    r.primary_ray.dir = Vector2::from_angle(rot);
+                    //r.primary_ray.set_dir_from_angle(model.rotation);
                     r.primary_ray.orig = vec2(
-                        square.x + square.width * 0.8,
-                        square.y + square.height * 0.3,
+                        square.x + square.width * 0.5,
+                        square.y + square.height * 0.5,
                     );
                     r.reset();
                     rays.push(r);
-                    create_wall_from_square(&square, walls, mode, padding, hole_pct);
                 }
-                2 => {
-                    let padding = step as f32 * perc_padding;
-                    let hole = (step as f32 / 2.0) * hole_pct;
-                    if random_range(0.0, 1.0) > rays_prob {
-                        let mut r = BouncingRay2D::new();
-                        //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                        r.primary_ray.dir = Vector2::from_angle(PI);
-                        r.primary_ray.orig = vec2(
-                            square.x + square.width * 0.5,
-                            square.y + square.height * 0.5,
-                        );
-                        r.reset();
-                        rays.push(r);
-                    }
-                    create_wall_from_square(&square, walls, mode, padding, hole);
-                }
-                _ => {}
+                create_curvedwalls_from_square(&square, walls, mode, padding, hole);
             }
-        }
-    } else {
-        let mut xpos = win.left();
-        let mut ypos = win.bottom();
-        for _x in 0..tile_count_w {
-            for _y in 0..(win.h() as u32 / step as u32) {
-                let coin = random_range(0.0, 1.0);
-                let start_p;
-                let end_p;
-                let padding = 0.1 * step as f32;
-                match mode {
-                    3 => {
-                        if coin > 0.4 {
-                            start_p = vec2(xpos + padding, ypos + step as f32 - padding);
-                            end_p = vec2(xpos + step as f32 - padding, ypos + padding);
-                        } else {
-                            start_p = vec2(xpos + padding, ypos + padding);
-                            end_p =
-                                vec2(xpos + step as f32 - padding, ypos + step as f32 - padding);
-                        }
-                        if _x % 2 == 0 && _y % 2 == 0 {
-                            let mut r = BouncingRay2D::new();
-                            r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                            r.primary_ray.orig = start_p;
-                            r.ray.orig = start_p;
-                            rays.push(r);
-                        } else {
-                            walls.push(start_p);
-                            walls.push(end_p);
-                        }
-                    }
-                    4 => {
-                        if coin > 0.5 {
-                            start_p = vec2(xpos + padding, ypos + step as f32 - padding);
-                            end_p = vec2(xpos + step as f32 - padding, ypos + padding);
-                        } else {
-                            start_p = vec2(xpos + padding, ypos + padding);
-                            end_p =
-                                vec2(xpos + step as f32 - padding, ypos + step as f32 - padding);
-                        }
-                        if (_x == 2 && _y == 2) || (_x == 14 && _y == 14) {
-                            let mut r = BouncingRay2D::new();
-                            r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                            r.primary_ray.orig = start_p;
-                            r.ray.orig = start_p;
-                            rays.push(r);
-                        } else {
-                            walls.push(start_p);
-                            walls.push(end_p);
-                        }
-                    }
-                    5 => {
-                        if _x % 2 == 0 && _y % 2 == 0 {
-                            start_p = vec2(xpos + padding, ypos + step as f32 - padding);
-                            end_p = vec2(xpos + step as f32 - padding, ypos + padding);
-                            let mut r = BouncingRay2D::new();
-                            //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                            r.primary_ray.dir = Vector2::from_angle(1.0);
-                            // r.primary_ray.orig = start_p;
-                            // r.ray.orig = start_p;
-                            let o = vec2(xpos + step as f32 / 2.0, ypos + step as f32 - padding);
-                            r.primary_ray.orig = o;
-                            r.ray.orig = o;
-                            if coin > 0.4 {
-                                rays.push(r);
-                            }
-                        } else if _y % 2 == 0 && _x % 2 != 0 {
-                            start_p = vec2(xpos + padding, ypos + padding);
-                            end_p =
-                                vec2(xpos + step as f32 - padding, ypos + step as f32 - padding);
-                        } else if _x % 2 != 0 && _y % 2 != 0 {
-                            start_p = vec2(xpos + padding, ypos + step as f32 - padding);
-                            end_p = vec2(xpos + step as f32 - padding, ypos + padding);
-                        } else {
-                            start_p = vec2(xpos + padding, ypos + padding);
-                            end_p =
-                                vec2(xpos + step as f32 - padding, ypos + step as f32 - padding);
-                        }
-                        walls.push(start_p);
-                        walls.push(end_p);
-                    }
-                    _ => {}
-                }
-                ypos += step as f32;
-            }
-            ypos = win.bottom();
-            xpos += step as f32;
+            _ => {}
         }
     }
+
     //println!("{:?}", walls.len());
     //println!("{:?}", squares);
 }
 
-fn create_wall_from_square(
+fn create_curvedwalls_from_square(
     square: &Square,
-    walls: &mut Vec<Vector2>,
+    walls: &mut Vec<Curve>,
     mode: u32,
     padding: f32,
     hole: f32,
 ) {
     //let padding = square.width * 0.1;
     match mode {
+        // Diagonal?
+
+
         1 => {
-            walls.push(vec2(square.x + padding, square.y + padding));
-            walls.push(vec2(
-                square.x + square.width,
-                square.y - padding + square.height - padding,
-            ));
+            let points = vec![
+                vec2(square.x + padding, square.y + padding),
+                vec2(
+                    square.x + square.width,
+                    square.y - padding + square.height - padding)
+                ];
+            let curve = Curve{points: points};
+            walls.push(curve);
+
         }
         // closed square
         2 => {
-            // bottom
-            walls.push(vec2(square.x + padding + hole, square.y + padding));
-            walls.push(vec2(
-                square.x - hole + square.width - padding * 2.0,
-                square.y + padding,
-            ));
+            // let bottom_points = vec![
+            //     vec2(square.x + padding + hole, square.y + padding),
+            //     vec2(
+            //         square.x - hole + square.width - padding * 2.0,
+            //         square.y + padding,
+            //     )];
+            // let bottom_curve = Curve{points: bottom_points};
+            // walls.push(bottom_curve);
+            
 
-            // top
-            walls.push(vec2(
-                square.x + padding + hole,
-                square.y + square.height - padding * 2.0,
-            ));
-            walls.push(vec2(
-                square.x - hole + square.width - padding * 2.0,
-                square.y + square.height - padding * 2.0,
-            ));
+            // // top
+            // let top_points = vec![
+            // vec2(
+            //     square.x + padding + hole,
+            //     square.y + square.height - padding * 2.0,
+            // ),
+            // vec2(
+            //     square.x - hole + square.width - padding * 2.0,
+            //     square.y + square.height - padding * 2.0,
+            // )];
+            // let top_curve = Curve{points: top_points};
+            // walls.push(top_curve);
 
-            // left
-            walls.push(vec2(
-                square.x + square.width - padding * 2.0,
-                square.y + padding + hole,
-            ));
-            walls.push(vec2(
-                square.x + square.width - padding * 2.0,
-                square.y - hole + square.height - padding * 2.0,
-            ));
+            // // left
+            // let left_points = vec![
+            // vec2(
+            //     square.x + square.width - padding * 2.0,
+            //     square.y + padding + hole,
+            // ),
+            // vec2(
+            //     square.x + square.width - padding * 2.0,
+            //     square.y - hole + square.height - padding * 2.0,
+            // )];
+            // let left_curve = Curve{points: left_points};
+            // walls.push(left_curve);
 
-            // right
-            walls.push(vec2(square.x + padding, square.y + padding + hole));
-            walls.push(vec2(
-                square.x + padding,
-                square.y - hole + square.height - padding * 2.0,
-            ));
+            // // right
+            // let right_points = vec![
+            // vec2(square.x + padding, square.y + padding + hole),
+            // vec2(
+            //     square.x + padding,
+            //     square.y - hole + square.height - padding * 2.0,
+            // )];
+            // let right_curve = Curve{points: right_points};
+            // walls.push(right_curve);
+
+
+            walls.push(create_curve_from_square(square, mode, padding, hole));
+
         }
         // un modo coi rombi e con alcuni muri aperti.
         _ => {}
     }
 }
+
+fn create_curve_from_square(
+    square: &Square,
+    mode: u32,
+    padding: f32,
+    hole: f32,
+) -> Curve {
+    let center = vec2(square.x + square.width/2.0, square.y + square.height / 2.0);
+    let radius = square.width / 2.0 - padding;
+    let mut points = vec![];
+    // let points = (0..=360).step_by(2).map(|i| {
+    //     let rad = deg_to_rad(i as f32);
+    //     (
+    //         center + vec2(rad.sin() * radius, rad.cos() * radius),
+    //         //model.palette.get_second(model.scheme_id, model.color_off),
+    //     )
+    // });
+
+    for i in (0..=360).step_by(2) {
+        let rad = deg_to_rad(i as f32);
+        
+        points.push(center + vec2(rad.sin() * radius, rad.cos() * radius))
+    }
+
+    println!("size {:?}", points.len());
+    Curve {points: points}
+}
+
+
+// fn create_wall_from_square(
+//     square: &Square,
+//     walls: &mut Vec<Vector2>,
+//     mode: u32,
+//     padding: f32,
+//     hole: f32,
+// ) {
+//     //let padding = square.width * 0.1;
+//     match mode {
+//         1 => {
+//             walls.push(vec2(square.x + padding, square.y + padding));
+//             walls.push(vec2(
+//                 square.x + square.width,
+//                 square.y - padding + square.height - padding,
+//             ));
+//         }
+//         // closed square
+//         2 => {
+//             // bottom
+//             walls.push(vec2(square.x + padding + hole, square.y + padding));
+//             walls.push(vec2(
+//                 square.x - hole + square.width - padding * 2.0,
+//                 square.y + padding,
+//             ));
+
+//             // top
+//             walls.push(vec2(
+//                 square.x + padding + hole,
+//                 square.y + square.height - padding * 2.0,
+//             ));
+//             walls.push(vec2(
+//                 square.x - hole + square.width - padding * 2.0,
+//                 square.y + square.height - padding * 2.0,
+//             ));
+
+//             // left
+//             walls.push(vec2(
+//                 square.x + square.width - padding * 2.0,
+//                 square.y + padding + hole,
+//             ));
+//             walls.push(vec2(
+//                 square.x + square.width - padding * 2.0,
+//                 square.y - hole + square.height - padding * 2.0,
+//             ));
+
+//             // right
+//             walls.push(vec2(square.x + padding, square.y + padding + hole));
+//             walls.push(vec2(
+//                 square.x + padding,
+//                 square.y - hole + square.height - padding * 2.0,
+//             ));
+//         }
+//         // un modo coi rombi e con alcuni muri aperti.
+//         _ => {}
+//     }
+// }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
     match key {
