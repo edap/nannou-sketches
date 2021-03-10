@@ -356,7 +356,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     //     draw.texture(&model.texture).w_h(800.0, 800.0);
     // }
 
-    let distanza = 400.0;
+    let distanza = 400.0 + app.time.sin() * 300.0;
     let parti = 4;
 
     // find low minimun multiple
