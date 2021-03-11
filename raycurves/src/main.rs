@@ -443,6 +443,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
 
             if r.bounces < r.max_bounces {
                 if (distance - ARROW_LENGTH) < EPSILON + model.animation_speed {
+                    // bounce!
                     collision = r.ray.orig + r.ray.dir.with_magnitude(distance);
                     r.bounces += 1;
                     let refl = r.ray.reflect(surface_normal);
@@ -453,10 +454,11 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                     //r.refractions.push(r.ray.refract(surface_normal, 1.0));
                     r.reflections.push(refl);
                 } else {
+                    // keep moving
                    if distance < Float::infinity() {
                     r.ray.orig = r.ray.orig + r.ray.dir.with_magnitude(model.animation_speed);
-                   }else{
-                       r.reset();
+                   } else {
+                    r.reset();
                    } 
                 }
 
@@ -741,10 +743,12 @@ fn create_curve_from_square(
     //     )
     // });
 
-    for i in (0..=360).step_by(2) {
+    for i in (0..=360).step_by(36) {
         let rad = deg_to_rad(i as f32);
-        
-        points.push(center + vec2(rad.sin() * radius, rad.cos() * radius))
+        //points.push(center + vec2(rad.sin() * radius, rad.cos() * radius));
+        let x = (square.width/2.0 - padding) * rad.cos();
+        let y = (square.height/2.0 - padding) * rad.sin();
+        points.push(center + vec2(x,y))
     }
 
     println!("size {:?}", points.len());
