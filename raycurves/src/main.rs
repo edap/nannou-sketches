@@ -8,8 +8,8 @@ pub use crate::bouncing::BouncingRay2D;
 use crate::mondrian::split_squares;
 pub use crate::mondrian::Square;
 
-const EPSILON:f32 = 0.01;
-const ARROW_LENGTH:f32 = 40.0;
+const EPSILON: f32 = 0.05;
+const ARROW_LENGTH: f32 = 40.0;
 
 fn main() {
     nannou::app(model).update(update).run();
@@ -32,6 +32,7 @@ struct Model {
     wall_width: f32,
     wall_split: f32,
     hole_pct: f32,
+    hole_n: usize,
     wall_padding: f32,
     collision_radius: f32,
     rotation: f32,
@@ -58,6 +59,7 @@ widget_ids! {
         wall_split,
         wall_padding,
         hole_pct,
+        hole_n,
         tile_count_w,
         button,
         wall_mode,
@@ -112,6 +114,7 @@ fn model(app: &App) -> Model {
     let wall_split = 0.3;
     let wall_padding = 0.07;
     let hole_pct = 0.0;
+    let hole_n = 1;
     let wall_mode = 2;
     let max_bounces = 10;
     let rotation = 0.0;
@@ -131,6 +134,7 @@ fn model(app: &App) -> Model {
         wall_split,
         wall_padding,
         hole_pct,
+        hole_n,
         rays_prob,
         rotation,
         wall_mode,
@@ -165,6 +169,7 @@ fn model(app: &App) -> Model {
         wall_split,
         wall_padding,
         hole_pct,
+        hole_n,
         collision_radius,
         ray_width,
         rays_prob,
@@ -232,12 +237,20 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.wall_padding = value;
         }
 
-        for value in slider(model.hole_pct as f32, 0.0, 0.8)
+        for value in slider(model.hole_pct as f32, 0.0, 0.9)
             .down(3.0)
             .label("hole")
             .set(model.ids.hole_pct, ui)
         {
             model.hole_pct = value;
+        }
+
+        for value in slider(model.hole_n as f32, 0.0, 6.0)
+            .down(1.0)
+            .label("hole_n")
+            .set(model.ids.hole_n, ui)
+        {
+            model.hole_n = value as usize;
         }
 
         for value in slider(model.wall_mode as f32, 1.0, 5.0)
@@ -275,6 +288,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 model.wall_split,
                 model.wall_padding,
                 model.hole_pct,
+                model.hole_n,
                 model.rays_prob,
                 model.rotation,
                 model.wall_mode,
@@ -407,7 +421,6 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
     }
 
-
     for r in model.rays.iter_mut() {
         r.max_bounces = model.max_bounces;
         if _app.time.round() as usize % model.clear_interval == 0 && model.animation {
@@ -420,53 +433,47 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         //     model.animation_time = _app.time * model.animation_speed;
         // }
         //r.primary_ray.dir = r.ray.dir.rotate(model.rotation);
-        
         r.primary_ray.set_dir_from_angle(model.rotation);
         // println!("{:?}", r.primary_ray.dir.x);
         // r.primary_ray.dir = r.primary_ray.dir.rotate(model.animation_time + model.rotation);
 
-            let mut collision: Vector2 = vec2(0.0, 0.0);
-            let mut distance: f32 = Float::infinity();
-            let mut surface_normal: Vector2 = vec2(0.0, 0.0);
-            // find the closest intersection point between the ray and the walls
-            for curve in model.walls.iter() {
-                if let Some(collision) = r.ray.intersect_polyline(
-                    &curve.points,
-                ) {
-                    // save the closest possible collision
-                    if collision.0 < distance {
-                        distance = collision.0 ;
-                        surface_normal = collision.1;
-                    }
+        let mut collision: Vector2 = vec2(0.0, 0.0);
+        let mut distance: f32 = Float::infinity();
+        let mut surface_normal: Vector2 = vec2(0.0, 0.0);
+        // find the closest intersection point between the ray and the walls
+        for curve in model.walls.iter() {
+            if let Some(collision) = r.ray.intersect_polyline(&curve.points) {
+                // save the closest possible collision
+                if collision.0 < distance {
+                    distance = collision.0;
+                    surface_normal = collision.1;
                 }
             }
+        }
 
-            if r.bounces < r.max_bounces {
-                if (distance - ARROW_LENGTH) < EPSILON + model.animation_speed {
-                    // bounce!
-                    collision = r.ray.orig + r.ray.dir.with_magnitude(distance);
-                    r.bounces += 1;
-                    let refl = r.ray.reflect(surface_normal);
-                    r.refl_intensity.push(r.ray.dir.dot(refl).abs());
-                    r.ray.orig = collision + refl.with_magnitude(EPSILON); // avoid self intersection bouncing a bit more far away
-                    r.ray.dir = refl;
-                    r.collisions.push(collision);
-                    //r.refractions.push(r.ray.refract(surface_normal, 1.0));
-                    r.reflections.push(refl);
-                } else {
-                    // keep moving
-                   if distance < Float::infinity() {
+        if r.bounces < r.max_bounces {
+            if (distance - ARROW_LENGTH) < EPSILON + model.animation_speed {
+                // bounce!
+                collision = r.ray.orig + r.ray.dir.with_magnitude(distance);
+                r.bounces += 1;
+                let refl = r.ray.reflect(surface_normal);
+                r.refl_intensity.push(r.ray.dir.dot(refl).abs());
+                r.ray.orig = collision + refl.with_magnitude(EPSILON); // avoid self intersection bouncing a bit more far away
+                r.ray.dir = refl;
+                r.collisions.push(collision);
+                //r.refractions.push(r.ray.refract(surface_normal, 1.0));
+                r.reflections.push(refl);
+            } else {
+                // keep moving
+                if distance < Float::infinity() {
                     r.ray.orig = r.ray.orig + r.ray.dir.with_magnitude(model.animation_speed);
-                   } else {
+                } else {
                     r.reset();
-                   } 
                 }
-
-            }else{
-                r.reset();
-            } 
-        
-
+            }
+        } else {
+            r.reset();
+        }
     }
 }
 
@@ -482,12 +489,13 @@ fn view(app: &App, model: &Model, frame: Frame) {
     // draw the walls
     if model.show_walls {
         for curve in model.walls.iter() {
+            //println!("{:?}", curve.points.len());
             draw.polyline()
                 .weight(model.wall_width)
                 .color(model.palette.get_second(model.scheme_id, model.color_off))
                 // look at points_colored
                 .points(curve.points.clone());
-                //.caps_round();
+            //.caps_round();
         }
     }
 
@@ -585,6 +593,7 @@ fn make_walls(
     wall_split: f32,
     perc_padding: f32,
     hole_pct: f32,
+    hole_n: usize,
     rays_prob: f32,
     rot: f32,
     mode: u32, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
@@ -594,13 +603,12 @@ fn make_walls(
     let margin: i32 = 100;
     let step = (win.w() as f32) as u32 / tile_count_w;
 
-
     //let step = 200;
 
     let mut squares: Vec<Square> = Vec::new();
     squares.push(Square {
-        x: win.left() + (margin as f32 /2.0),
-        y: win.bottom() + (margin as f32 /2.0),
+        x: win.left() + (margin as f32 / 2.0),
+        y: win.bottom() + (margin as f32 / 2.0),
         width: (win.w() - margin as f32),
         height: (win.h() - margin as f32),
     });
@@ -619,11 +627,10 @@ fn make_walls(
                 );
                 r.reset();
                 rays.push(r);
-                create_curvedwalls_from_square(&square, walls, mode, padding, hole_pct);
+                create_curvedwalls_from_square(&square, walls, mode, padding, hole_pct, hole_n);
             }
             2 => {
                 let padding = step as f32 * perc_padding;
-                let hole = (step as f32 / 2.0) * hole_pct;
                 if random_range(0.0, 1.0) > rays_prob {
                     let mut r = BouncingRay2D::new();
                     //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
@@ -636,7 +643,7 @@ fn make_walls(
                     r.reset();
                     rays.push(r);
                 }
-                create_curvedwalls_from_square(&square, walls, mode, padding, hole);
+                create_curvedwalls_from_square(&square, walls, mode, padding, hole_pct, hole_n);
             }
             _ => {}
         }
@@ -652,22 +659,21 @@ fn create_curvedwalls_from_square(
     mode: u32,
     padding: f32,
     hole: f32,
+    hole_n: usize,
 ) {
     //let padding = square.width * 0.1;
     match mode {
         // Diagonal?
-
-
         1 => {
             let points = vec![
                 vec2(square.x + padding, square.y + padding),
                 vec2(
                     square.x + square.width,
-                    square.y - padding + square.height - padding)
-                ];
-            let curve = Curve{points: points};
+                    square.y - padding + square.height - padding,
+                ),
+            ];
+            let curve = Curve { points: points };
             walls.push(curve);
-
         }
         // closed square
         2 => {
@@ -679,7 +685,6 @@ fn create_curvedwalls_from_square(
             //     )];
             // let bottom_curve = Curve{points: bottom_points};
             // walls.push(bottom_curve);
-            
 
             // // top
             // let top_points = vec![
@@ -717,9 +722,7 @@ fn create_curvedwalls_from_square(
             // let right_curve = Curve{points: right_points};
             // walls.push(right_curve);
 
-
-            walls.push(create_curve_from_square(square, mode, padding, hole));
-
+            create_curve_from_square(square, mode, padding, hole, hole_n, walls);
         }
         // un modo coi rombi e con alcuni muri aperti.
         _ => {}
@@ -731,9 +734,14 @@ fn create_curve_from_square(
     mode: u32,
     padding: f32,
     hole: f32,
-) -> Curve {
-    let center = vec2(square.x + square.width/2.0, square.y + square.height / 2.0);
-    let radius = square.width / 2.0 - padding;
+    hole_n: usize,
+    walls: &mut Vec<Curve>,
+) {
+    let center = vec2(
+        square.x + square.width / 2.0,
+        square.y + square.height / 2.0,
+    );
+    //let radius = square.width / 2.0 - padding;
     let mut points = vec![];
     // let points = (0..=360).step_by(2).map(|i| {
     //     let rad = deg_to_rad(i as f32);
@@ -743,75 +751,45 @@ fn create_curve_from_square(
     //     )
     // });
 
-    for i in (0..=360).step_by(36) {
-        let rad = deg_to_rad(i as f32);
-        //points.push(center + vec2(rad.sin() * radius, rad.cos() * radius));
-        let x = (square.width/2.0 - padding) * rad.cos();
-        let y = (square.height/2.0 - padding) * rad.sin();
-        points.push(center + vec2(x,y))
+    let mut wall_length = 360.00;
+    if hole_n > 0 {
+        wall_length = 360.00 / hole_n as f32;
     }
 
-    println!("size {:?}", points.len());
-    Curve {points: points}
+    let pad = wall_length * hole;
+    let mut start_from = 0.0;
+    let mut end_to = start_from + wall_length - pad;
+    println!("{:?}  hh", hole);
+    println!("{:?}  wap", wall_length);
+    // println!("{:?}  aap", pad);
+    // println!("{:?} aas", start_from);
+    // println!("{:?} aae", end_to);
+
+    for i in (0..=360).step_by(2) {
+        let rad = deg_to_rad(i as f32);
+        //points.push(center + vec2(rad.sin() * radius, rad.cos() * radius));
+        let x = (square.width / 2.0 - padding) * rad.cos();
+        let y = (square.height / 2.0 - padding) * rad.sin();
+
+        if i as f32 >= start_from && (i as f32) < end_to {
+            points.push(center + vec2(x, y))
+        }
+
+        if i as f32 >= end_to {
+            // println!("{:?}  p", padding);
+            // println!("{:?} s", start_from);
+            // println!("{:?} e", end_to);
+
+            points.push(center + vec2(x, y));
+            walls.push(Curve {
+                points: points.clone(),
+            });
+            points.clear();
+            start_from = i as f32;
+            end_to = start_from + wall_length - pad;
+        }
+    }
 }
-
-
-// fn create_wall_from_square(
-//     square: &Square,
-//     walls: &mut Vec<Vector2>,
-//     mode: u32,
-//     padding: f32,
-//     hole: f32,
-// ) {
-//     //let padding = square.width * 0.1;
-//     match mode {
-//         1 => {
-//             walls.push(vec2(square.x + padding, square.y + padding));
-//             walls.push(vec2(
-//                 square.x + square.width,
-//                 square.y - padding + square.height - padding,
-//             ));
-//         }
-//         // closed square
-//         2 => {
-//             // bottom
-//             walls.push(vec2(square.x + padding + hole, square.y + padding));
-//             walls.push(vec2(
-//                 square.x - hole + square.width - padding * 2.0,
-//                 square.y + padding,
-//             ));
-
-//             // top
-//             walls.push(vec2(
-//                 square.x + padding + hole,
-//                 square.y + square.height - padding * 2.0,
-//             ));
-//             walls.push(vec2(
-//                 square.x - hole + square.width - padding * 2.0,
-//                 square.y + square.height - padding * 2.0,
-//             ));
-
-//             // left
-//             walls.push(vec2(
-//                 square.x + square.width - padding * 2.0,
-//                 square.y + padding + hole,
-//             ));
-//             walls.push(vec2(
-//                 square.x + square.width - padding * 2.0,
-//                 square.y - hole + square.height - padding * 2.0,
-//             ));
-
-//             // right
-//             walls.push(vec2(square.x + padding, square.y + padding + hole));
-//             walls.push(vec2(
-//                 square.x + padding,
-//                 square.y - hole + square.height - padding * 2.0,
-//             ));
-//         }
-//         // un modo coi rombi e con alcuni muri aperti.
-//         _ => {}
-//     }
-// }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
     match key {
