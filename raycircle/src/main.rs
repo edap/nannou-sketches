@@ -198,7 +198,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             model.animation = v;
         }
 
-        for value in slider(model.animation_speed as f32, 0.1, 0.0001)
+        for value in slider(model.animation_speed as f32, 1.0, 0.1)
             .down(30.0)
             .label("animation speed")
             .set(model.ids.animation_speed, ui)
@@ -218,7 +218,9 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         r.collisions.clear();
         r.reflections.clear();
         r.refl_intensity.clear();
-        r.primary_ray.orig.x = (_app.time * 0.1).sin() * 300.0;
+        if model.animation {
+            r.primary_ray.orig.x = (_app.time * 0.1).sin() * 300.0 * model.animation_speed;
+        }
 
         // this two are not necessary but add a line more from the ray to the destination
         // r.collisions.push(r.ray.orig);
@@ -257,11 +259,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         r.reset();
         // println!("{:?}", r.bounces);
         //println!("RESE");
-        if model.animation {
-            r.ray.dir = r.ray.dir.rotate(_app.time * model.animation_speed);
-        } else {
-            r.ray.dir = r.ray.dir.rotate(model.rotation);
-        }
+        r.ray.set_dir_from_angle(model.rotation);
     }
 }
 
