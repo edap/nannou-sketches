@@ -114,7 +114,7 @@ fn model(app: &App) -> Model {
     let wall_split = 0.3;
     let wall_padding = 0.07;
     let hole_pct = 0.25;
-    let hole_n = 1;
+    let hole_n = 2;
     let wall_mode = 2;
     let max_bounces = 10;
     let rotation = 0.0;
@@ -421,9 +421,13 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
     }
 
+    if !model.animation {
+        return;
+    }
+
     for r in model.rays.iter_mut() {
         r.max_bounces = model.max_bounces;
-        if _app.time.round() as usize % model.clear_interval == 0 && model.animation {
+        if _app.time.round() as usize % model.clear_interval == 0 {
             r.collisions.clear();
             r.reflections.clear();
             r.refl_intensity.clear();
@@ -768,7 +772,7 @@ fn create_curve_from_square(
     // println!("{:?} aas", start_from);
     // println!("{:?} aae", end_to);
 
-    for i in (0..=360).step_by(2) {
+    for i in (0..=360).step_by(1) {
         let rad = deg_to_rad(i as f32);
         //points.push(center + vec2(rad.sin() * radius, rad.cos() * radius));
         let x = (square.width / 2.0 - padding) * rad.cos();
@@ -778,7 +782,7 @@ fn create_curve_from_square(
             points.push(center + vec2(x, y))
         }
 
-        if i  == end_to {
+        if i == end_to {
             // println!("{:?}  p", padding);
             // println!("{:?} s", start_from);
             // println!("{:?} e", end_to);
