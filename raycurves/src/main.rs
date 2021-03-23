@@ -113,7 +113,7 @@ fn model(app: &App) -> Model {
     let wall_width = 2.0;
     let wall_split = 0.3;
     let wall_padding = 0.07;
-    let hole_pct = 0.0;
+    let hole_pct = 0.25;
     let hole_n = 1;
     let wall_mode = 2;
     let max_bounces = 10;
@@ -751,16 +751,19 @@ fn create_curve_from_square(
     //     )
     // });
 
-    let mut wall_length = 360.00;
+    let mut wall_length = 360;
     if hole_n > 0 {
-        wall_length = 360.00 / hole_n as f32;
+        wall_length = 360 / hole_n;
     }
 
-    let pad = wall_length * hole;
-    let mut start_from = 0.0;
+    let pad = (wall_length as f32 * hole) as usize;
+    let mut start_from = 0;
     let mut end_to = start_from + wall_length - pad;
+    println!("{:?}  hole_n", hole_n);
+    println!("{:?}  wall l", wall_length);
+    println!("{:?}  pad", pad);
     println!("{:?}  hh", hole);
-    println!("{:?}  wap", wall_length);
+    println!("{:?}  wap ", wall_length - pad);
     // println!("{:?}  aap", pad);
     // println!("{:?} aas", start_from);
     // println!("{:?} aae", end_to);
@@ -771,11 +774,11 @@ fn create_curve_from_square(
         let x = (square.width / 2.0 - padding) * rad.cos();
         let y = (square.height / 2.0 - padding) * rad.sin();
 
-        if i as f32 >= start_from && (i as f32) < end_to {
+        if i >= start_from && i < end_to {
             points.push(center + vec2(x, y))
         }
 
-        if i as f32 >= end_to {
+        if i  == end_to {
             // println!("{:?}  p", padding);
             // println!("{:?} s", start_from);
             // println!("{:?} e", end_to);
@@ -785,8 +788,10 @@ fn create_curve_from_square(
                 points: points.clone(),
             });
             points.clear();
-            start_from = i as f32;
+            start_from = i + pad;
             end_to = start_from + wall_length - pad;
+            println!("{:?}  start_from", start_from);
+            println!("{:?}  end_to l", end_to);
         }
     }
 }
