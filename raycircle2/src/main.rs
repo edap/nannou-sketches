@@ -417,7 +417,12 @@ fn make_balls(
 fn draw_ray_ball(draw: &Draw, model: &Model, ray_ball: &RayBall) {
     for (r, c) in ray_ball.rays.iter().zip(ray_ball.collisions.iter()) {
         //println!("{:?}", c);
-        draw.line().start(r.orig).end(*c);
+        draw.line()
+            .start(r.orig)
+            .end(*c)
+            .weight(model.ray_width)
+            .color(model.palette.get_second(model.scheme_id, model.color_off))
+            .caps_round();
     }
 }
 
