@@ -3,6 +3,8 @@ use nannou::prelude::*;
 use nannou::ui::prelude::*;
 
 use ray2d::Ray2D;
+const W: u32 = 800;
+const H: u32 = 800;
 
 fn main() {
     nannou::app(model).update(update).run();
@@ -52,6 +54,7 @@ widget_ids! {
         ray_width,
         max_bounces,
         collision_radius,
+        button,
         rotation,
         scheme_id,
         blend_id,
@@ -70,7 +73,7 @@ widget_ids! {
 fn model(app: &App) -> Model {
     let tile_count_w = 2;
     app.new_window()
-        .size(800, 800)
+        .size(W, H)
         .view(view)
         .key_pressed(key_pressed)
         .build()
@@ -95,7 +98,7 @@ fn model(app: &App) -> Model {
     let collision_radius = 3.0;
 
     let scheme_id = 5;
-    let blend_id = 0;
+    let blend_id = 2;
     let color_off = 4;
     let palette = Palette::new();
     let padding = 0.44;
@@ -180,6 +183,31 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             .set(model.ids.wall_width, ui)
         {
             model.wall_width = value;
+        }
+
+        for _click in widget::Button::new()
+            .down(3.0)
+            //.w_h(200.0, 60.0)
+            .label("Regenerate Walls")
+            .label_font_size(15)
+            .rgb(0.3, 0.3, 0.3)
+            .label_rgb(1.0, 1.0, 1.0)
+            .border(0.0)
+            .set(model.ids.button, ui)
+        {
+            let win = _app.window_rect();
+            let padding = 0.44;
+            let rad = (win.w() / model.tile_count_w as f32) * 0.3;
+
+            make_balls(
+                &mut model.balls,
+                &mut model.rays_balls,
+                &win,
+                model.tile_count_w,
+                model.padding,
+                padding,
+                11,
+            );
         }
 
         for value in slider(model.collision_radius as f32, 3.0, 85.0)
@@ -290,9 +318,6 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
     }
 
     for rbal in model.rays_balls.iter_mut() {
-        // find the closest intersection
-        let sensibility = 200.0;
-
         for (r, c) in rbal.rays.iter().zip(rbal.collisions.iter_mut()) {
             let mut distance: f32 = Float::infinity();
             let mut coll = vec2(0.0, 0.0);
@@ -309,11 +334,12 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 }
                 //}
             }
-            if distance < Float::infinity() && distance < sensibility {
+            if distance < Float::infinity() {
                 // there was a close collision, draw it
                 *c = coll;
             } else {
-                let cc = r.orig + r.dir.with_magnitude(sensibility);
+                // goes out of screen
+                let cc = r.orig + r.dir.with_magnitude(W as f32 * 2.0);
                 *c = cc;
             }
         }
@@ -370,6 +396,8 @@ fn make_balls(
     radius: f32,
     resolution: u8, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
 ) {
+    balls.clear();
+    ray_balls.clear();
     let side = win.w() as u32 / tile_count_w;
     let mut xpos = win.left();
     let mut ypos = win.bottom();
