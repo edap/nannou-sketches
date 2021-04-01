@@ -763,11 +763,11 @@ fn create_curve_from_square(
     let pad = (wall_length as f32 * hole) as usize;
     let mut start_from = 0;
     let mut end_to = start_from + wall_length - pad;
-    println!("{:?}  hole_n", hole_n);
-    println!("{:?}  wall l", wall_length);
-    println!("{:?}  pad", pad);
-    println!("{:?}  hh", hole);
-    println!("{:?}  wap ", wall_length - pad);
+    // println!("{:?}  hole_n", hole_n);
+    // println!("{:?}  wall l", wall_length);
+    // println!("{:?}  pad", pad);
+    // println!("{:?}  hh", hole);
+    // println!("{:?}  wap ", wall_length - pad);
     // println!("{:?}  aap", pad);
     // println!("{:?} aas", start_from);
     // println!("{:?} aae", end_to);
@@ -794,8 +794,8 @@ fn create_curve_from_square(
             points.clear();
             start_from = i + pad;
             end_to = start_from + wall_length - pad;
-            println!("{:?}  start_from", start_from);
-            println!("{:?}  end_to l", end_to);
+            // println!("{:?}  start_from", start_from);
+            // println!("{:?}  end_to l", end_to);
         }
     }
 }
