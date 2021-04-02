@@ -2065,6 +2065,7 @@ dependencies = [
  "edapx-colors 0.1.0",
  "nannou 0.15.0 (git+https://github.com/nannou-org/nannou)",
  "ray2d 0.1.0",
+ "rayon 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
