@@ -426,59 +426,73 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         return;
     }
 
-    for r in model.rays.iter_mut() {
-        r.max_bounces = model.max_bounces;
-        if _app.time.round() as usize % model.clear_interval == 0 {
-            r.collisions.clear();
-            r.reflections.clear();
-            r.refl_intensity.clear();
-        }
+    let t = _app.time;
+    let mb = model.max_bounces;
+    let ci = model.clear_interval;
+    let ro = model.rotation;
+    let an = model.animation;
+    let ans = model.animation_speed;
+    let ww = &model.walls;
+    model
+        .rays
+        .par_iter_mut()
+        .for_each(|r| ray_collides(r, mb, ci, ro, an, ans, t, ww));
+}
 
-        // if model.animation {
-        //     model.animation_time = _app.time * model.animation_speed;
-        // }
-        //r.primary_ray.dir = r.ray.dir.rotate(model.rotation);
-        r.primary_ray.set_dir_from_angle(model.rotation);
-        // println!("{:?}", r.primary_ray.dir.x);
-        // r.primary_ray.dir = r.primary_ray.dir.rotate(model.animation_time + model.rotation);
+fn ray_collides(
+    r: &mut BouncingRay2D,
+    max_bounces: usize,
+    clear_interval: usize,
+    rotation: f32,
+    animation: bool,
+    animation_speed: f32,
+    time: f32,
+    walls: &Vec<Curve>,
+) {
+    r.max_bounces = max_bounces;
+    if time.round() as usize % clear_interval == 0 {
+        r.collisions.clear();
+        r.reflections.clear();
+        r.refl_intensity.clear();
+    }
 
-        let mut collision: Vector2 = vec2(0.0, 0.0);
-        let mut distance: f32 = Float::infinity();
-        let mut surface_normal: Vector2 = vec2(0.0, 0.0);
-        // find the closest intersection point between the ray and the walls
-        for curve in model.walls.iter() {
-            if let Some(collision) = r.ray.intersect_polyline(&curve.points) {
-                // save the closest possible collision
-                if collision.0 < distance {
-                    distance = collision.0;
-                    surface_normal = collision.1;
-                }
+    r.primary_ray.set_dir_from_angle(rotation);
+    let mut collision: Vector2 = vec2(0.0, 0.0);
+    let mut distance: f32 = Float::infinity();
+    let mut surface_normal: Vector2 = vec2(0.0, 0.0);
+    // find the closest intersection point between the ray and the walls
+    for curve in walls.iter() {
+        if let Some(collision) = r.ray.intersect_polyline(&curve.points) {
+            // save the closest possible collision
+            if collision.0 < distance {
+                distance = collision.0;
+                surface_normal = collision.1;
             }
         }
+    }
 
-        if r.bounces < r.max_bounces {
-            if (distance - ARROW_LENGTH) < EPSILON + model.animation_speed {
-                // bounce!
-                collision = r.ray.orig + r.ray.dir.with_magnitude(distance);
-                r.bounces += 1;
-                let refl = r.ray.reflect(surface_normal);
-                r.refl_intensity.push(r.ray.dir.dot(refl).abs());
-                r.ray.orig = collision + refl.with_magnitude(EPSILON); // avoid self intersection bouncing a bit more far away
-                r.ray.dir = refl;
-                r.collisions.push(collision);
-                //r.refractions.push(r.ray.refract(surface_normal, 1.0));
-                r.reflections.push(refl);
-            } else {
-                // keep moving
-                if distance < Float::infinity() {
-                    r.ray.orig = r.ray.orig + r.ray.dir.with_magnitude(model.animation_speed);
-                } else {
-                    r.reset();
-                }
-            }
+    if r.bounces < r.max_bounces {
+        if (distance - ARROW_LENGTH) < EPSILON + animation_speed {
+            // bounce!
+            collision = r.ray.orig + r.ray.dir.with_magnitude(distance);
+            r.bounces += 1;
+            let refl = r.ray.reflect(surface_normal);
+            r.refl_intensity.push(r.ray.dir.dot(refl).abs());
+            r.ray.orig = collision + refl.with_magnitude(EPSILON); // avoid self intersection bouncing a bit more far away
+            r.ray.dir = refl;
+            r.collisions.push(collision);
+            //r.refractions.push(r.ray.refract(surface_normal, 1.0));
+            r.reflections.push(refl);
         } else {
-            r.reset();
+            // keep moving
+            if distance < Float::infinity() {
+                r.ray.orig = r.ray.orig + r.ray.dir.with_magnitude(animation_speed);
+            } else {
+                r.reset();
+            }
         }
+    } else {
+        r.reset();
     }
 }
 
