@@ -1,6 +1,7 @@
 use edapx_colors::Palette;
 use nannou::prelude::*;
 use nannou::ui::prelude::*;
+use rayon::prelude::*;
 
 mod bouncing;
 pub use crate::bouncing::BouncingRay2D;
@@ -214,63 +215,62 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         }
     }
 
-    for r in model.rays.iter_mut() {
-        rayCollides(
-            r,
-            model.rotation,
-            model.animation,
-            model.animation_speed,
-            _app,
-            &model.walls,
-        );
+    let t = _app.time;
+    let ro = model.rotation;
+    let an = model.animation;
+    let ans = model.animation_speed;
+    let ww = &model.walls;
+    model
+        .rays
+        .par_iter_mut()
+        .for_each(|r| ray_collides(r, ro, an, ans, t, ww));
+}
+
+fn ray_collides(
+    r: &mut BouncingRay2D,
+    rotation: f32,
+    animation: bool,
+    animation_speed: f32,
+    time: f32,
+    walls: &Vec<Circle>,
+) {
+    r.collisions.clear();
+    r.reflections.clear();
+    r.refl_intensity.clear();
+
+    if animation {
+        r.primary_ray.orig.x = (time * 0.1).sin() * 300.0 * animation_speed;
     }
 
-    fn rayCollides(
-        r: &mut BouncingRay2D,
-        rotation: f32,
-        animation: bool,
-        animation_speed: f32,
-        _app: &App,
-        walls: &Vec<Circle>,
-    ) {
-        r.collisions.clear();
-        r.reflections.clear();
-        r.refl_intensity.clear();
-
-        if animation {
-            r.primary_ray.orig.x = (_app.time * 0.1).sin() * 300.0 * animation_speed;
-        }
-
-        while !r.max_bounces_reached() {
-            let mut collision: Vector2 = vec2(0.0, 0.0);
-            let mut distance: f32 = Float::infinity();
-            let mut surface_normal: Vector2 = vec2(0.0, 0.0);
-            // find the closest intersection point between the ray and the walls
-            for c in walls {
-                if let Some(collision_distance) = r.ray.intersect_circle(c.pos, c.radius) {
-                    if collision_distance < distance {
-                        distance = collision_distance;
-                        collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
-                        surface_normal = (collision - c.pos).normalize();
-                    }
+    while !r.max_bounces_reached() {
+        let mut collision: Vector2 = vec2(0.0, 0.0);
+        let mut distance: f32 = Float::infinity();
+        let mut surface_normal: Vector2 = vec2(0.0, 0.0);
+        // find the closest intersection point between the ray and the walls
+        for c in walls {
+            if let Some(collision_distance) = r.ray.intersect_circle(c.pos, c.radius) {
+                if collision_distance < distance {
+                    distance = collision_distance;
+                    collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
+                    surface_normal = (collision - c.pos).normalize();
                 }
             }
-            if distance < Float::infinity() {
-                // collision point
-                r.bounces += 1;
-                let refl = r.ray.reflect(surface_normal);
-                r.refl_intensity.push(r.ray.dir.dot(refl).abs());
-                r.ray.orig = collision + refl.with_magnitude(0.03);
-                r.ray.dir = refl;
-                r.collisions.push(collision);
-                r.reflections.push(refl);
-            } else {
-                break;
-            };
         }
-        r.reset();
-        r.ray.set_dir_from_angle(rotation);
+        if distance < Float::infinity() {
+            // collision point
+            r.bounces += 1;
+            let refl = r.ray.reflect(surface_normal);
+            r.refl_intensity.push(r.ray.dir.dot(refl).abs());
+            r.ray.orig = collision + refl.with_magnitude(0.03);
+            r.ray.dir = refl;
+            r.collisions.push(collision);
+            r.reflections.push(refl);
+        } else {
+            break;
+        };
     }
+    r.reset();
+    r.ray.set_dir_from_angle(rotation);
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
