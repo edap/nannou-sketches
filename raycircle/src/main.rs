@@ -215,25 +215,38 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
     }
 
     for r in model.rays.iter_mut() {
+        rayCollides(
+            r,
+            model.rotation,
+            model.animation,
+            model.animation_speed,
+            _app,
+            &model.walls,
+        );
+    }
+
+    fn rayCollides(
+        r: &mut BouncingRay2D,
+        rotation: f32,
+        animation: bool,
+        animation_speed: f32,
+        _app: &App,
+        walls: &Vec<Circle>,
+    ) {
         r.collisions.clear();
         r.reflections.clear();
         r.refl_intensity.clear();
-        if model.animation {
-            r.primary_ray.orig.x = (_app.time * 0.1).sin() * 300.0 * model.animation_speed;
+
+        if animation {
+            r.primary_ray.orig.x = (_app.time * 0.1).sin() * 300.0 * animation_speed;
         }
 
-        // this two are not necessary but add a line more from the ray to the destination
-        // r.collisions.push(r.ray.orig);
-        // r.reflections.push(r.ray.dir);
-        // r.refl_intensity.push(0.0);
-
         while !r.max_bounces_reached() {
-            //println!("get {:?}", r.max_bounces);
             let mut collision: Vector2 = vec2(0.0, 0.0);
             let mut distance: f32 = Float::infinity();
             let mut surface_normal: Vector2 = vec2(0.0, 0.0);
             // find the closest intersection point between the ray and the walls
-            for c in &model.walls {
+            for c in walls {
                 if let Some(collision_distance) = r.ray.intersect_circle(c.pos, c.radius) {
                     if collision_distance < distance {
                         distance = collision_distance;
@@ -250,16 +263,13 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 r.ray.orig = collision + refl.with_magnitude(0.03);
                 r.ray.dir = refl;
                 r.collisions.push(collision);
-                //r.refractions.push(r.ray.refract(surface_normal, 1.0));
                 r.reflections.push(refl);
             } else {
                 break;
             };
         }
         r.reset();
-        // println!("{:?}", r.bounces);
-        //println!("RESE");
-        r.ray.set_dir_from_angle(model.rotation);
+        r.ray.set_dir_from_angle(rotation);
     }
 }
 
