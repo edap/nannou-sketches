@@ -8,6 +8,7 @@ pub use crate::bouncing::BouncingRay2D;
 use crate::mondrian::split_squares;
 pub use crate::mondrian::Square;
 
+
 const EPSILON: f32 = 0.05;
 const ARROW_LENGTH: f32 = 40.0;
 
