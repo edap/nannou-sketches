@@ -17,6 +17,8 @@ struct Circle {
 
 struct Model {
     walls: Vec<Circle>,
+    tile_count_w: u32,
+    wall_mode: u32,
     rays: Vec<BouncingRay2D>,
     draw_gui: bool,
     ui: Ui,
@@ -37,6 +39,9 @@ struct Model {
 
 widget_ids! {
     struct Ids {
+        tile_count_w,
+        button,
+        wall_mode,
         wall_width,
         ray_width,
         collision_radius,
@@ -52,7 +57,7 @@ widget_ids! {
 }
 
 fn model(app: &App) -> Model {
-    let tile_count_w = 2;
+    let tile_count_w = 6;
     app.new_window()
         .size(800, 800)
         .view(view)
@@ -90,6 +95,7 @@ fn model(app: &App) -> Model {
     Model {
         walls,
         rays,
+        tile_count_w,
         draw_gui,
         ui,
         ids,
@@ -136,6 +142,27 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             .set(model.ids.wall_width, ui)
         {
             model.wall_width = value;
+        }
+
+        for _click in widget::Button::new()
+            .down(3.0)
+            //.w_h(200.0, 60.0)
+            .label("Regenerate Walls")
+            .label_font_size(15)
+            .rgb(0.3, 0.3, 0.3)
+            .label_rgb(1.0, 1.0, 1.0)
+            .border(0.0)
+            .set(model.ids.button, ui)
+        {
+            let win = _app.window_rect();
+
+            make_circles(
+                &mut model.walls,
+                &mut model.rays,
+                &win,
+                model.tile_count_w,
+                model.wall_mode,
+            );
         }
 
         for value in slider(model.collision_radius as f32, 5.0, 45.0)
