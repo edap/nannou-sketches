@@ -18,7 +18,7 @@ struct Circle {
 struct Model {
     walls: Vec<Circle>,
     tile_count_w: u32,
-    wall_mode: u32,
+    wall_mode: u8,
     rays: Vec<BouncingRay2D>,
     draw_gui: bool,
     ui: Ui,
@@ -91,11 +91,13 @@ fn model(app: &App) -> Model {
     let animation_speed = 0.01;
     let draw_refl = true;
     let draw_polygon = false;
+    let wall_mode = 4;
 
     Model {
         walls,
         rays,
         tile_count_w,
+        wall_mode,
         draw_gui,
         ui,
         ids,
@@ -381,6 +383,8 @@ fn make_circles(
     tile_count_w: u32,
     mode: u8, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
 ) {
+    walls.clear();
+    rays.clear();
     let side = win.w() as u32 / tile_count_w;
     let mut xpos = win.left();
     let mut ypos = win.bottom();
