@@ -695,7 +695,6 @@ fn create_curvedwalls_from_square(
             walls.push(curve);
         }
         2 => {
-
             create_curve_from_square(square, mode, padding, hole, hole_n, walls);
         }
         _ => {}
