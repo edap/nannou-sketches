@@ -9,57 +9,91 @@ fn main() {
     nannou::app(model).update(update).run();
 }
 
-struct Circle {
-    pos: Vector2,
-    radius: f32,
+
+struct Curve {
+    points: Vec<Vector2>,
 }
 
+
 struct Model {
-    walls: Vec<Circle>,
+    walls: Vec<Curve>,
+    tile_count_w: u32,
+    wall_mode: u32,
     rays: Vec<BouncingRay2D>,
     draw_gui: bool,
     ui: Ui,
     ids: Ids,
     ray_width: f32,
+    rays_prob: f32,
     wall_width: f32,
+    wall_split: f32,
+    hole_pct: f32,
+    hole_n: usize,
+    wall_padding: f32,
     collision_radius: f32,
     rotation: f32,
     scheme_id: usize,
+    max_bounces: usize,
     blend_id: usize,
+    color_off: usize,
     palette: Palette,
     show_walls: bool,
+    draw_arrows: bool,
+    draw_tex_overlay: bool,
     animation: bool,
     animation_speed: f32,
-    draw_refl: bool,
+    animation_time: f32,
     draw_polygon: bool,
+    polygon_contour_weight: f32,
+    texture: wgpu::Texture,
+    clear_interval: usize,
 }
 
 widget_ids! {
     struct Ids {
         wall_width,
+        wall_split,
+        wall_padding,
+        hole_pct,
+        hole_n,
+        tile_count_w,
+        button,
+        wall_mode,
         ray_width,
+        rays_prob,
+        max_bounces,
         collision_radius,
         rotation,
         scheme_id,
         blend_id,
-        draw_refl,
+        color_off,
+        animation_time,
         draw_polygon,
+        draw_arrows,
+        polygon_contour_weight,
         animation,
         animation_speed,
-        show_walls
+        show_walls,
+        draw_tex_overlay,
+        clear_interval
     }
 }
 
 fn model(app: &App) -> Model {
-    let tile_count_w = 2;
+    let tile_count_w = 8;
     app.new_window()
-        .size(800, 800)
+        //.size(1280, 720)
+        .size(1600, 900)
+        //.size(1777, 1000)
+        //.size(1920,1080)
+        // .size( 3840,2160)
+        // .size(2560, 1440) // 16:9
         .view(view)
         .key_pressed(key_pressed)
         .build()
         .unwrap();
 
-    let mut walls: Vec<Circle> = Vec::new();
+    let mut walls: Vec<Curve> = Vec::new();
     let mut rays: Vec<BouncingRay2D> = Vec::new();
     let win = app.window_rect();
 
@@ -71,39 +105,85 @@ fn model(app: &App) -> Model {
     // Generate some ids for our widgets.
     let ids = Ids::new(ui.widget_id_generator());
 
-    let ray_width = 2.0;
+    let ray_width = 3.0;
     let wall_width = 2.0;
+    let wall_split = 0.3;
+    let wall_padding = 0.07;
+    let hole_pct = 0.25;
+    let hole_n = 2;
+    let wall_mode = 2;
+    let max_bounces = 10;
     let rotation = 0.0;
     let collision_radius = 3.0;
+    let rays_prob = 0.0;
 
     let scheme_id = 5;
-    let blend_id = 2;
+    let blend_id = 0;
+    let color_off = 4;
     let palette = Palette::new();
-    make_circles(&mut walls, &mut rays, &win, tile_count_w, 4);
+    let clear_interval = 14;
+    make_walls(
+        &mut walls,
+        &mut rays,
+        &win,
+        tile_count_w,
+        wall_split,
+        wall_padding,
+        hole_pct,
+        hole_n,
+        rays_prob,
+        rotation,
+        wall_mode,
+    );
     let show_walls = true;
-    let animation = false;
-    let animation_speed = 0.01;
-    let draw_refl = true;
-    let draw_polygon = false;
+    let animation = true;
+    let draw_arrows = true;
+    let animation_speed = 2.0;
+    let animation_time = 0.0;
+    let draw_polygon = true;
+    let polygon_contour_weight = 5.0;
+    let draw_tex_overlay = false;
+
+    // texture
+    // Load the image from disk and upload it to a GPU texture.
+    let assets = app.assets_path().unwrap();
+    let img_path = assets.join("images").join("noise-texture1-tr.png");
+    //let img_path = assets.join("images").join("water.png");
+    //let img_path = assets.join("images").join("grunge-halftone-tr.png");
+    let texture = wgpu::Texture::from_path(app, img_path).unwrap();
 
     Model {
         walls,
+        wall_mode,
+        tile_count_w,
         rays,
+        max_bounces,
         draw_gui,
         ui,
         ids,
         wall_width,
+        wall_split,
+        wall_padding,
+        hole_pct,
+        hole_n,
         collision_radius,
         ray_width,
+        rays_prob,
         rotation,
         scheme_id,
         blend_id,
+        color_off,
         palette,
         show_walls,
         animation,
         animation_speed,
-        draw_refl,
+        animation_time,
         draw_polygon,
+        draw_arrows,
+        polygon_contour_weight,
+        draw_tex_overlay,
+        clear_interval,
+        texture,
     }
 }
 
@@ -337,81 +417,178 @@ fn view(app: &App, model: &Model, frame: Frame) {
     }
 }
 
-fn make_circles(
-    walls: &mut Vec<Circle>,
+fn make_walls(
+    walls: &mut Vec<Curve>,
+    rays: &mut Vec<BouncingRay2D>,
+    win: &geom::Rect,
+    tile_count_w: u32,
+    wall_split: f32,
+    perc_padding: f32,
+    hole_pct: f32,
+    hole_n: usize,
+    rays_prob: f32,
+    rot: f32,
+    mode: u32, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
+) {
+    walls.clear();
+    rays.clear();
+    let margin: i32 = 100;
+    let step = (win.w() as f32) as u32 / tile_count_w;
+
+    //let step = 200;
+
+    let mut squares: Vec<Square> = Vec::new();
+    squares.push(Square {
+        x: win.left() + (margin as f32 / 2.0),
+        y: win.bottom() + (margin as f32 / 2.0),
+        width: (win.w() - margin as f32),
+        height: (win.h() - margin as f32),
+    });
+    for i in (win.left() as i32..win.right() as i32).step_by(step as usize) {
+        split_squares(i as f32, i as f32, &mut squares, wall_split);
+    }
+    for square in &squares {
+        match mode {
+            1 => {
+                let padding = step as f32 * perc_padding;
+                let mut r = BouncingRay2D::new();
+                r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                r.primary_ray.orig = vec2(
+                    square.x + square.width * 0.8,
+                    square.y + square.height * 0.3,
+                );
+                r.reset();
+                rays.push(r);
+                create_curvedwalls_from_square(&square, walls, mode, padding, hole_pct, hole_n);
+            }
+            2 => {
+                let padding = step as f32 * perc_padding;
+                if random_range(0.0, 1.0) > rays_prob {
+                    let mut r = BouncingRay2D::new();
+                    //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                    r.primary_ray.dir = Vector2::from_angle(rot);
+                    //r.primary_ray.set_dir_from_angle(model.rotation);
+                    r.primary_ray.orig = vec2(
+                        square.x + square.width * 0.5,
+                        square.y + square.height * 0.5,
+                    );
+                    r.reset();
+                    rays.push(r);
+                }
+                create_curvedwalls_from_square(&square, walls, mode, padding, hole_pct, hole_n);
+            }
+            _ => {}
+        }
+    }
+
+    //println!("{:?}", walls.len());
+    //println!("{:?}", squares);
+}
+
+fn create_curvedwalls_from_square(
+    square: &Square,
+    walls: &mut Vec<Curve>,
+    mode: u32,
+    padding: f32,
+    hole: f32,
+    hole_n: usize,
+) {
+    //let padding = square.width * 0.1;
+    match mode {
+        // Diagonal?
+        1 => {
+            let points = vec![
+                vec2(square.x + padding, square.y + padding),
+                vec2(
+                    square.x + square.width,
+                    square.y - padding + square.height - padding,
+                ),
+            ];
+            let curve = Curve { points: points };
+            walls.push(curve);
+        }
+        2 => {
+
+            create_curve_from_square(square, mode, padding, hole, hole_n, walls);
+        }
+        _ => {}
+    }
+}
+
+fn create_curve_from_square(
+    square: &Square,
+    mode: u32,
+    padding: f32,
+    hole: f32,
+    hole_n: usize,
+    walls: &mut Vec<Curve>,
+) {
+    let center = vec2(
+        square.x + square.width / 2.0,
+        square.y + square.height / 2.0,
+    );
+    //let radius = square.width / 2.0 - padding;
+    let mut points = vec![];
+    // let points = (0..=360).step_by(2).map(|i| {
+    //     let rad = deg_to_rad(i as f32);
+    //     (
+    //         center + vec2(rad.sin() * radius, rad.cos() * radius),
+    //         //model.palette.get_second(model.scheme_id, model.color_off),
+    //     )
+    // });
+
+    let mut wall_length = 360;
+    if hole_n > 0 {
+        wall_length = 360 / hole_n;
+    }
+
+    let pad = (wall_length as f32 * hole) as usize;
+    let mut start_from = 0;
+    let mut end_to = start_from + wall_length - pad;
+
+    for i in (0..=360).step_by(1) {
+        let rad = deg_to_rad(i as f32);
+        //points.push(center + vec2(rad.sin() * radius, rad.cos() * radius));
+        let x = (square.width / 2.0 - padding) * rad.cos();
+        let y = (square.height / 2.0 - padding) * rad.sin();
+
+        if i >= start_from && i < end_to {
+            points.push(center + vec2(x, y))
+        }
+
+        if i == end_to {
+
+            points.push(center + vec2(x, y));
+            walls.push(Curve {
+                points: points.clone(),
+            });
+            points.clear();
+            start_from = i + pad;
+            end_to = start_from + wall_length - pad;
+        }
+    }
+}
+
+fn make_rays(
     rays: &mut Vec<BouncingRay2D>,
     win: &geom::Rect,
     tile_count_w: u32,
     mode: u8, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
-) {
-    let side = win.w() as u32 / tile_count_w;
-    let mut xpos = win.left();
-    let mut ypos = win.bottom();
-
-    for _x in 0..tile_count_w {
-        for _y in 0..(win.h() as u32 / side as u32) {
-            let coin = random_range(0.0, 1.0);
-            let start_p;
-            let end_p;
-            let padding = 0.1 * side as f32;
-
-            match mode {
-                4 => {
-                    if _x % 2 == 0 && _y % 2 == 0 {
-                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                    // let mut r = BouncingRay2D::new();
-                    // //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                    // r.primary_ray.dir = Vector2::from_angle(1.0);
-                    // // r.primary_ray.orig = start_p;
-                    // // r.ray.orig = start_p;
-                    // let o = vec2(xpos + side as f32 / 2.0, ypos + side as f32 - padding);
-                    // r.primary_ray.orig = o;
-                    // r.ray.orig = o;
-                    // if coin > 0.6 {
-                    //     rays.push(r);
-                    // }
-                    } else if _y % 2 == 0 && _x % 2 != 0 {
-                        start_p = vec2(xpos + padding, ypos + padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-                    } else if _x % 2 != 0 && _y % 2 != 0 {
-                        start_p = vec2(xpos + padding, ypos + side as f32 - padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + padding);
-                    } else {
-                        start_p = vec2(xpos + padding, ypos + padding);
-                        end_p = vec2(xpos + side as f32 - padding, ypos + side as f32 - padding);
-                    }
-                    // walls.push(Circle {
-                    //     pos: start_p,
-                    //     radius: 50.0,
-                    // });
-
-                    //}
-                }
-                _ => {}
-            }
-
-            ypos += side as f32;
-        }
-        ypos = win.bottom();
-        xpos += side as f32;
+    ){
+    let n_rays = (win.h() as u32 / tile_count_w) as u32;
+    for y in 0..n_rays {
+        let mut r = BouncingRay2D::new();
+        //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+        r.primary_ray.dir = Vector2::from_angle(1.0);
+        // r.primary_ray.orig = start_p;
+        // r.ray.orig = start_p;
+        let o = vec2(0.0, y as f32);
+        //let o = vec2(300.0, 20.0);
+        r.primary_ray.orig = o;
+        r.ray.orig = o;
+        //if coin > 0.6 {
+        rays.push(r);
     }
-    walls.push(Circle {
-        pos: vec2(0.0, 0.0),
-        radius: 150.0,
-    });
-    let mut r = BouncingRay2D::new();
-    //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-    r.primary_ray.dir = Vector2::from_angle(1.0);
-    // r.primary_ray.orig = start_p;
-    // r.ray.orig = start_p;
-    let o = vec2(10.0, 20.0);
-    //let o = vec2(300.0, 20.0);
-    r.primary_ray.orig = o;
-    r.ray.orig = o;
-    //if coin > 0.6 {
-    println!("get {:?}", r);
-    rays.push(r);
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
