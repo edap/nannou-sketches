@@ -694,56 +694,9 @@ fn create_curvedwalls_from_square(
             let curve = Curve { points: points };
             walls.push(curve);
         }
-        // closed square
         2 => {
-            // let bottom_points = vec![
-            //     vec2(square.x + padding + hole, square.y + padding),
-            //     vec2(
-            //         square.x - hole + square.width - padding * 2.0,
-            //         square.y + padding,
-            //     )];
-            // let bottom_curve = Curve{points: bottom_points};
-            // walls.push(bottom_curve);
-
-            // // top
-            // let top_points = vec![
-            // vec2(
-            //     square.x + padding + hole,
-            //     square.y + square.height - padding * 2.0,
-            // ),
-            // vec2(
-            //     square.x - hole + square.width - padding * 2.0,
-            //     square.y + square.height - padding * 2.0,
-            // )];
-            // let top_curve = Curve{points: top_points};
-            // walls.push(top_curve);
-
-            // // left
-            // let left_points = vec![
-            // vec2(
-            //     square.x + square.width - padding * 2.0,
-            //     square.y + padding + hole,
-            // ),
-            // vec2(
-            //     square.x + square.width - padding * 2.0,
-            //     square.y - hole + square.height - padding * 2.0,
-            // )];
-            // let left_curve = Curve{points: left_points};
-            // walls.push(left_curve);
-
-            // // right
-            // let right_points = vec![
-            // vec2(square.x + padding, square.y + padding + hole),
-            // vec2(
-            //     square.x + padding,
-            //     square.y - hole + square.height - padding * 2.0,
-            // )];
-            // let right_curve = Curve{points: right_points};
-            // walls.push(right_curve);
-
             create_curve_from_square(square, mode, padding, hole, hole_n, walls);
         }
-        // un modo coi rombi e con alcuni muri aperti.
         _ => {}
     }
 }
@@ -778,14 +731,6 @@ fn create_curve_from_square(
     let pad = (wall_length as f32 * hole) as usize;
     let mut start_from = 0;
     let mut end_to = start_from + wall_length - pad;
-    // println!("{:?}  hole_n", hole_n);
-    // println!("{:?}  wall l", wall_length);
-    // println!("{:?}  pad", pad);
-    // println!("{:?}  hh", hole);
-    // println!("{:?}  wap ", wall_length - pad);
-    // println!("{:?}  aap", pad);
-    // println!("{:?} aas", start_from);
-    // println!("{:?} aae", end_to);
 
     for i in (0..=360).step_by(1) {
         let rad = deg_to_rad(i as f32);
@@ -798,9 +743,6 @@ fn create_curve_from_square(
         }
 
         if i == end_to {
-            // println!("{:?}  p", padding);
-            // println!("{:?} s", start_from);
-            // println!("{:?} e", end_to);
 
             points.push(center + vec2(x, y));
             walls.push(Curve {
@@ -809,8 +751,6 @@ fn create_curve_from_square(
             points.clear();
             start_from = i + pad;
             end_to = start_from + wall_length - pad;
-            // println!("{:?}  start_from", start_from);
-            // println!("{:?}  end_to l", end_to);
         }
     }
 }
