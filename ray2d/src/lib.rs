@@ -145,16 +145,16 @@ impl Ray2D {
     }
 }
 
-pub trait Intersectable {
-    fn intersect(&self, ray: &Ray2D) -> Option<f32>;
-}
+// pub trait Intersectable {
+//     fn intersect(&self, ray: &Ray2D) -> Option<f32>;
+// }
 
-pub enum Element {
-    Circle(Vector2, f32),
-    Polyline(&Vec<Vector2>),
-    Segment(f32, f32, f32, f32),
-    //Plane(Plane),
-}
+// pub enum Element {
+//     Circle(Vector2, f32),
+//     Polyline(&Vec<Vector2>),
+//     Segment(f32, f32, f32, f32),
+//     //Plane(Plane),
+// }
 
 //let sphere = Element::Circle(vec2(10.0, 2.0),12,5);
 // WIP https://github.com/bheisler/raytracer/blob/master/src/scene.rs

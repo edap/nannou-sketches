@@ -8,7 +8,7 @@ pub use crate::bouncing::BouncingRay2D;
 use crate::mondrian::split_squares;
 pub use crate::mondrian::Square;
 
-const EPSILON:f32 = 0.5; 
+const EPSILON: f32 = 0.5;
 
 fn main() {
     nannou::app(model).update(update).run();
@@ -104,14 +104,14 @@ fn model(app: &App) -> Model {
 
     let ray_width = 3.0;
     let wall_width = 2.0;
-    let wall_split = 0.3;
+    let wall_split = 0.6;
     let wall_padding = 0.07;
     let hole_pct = 0.3;
-    let wall_mode = 3;
-    let max_bounces = 4;
+    let wall_mode = 2;
+    let max_bounces = 40;
     let rotation = 0.0;
-    let collision_radius = 3.0;
-    let rays_prob = 0.0;
+    let collision_radius = 0.3;
+    let rays_prob = 0.5;
 
     let scheme_id = 5;
     let blend_id = 0;
@@ -294,7 +294,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
         {
             model.rays_prob = value;
         }
-        for value in slider(model.max_bounces as f32, 1.0, 200.0)
+        for value in slider(model.max_bounces as f32, 1.0, 600.0)
             .down(3.0)
             .label("max_bounces")
             .set(model.ids.max_bounces, ui)
@@ -528,6 +528,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .caps_round()
                 .stroke_weight(model.ray_width)
                 .points(r.collisions.iter().cloned())
+                //.points_colored(ppp.cloned());
                 .color(model.palette.get_first(model.scheme_id, model.color_off));
         }
 
@@ -572,8 +573,8 @@ fn make_walls(
     if mode <= 2 {
         let mut squares: Vec<Square> = Vec::new();
         squares.push(Square {
-            x: win.left() + (margin as f32 /2.0),
-            y: win.bottom() + (margin as f32 /2.0),
+            x: win.left() + (margin as f32 / 2.0),
+            y: win.bottom() + (margin as f32 / 2.0),
             width: (win.w() - margin as f32),
             height: (win.h() - margin as f32),
         });
