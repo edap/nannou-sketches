@@ -1,5 +1,5 @@
 use nannou::prelude::*;
 
 pub struct Curve {
-    points: Vec<Vector2>,
+    pub points: Vec<Vector2>,
 }
