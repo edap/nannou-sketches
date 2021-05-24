@@ -13,6 +13,8 @@ mod ray_helper;
 use crate::ray_helper::make_rays;
 mod wall_helper;
 use crate::wall_helper::make_walls;
+mod raycaster;
+pub use crate::raycaster::Raycaster;
 
 const EPSILON: f32 = 0.05;
 const ARROW_LENGTH: f32 = 40.0;
