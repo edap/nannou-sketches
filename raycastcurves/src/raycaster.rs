@@ -69,6 +69,7 @@ impl Raycaster {
     }
 }
 
+// TODO, make it a method of the bouncing2D
 pub fn ray_collides(
     r: &mut BouncingRay2D,
     rotation: f32,
@@ -81,6 +82,7 @@ pub fn ray_collides(
     r.collisions.clear();
     r.reflections.clear();
     r.refl_intensity.clear();
+    // TODO, move this in the main.rs
     if animation {
         if r.primary_ray.dir.x > 0.0 {
             r.primary_ray.orig.x += 0.1 * animation_speed;
