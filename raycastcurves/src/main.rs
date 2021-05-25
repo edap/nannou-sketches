@@ -10,7 +10,7 @@ pub use crate::mondrian::Square;
 mod bouncing;
 pub use crate::bouncing::BouncingRay2D;
 mod ray_helper;
-use crate::ray_helper::make_rays;
+use crate::ray_helper::make_raycasters;
 mod wall_helper;
 use crate::wall_helper::make_walls;
 mod raycaster;
@@ -27,7 +27,7 @@ struct Model {
     walls: Vec<Curve>,
     tile_count_w: u32,
     n_caster: u32,
-    rays: Vec<BouncingRay2D>,
+    rays: Vec<Raycaster>,
     draw_gui: bool,
     ui: Ui,
     ids: Ids,
@@ -102,7 +102,7 @@ fn model(app: &App) -> Model {
         .unwrap();
 
     let mut walls: Vec<Curve> = Vec::new();
-    let mut rays: Vec<BouncingRay2D> = Vec::new();
+    let mut rays: Vec<Raycaster> = Vec::new();
     let win = app.window_rect();
 
     let draw_gui = true;
@@ -142,7 +142,7 @@ fn model(app: &App) -> Model {
         rotation,
         n_caster,
     );
-    make_rays(&mut rays, &win, tile_count_w, n_caster);
+    make_raycasters(&mut rays, &win, tile_count_w, n_caster);
     let show_walls = true;
     let animation = true;
     let draw_arrows = true;
@@ -296,7 +296,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 model.rotation,
                 model.n_caster,
             );
-            make_rays(&mut model.rays, &win, model.tile_count_w, model.n_caster)
+            make_raycasters(&mut model.rays, &win, model.tile_count_w, model.n_caster)
         }
 
         for value in slider(model.collision_radius as f32, 0.0, 185.0)
@@ -434,67 +434,9 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
     model
         .rays
         .par_iter_mut()
-        .for_each(|ray| ray_collides(ray, rot, anim, anim_speed, time, wallss, win));
+        .for_each(|ray| ray.collide(rot, anim, anim_speed, time, wallss, win));
 }
 
-fn ray_collides(
-    r: &mut BouncingRay2D,
-    rotation: f32,
-    animation: bool,
-    animation_speed: f32,
-    time: f32,
-    walls: &Vec<Curve>,
-    win: geom::Rect,
-) {
-    r.collisions.clear();
-    r.reflections.clear();
-    r.refl_intensity.clear();
-
-    if animation {
-        if r.primary_ray.dir.x > 0.0 {
-            r.primary_ray.orig.x += 0.1 * animation_speed;
-        } else {
-            r.primary_ray.orig.x -= 0.1 * animation_speed;
-        }
-        //r.primary_ray.orig = r.primary_ray.orig + r.primary_ray.dir.with_magnitude(animation_speed);
-        if r.primary_ray.orig.x >= win.right() as f32 {
-            r.primary_ray.orig.x = win.left();
-        } else if r.primary_ray.orig.x <= win.left() as f32 {
-            r.primary_ray.orig.x = win.right();
-        }
-    }
-
-    while !r.max_bounces_reached() {
-        let collision: Vector2;
-        let mut distance: f32 = Float::infinity();
-        let mut surface_normal: Vector2 = vec2(0.0, 0.0);
-        // find the closest intersection point between the ray and the walls
-        for curve in walls.iter() {
-            if let Some(collision) = r.ray.intersect_polyline(&curve.points) {
-                // save the closest possible collision
-                if collision.0 < distance {
-                    distance = collision.0;
-                    surface_normal = collision.1;
-                }
-            }
-        }
-        if distance < Float::infinity() {
-            // collision point
-            collision = r.ray.orig + r.ray.dir.with_magnitude(distance);
-            r.bounces += 1;
-            let refl = r.ray.reflect(surface_normal);
-            r.refl_intensity.push(r.ray.dir.dot(refl).abs());
-            r.ray.orig = collision + refl.with_magnitude(0.03);
-            r.ray.dir = refl;
-            r.collisions.push(collision);
-            r.reflections.push(refl);
-        } else {
-            break;
-        };
-    }
-    r.reset();
-    //r.ray.set_dir_from_angle(rotation);
-}
 
 fn view(app: &App, model: &Model, frame: Frame) {
     let blends = [BLEND_NORMAL, BLEND_ADD, BLEND_SUBTRACT, BLEND_LIGHTEST];
@@ -578,76 +520,77 @@ fn view(app: &App, model: &Model, frame: Frame) {
     }
 
     for r in &model.rays {
-        if model.draw_arrows {
-            draw.arrow()
-                .color(model.palette.get_first(model.scheme_id, model.color_off))
-                .start(r.ray.orig)
-                .stroke_weight(model.ray_width)
-                .end(r.ray.orig + r.ray.dir.with_magnitude(ARROW_LENGTH));
-        }
 
-        if r.collisions.len() > 3 && model.collision_radius > 0.0 {
-            for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
-                draw.ellipse()
-                    .no_fill()
-                    .stroke(model.palette.get_third(model.scheme_id, model.color_off))
-                    .stroke_weight(3.0)
-                    .x_y(c.x, c.y)
-                    .w_h(model.collision_radius * i, model.collision_radius * i);
-            }
-        }
+        r.draw(&draw, 100.0, 4.0, *model.palette.get_first(model.scheme_id, model.color_off));
+    }
+        // if model.draw_arrows {
+        //     draw.arrow()
+        //         .color(model.palette.get_first(model.scheme_id, model.color_off))
+        //         .start(r.ray.orig)
+        //         .stroke_weight(model.ray_width)
+        //         .end(r.ray.orig + r.ray.dir.with_magnitude(ARROW_LENGTH));
+        // }
 
-        let mut col = rgba(0.0, 0.0, 0.0, 0.0);
-        //let win = app.window_rect();
-        let ppp = r
-            .collisions
-            .iter()
-            .zip(r.reflections.iter())
-            .map(|(&co, &re)| {
-                if re.x > 0.0 {
-                    col = model.palette.get_third(model.scheme_id, model.color_off)
-                } else {
-                    col = model.palette.get_fourth(model.scheme_id, model.color_off)
-                }
-                // let xc = map_range(co.x, win.left(), win.right(), 0.0, 1.0);
-                // let xy = map_range(co.y, win.bottom(), win.top(), 0.0, 1.0);
-                // let tex_coords = [xc, xy];
-                // (pt2(co.x, co.y), tex_coords)
-                (pt2(co.x, co.y), col)
-            });
+        // if r.collisions.len() > 3 && model.collision_radius > 0.0 {
+        //     for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
+        //         draw.ellipse()
+        //             .no_fill()
+        //             .stroke(model.palette.get_third(model.scheme_id, model.color_off))
+        //             .stroke_weight(3.0)
+        //             .x_y(c.x, c.y)
+        //             .w_h(model.collision_radius * i, model.collision_radius * i);
+        //     }
+        // }
 
-        if model.draw_polygon {
-            if ppp.len() > 3 {
-                draw.polygon()
-                    .stroke(model.palette.get_second(model.scheme_id, model.color_off))
-                    .stroke_weight(model.polygon_contour_weight)
-                    .join_round()
-                    .points_colored(ppp);
-                //draw.polygon().points_textured(&model.texture, ppp);
-            }
-        };
+        // let mut col = rgba(0.0, 0.0, 0.0, 0.0);
+        // //let win = app.window_rect();
+        // let ppp = r
+        //     .collisions
+        //     .iter()
+        //     .zip(r.reflections.iter())
+        //     .map(|(&co, &re)| {
+        //         if re.x > 0.0 {
+        //             col = model.palette.get_third(model.scheme_id, model.color_off)
+        //         } else {
+        //             col = model.palette.get_fourth(model.scheme_id, model.color_off)
+        //         }
+        //         // let xc = map_range(co.x, win.left(), win.right(), 0.0, 1.0);
+        //         // let xy = map_range(co.y, win.bottom(), win.top(), 0.0, 1.0);
+        //         // let tex_coords = [xc, xy];
+        //         // (pt2(co.x, co.y), tex_coords)
+        //         (pt2(co.x, co.y), col)
+        //     });
 
-        if r.collisions.len() > 3 {
-            draw.path()
-                .stroke()
-                .caps_round()
-                .stroke_weight(model.ray_width)
-                .points(r.collisions.iter().cloned())
-                .color(model.palette.get_first(model.scheme_id, model.color_off));
-        }
+        // if model.draw_polygon {
+        //     if ppp.len() > 3 {
+        //         draw.polygon()
+        //             .stroke(model.palette.get_second(model.scheme_id, model.color_off))
+        //             .stroke_weight(model.polygon_contour_weight)
+        //             .join_round()
+        //             .points_colored(ppp);
+        //         //draw.polygon().points_textured(&model.texture, ppp);
+        //     }
+        // };
 
-        for (&c, &r) in r.collisions.iter().zip(r.reflections.iter()) {
-            if model.draw_arrows {
-                draw.arrow()
-                    .start(c)
-                    .end(c + r.with_magnitude(40.0))
-                    .stroke_weight(model.ray_width)
-                    .color(model.palette.get_first(model.scheme_id, model.color_off));
-            }
-        }
-        if model.draw_tex_overlay {
-            draw.texture(&model.texture).w_h(800.0, 800.0);
-        }
+        // if r.collisions.len() > 3 {
+        //     draw.path()
+        //         .stroke()
+        //         .caps_round()
+        //         .stroke_weight(model.ray_width)
+        //         .points(r.collisions.iter().cloned())
+        //         .color(model.palette.get_first(model.scheme_id, model.color_off));
+        // }
+
+        // for (&c, &r) in r.collisions.iter().zip(r.reflections.iter()) {
+        //     if model.draw_arrows {
+        //         draw.arrow()
+        //             .start(c)
+        //             .end(c + r.with_magnitude(40.0))
+        //             .stroke_weight(model.ray_width)
+        //             .color(model.palette.get_first(model.scheme_id, model.color_off));
+        //     }
+        // }
+
     }
 
     draw.to_frame(app, &frame).unwrap();
