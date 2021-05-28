@@ -44,15 +44,19 @@ pub fn make_raycasters(
     //for _y in 0..(win.h() as u32 / side as u32) {
     for _y in 0..n_caster {
         let x;
+        let dir;
         //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+
         if _y % 2 == 0 {
+            dir = Vector2::from_angle(0.0);
             x = win.left();
         } else {
+            dir = Vector2::from_angle(-PI);
             x = win.right();
         }
 
         let pos = vec2(x, (_y * padding) as f32 - win.h() / 2 as f32);
-        let mut r = Raycaster::new(pos);
+        let r = Raycaster::new(pos, dir);
         rays.push(r);
     }
 }

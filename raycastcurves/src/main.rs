@@ -431,12 +431,19 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
     let anim_speed = model.animation_speed;
     let wallss = &model.walls;
     let win = _app.window_rect();
-    model
-        .rays
-        .par_iter_mut()
-        .for_each(|ray| ray.collide(rot, anim, anim_speed, time, wallss, win));
-}
 
+    if model.animation {
+        model
+            .rays
+            .par_iter_mut()
+            .for_each(|r| r.bounce_horizontally(&win, anim_speed))
+    }
+
+    // model
+    //     .rays
+    //     .par_iter_mut()
+    //     .for_each(|ray| ray.collide(rot, anim, anim_speed, time, wallss, win));
+}
 
 fn view(app: &App, model: &Model, frame: Frame) {
     let blends = [BLEND_NORMAL, BLEND_ADD, BLEND_SUBTRACT, BLEND_LIGHTEST];
@@ -520,78 +527,80 @@ fn view(app: &App, model: &Model, frame: Frame) {
     }
 
     for r in &model.rays {
-
-        r.draw(&draw, 100.0, 4.0, *model.palette.get_first(model.scheme_id, model.color_off));
+        r.draw(
+            &draw,
+            100.0,
+            4.0,
+            *model.palette.get_first(model.scheme_id, model.color_off),
+        );
     }
-        // if model.draw_arrows {
-        //     draw.arrow()
-        //         .color(model.palette.get_first(model.scheme_id, model.color_off))
-        //         .start(r.ray.orig)
-        //         .stroke_weight(model.ray_width)
-        //         .end(r.ray.orig + r.ray.dir.with_magnitude(ARROW_LENGTH));
-        // }
+    // if model.draw_arrows {
+    //     draw.arrow()
+    //         .color(model.palette.get_first(model.scheme_id, model.color_off))
+    //         .start(r.ray.orig)
+    //         .stroke_weight(model.ray_width)
+    //         .end(r.ray.orig + r.ray.dir.with_magnitude(ARROW_LENGTH));
+    // }
 
-        // if r.collisions.len() > 3 && model.collision_radius > 0.0 {
-        //     for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
-        //         draw.ellipse()
-        //             .no_fill()
-        //             .stroke(model.palette.get_third(model.scheme_id, model.color_off))
-        //             .stroke_weight(3.0)
-        //             .x_y(c.x, c.y)
-        //             .w_h(model.collision_radius * i, model.collision_radius * i);
-        //     }
-        // }
+    // if r.collisions.len() > 3 && model.collision_radius > 0.0 {
+    //     for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
+    //         draw.ellipse()
+    //             .no_fill()
+    //             .stroke(model.palette.get_third(model.scheme_id, model.color_off))
+    //             .stroke_weight(3.0)
+    //             .x_y(c.x, c.y)
+    //             .w_h(model.collision_radius * i, model.collision_radius * i);
+    //     }
+    // }
 
-        // let mut col = rgba(0.0, 0.0, 0.0, 0.0);
-        // //let win = app.window_rect();
-        // let ppp = r
-        //     .collisions
-        //     .iter()
-        //     .zip(r.reflections.iter())
-        //     .map(|(&co, &re)| {
-        //         if re.x > 0.0 {
-        //             col = model.palette.get_third(model.scheme_id, model.color_off)
-        //         } else {
-        //             col = model.palette.get_fourth(model.scheme_id, model.color_off)
-        //         }
-        //         // let xc = map_range(co.x, win.left(), win.right(), 0.0, 1.0);
-        //         // let xy = map_range(co.y, win.bottom(), win.top(), 0.0, 1.0);
-        //         // let tex_coords = [xc, xy];
-        //         // (pt2(co.x, co.y), tex_coords)
-        //         (pt2(co.x, co.y), col)
-        //     });
+    // let mut col = rgba(0.0, 0.0, 0.0, 0.0);
+    // //let win = app.window_rect();
+    // let ppp = r
+    //     .collisions
+    //     .iter()
+    //     .zip(r.reflections.iter())
+    //     .map(|(&co, &re)| {
+    //         if re.x > 0.0 {
+    //             col = model.palette.get_third(model.scheme_id, model.color_off)
+    //         } else {
+    //             col = model.palette.get_fourth(model.scheme_id, model.color_off)
+    //         }
+    //         // let xc = map_range(co.x, win.left(), win.right(), 0.0, 1.0);
+    //         // let xy = map_range(co.y, win.bottom(), win.top(), 0.0, 1.0);
+    //         // let tex_coords = [xc, xy];
+    //         // (pt2(co.x, co.y), tex_coords)
+    //         (pt2(co.x, co.y), col)
+    //     });
 
-        // if model.draw_polygon {
-        //     if ppp.len() > 3 {
-        //         draw.polygon()
-        //             .stroke(model.palette.get_second(model.scheme_id, model.color_off))
-        //             .stroke_weight(model.polygon_contour_weight)
-        //             .join_round()
-        //             .points_colored(ppp);
-        //         //draw.polygon().points_textured(&model.texture, ppp);
-        //     }
-        // };
+    // if model.draw_polygon {
+    //     if ppp.len() > 3 {
+    //         draw.polygon()
+    //             .stroke(model.palette.get_second(model.scheme_id, model.color_off))
+    //             .stroke_weight(model.polygon_contour_weight)
+    //             .join_round()
+    //             .points_colored(ppp);
+    //         //draw.polygon().points_textured(&model.texture, ppp);
+    //     }
+    // };
 
-        // if r.collisions.len() > 3 {
-        //     draw.path()
-        //         .stroke()
-        //         .caps_round()
-        //         .stroke_weight(model.ray_width)
-        //         .points(r.collisions.iter().cloned())
-        //         .color(model.palette.get_first(model.scheme_id, model.color_off));
-        // }
+    // if r.collisions.len() > 3 {
+    //     draw.path()
+    //         .stroke()
+    //         .caps_round()
+    //         .stroke_weight(model.ray_width)
+    //         .points(r.collisions.iter().cloned())
+    //         .color(model.palette.get_first(model.scheme_id, model.color_off));
+    // }
 
-        // for (&c, &r) in r.collisions.iter().zip(r.reflections.iter()) {
-        //     if model.draw_arrows {
-        //         draw.arrow()
-        //             .start(c)
-        //             .end(c + r.with_magnitude(40.0))
-        //             .stroke_weight(model.ray_width)
-        //             .color(model.palette.get_first(model.scheme_id, model.color_off));
-        //     }
-        // }
-
-    }
+    // for (&c, &r) in r.collisions.iter().zip(r.reflections.iter()) {
+    //     if model.draw_arrows {
+    //         draw.arrow()
+    //             .start(c)
+    //             .end(c + r.with_magnitude(40.0))
+    //             .stroke_weight(model.ray_width)
+    //             .color(model.palette.get_first(model.scheme_id, model.color_off));
+    //     }
+    // }
 
     draw.to_frame(app, &frame).unwrap();
 

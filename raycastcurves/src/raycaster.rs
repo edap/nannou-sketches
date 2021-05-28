@@ -8,12 +8,13 @@ use rayon::prelude::*;
 pub struct Raycaster {
     pub bouncing_rays: Vec<BouncingRay2D>,
     pub position: Vector2,
+    pub direction: Vector2,
 }
 
 impl Raycaster {
-    pub fn new(position: Vector2) -> Self {
+    pub fn new(position: Vector2, direction: Vector2) -> Self {
         let mut bouncing_rays: Vec<BouncingRay2D> = Vec::new();
-        for i in (0..360).step_by(2) {
+        for i in (0..360).step_by(10) {
             let radian = deg_to_rad(i as f32);
             let mut ray = BouncingRay2D::new();
             ray.primary_ray.set_dir_from_angle(radian);
@@ -24,6 +25,7 @@ impl Raycaster {
         Raycaster {
             bouncing_rays,
             position,
+            direction,
         }
     }
 
@@ -35,6 +37,28 @@ impl Raycaster {
         });
     }
 
+    pub fn bounce_horizontally(&mut self, win: &geom::Rect, anim_speed: f32) {
+        for r in self.bouncing_rays.iter_mut() {
+            if r.primary_ray.dir.x > 0.0 {
+                r.primary_ray.orig.x += 0.1 * anim_speed;
+                self.position.x = r.primary_ray.orig.x;
+            } else {
+                r.primary_ray.orig.x -= 0.1 * anim_speed;
+                self.position.x = r.primary_ray.orig.x;
+            }
+            println!("{:?}", r.primary_ray.dir.x);
+
+            //r.primary_ray.orig = r.primary_ray.orig + r.primary_ray.dir.with_magnitude(animation_speed);
+            if r.primary_ray.orig.x >= win.right() as f32 {
+                r.primary_ray.orig.x = win.left();
+                self.position.x = r.primary_ray.orig.x;
+            } else if r.primary_ray.orig.x <= win.left() as f32 {
+                r.primary_ray.orig.x = win.right();
+                self.position.x = r.primary_ray.orig.x;
+            }
+        }
+    }
+
     pub fn draw(&self, draw: &Draw, mag: f32, weight: f32, col: Rgb) {
         //self.bouncing_rays.iter_mut(|b_ray| {
         for b_ray in self.bouncing_rays.iter() {
@@ -44,6 +68,13 @@ impl Raycaster {
                 .start(b_ray.primary_ray.orig)
                 .end(b_ray.primary_ray.dir.with_magnitude(mag));
         }
+        //});
+        draw.ellipse()
+            .no_fill()
+            .stroke(col)
+            .stroke_weight(3.0)
+            .x_y(self.position.x, self.position.y)
+            .w_h(50.0, 50.0);
     }
 
     pub fn collide(
@@ -83,19 +114,7 @@ pub fn ray_collides(
     r.reflections.clear();
     r.refl_intensity.clear();
     // TODO, move this in the main.rs
-    if animation {
-        if r.primary_ray.dir.x > 0.0 {
-            r.primary_ray.orig.x += 0.1 * animation_speed;
-        } else {
-            r.primary_ray.orig.x -= 0.1 * animation_speed;
-        }
-        //r.primary_ray.orig = r.primary_ray.orig + r.primary_ray.dir.with_magnitude(animation_speed);
-        if r.primary_ray.orig.x >= win.right() as f32 {
-            r.primary_ray.orig.x = win.left();
-        } else if r.primary_ray.orig.x <= win.left() as f32 {
-            r.primary_ray.orig.x = win.right();
-        }
-    }
+
     while !r.max_bounces_reached() {
         let collision: Vector2;
         let mut distance: f32 = Float::infinity();
