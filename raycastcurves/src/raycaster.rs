@@ -7,30 +7,29 @@ use rayon::prelude::*;
 #[derive(Debug)]
 pub struct Raycaster {
     pub bouncing_rays: Vec<BouncingRay2D>,
-    pub position: Vector2,
     pub direction: Vector2,
 }
 
 impl Raycaster {
     pub fn new(position: Vector2, direction: Vector2) -> Self {
         let mut bouncing_rays: Vec<BouncingRay2D> = Vec::new();
-        for i in (0..360).step_by(10) {
+        for i in (0..360).step_by(6) {
             let radian = deg_to_rad(i as f32);
             let mut ray = BouncingRay2D::new();
             ray.primary_ray.set_dir_from_angle(radian);
+            println!("{:?} d", ray.primary_ray.dir);
             ray.primary_ray.orig = position;
             bouncing_rays.push(ray);
+            println!("{:?} nn", bouncing_rays.len())
         }
 
         Raycaster {
             bouncing_rays,
-            position,
             direction,
         }
     }
 
     pub fn move_to(&mut self, new_pos: Vector2) {
-        self.position = new_pos;
         self.bouncing_rays.par_iter_mut().for_each(|b_ray| {
             b_ray.primary_ray.orig.x = new_pos.x;
             b_ray.primary_ray.orig.y = new_pos.y
@@ -39,42 +38,49 @@ impl Raycaster {
 
     pub fn bounce_horizontally(&mut self, win: &geom::Rect, anim_speed: f32) {
         for r in self.bouncing_rays.iter_mut() {
-            if r.primary_ray.dir.x > 0.0 {
+            if self.direction.x > 0.0 {
                 r.primary_ray.orig.x += 0.1 * anim_speed;
-                self.position.x = r.primary_ray.orig.x;
             } else {
                 r.primary_ray.orig.x -= 0.1 * anim_speed;
-                self.position.x = r.primary_ray.orig.x;
             }
-            println!("{:?}", r.primary_ray.dir.x);
+            //println!("{:?}", r.primary_ray.dir.x);
 
             //r.primary_ray.orig = r.primary_ray.orig + r.primary_ray.dir.with_magnitude(animation_speed);
             if r.primary_ray.orig.x >= win.right() as f32 {
                 r.primary_ray.orig.x = win.left();
-                self.position.x = r.primary_ray.orig.x;
-            } else if r.primary_ray.orig.x <= win.left() as f32 {
+            } else if r.primary_ray.orig.x < win.left() as f32 {
                 r.primary_ray.orig.x = win.right();
-                self.position.x = r.primary_ray.orig.x;
             }
         }
     }
 
-    pub fn draw(&self, draw: &Draw, mag: f32, weight: f32, col: Rgb) {
+    pub fn draw(&self, draw: &Draw, mag: f32, weight: f32, cola: Rgb, colb: Rgb) {
         //self.bouncing_rays.iter_mut(|b_ray| {
         for b_ray in self.bouncing_rays.iter() {
-            draw.arrow()
-                .color(col)
-                .weight(weight)
-                .start(b_ray.primary_ray.orig)
-                .end(b_ray.primary_ray.dir.with_magnitude(mag));
+            // draw.arrow()
+            //     .color(cola)
+            //     .weight(weight)
+            //     .start(b_ray.primary_ray.orig)
+            //     .end(b_ray.primary_ray.orig + b_ray.primary_ray.dir.with_magnitude(mag));
+
+            // for coll in &b_ray.collisions {
+            //     draw.ellipse().x_y(coll.x, coll.y).w_h(5.0, 5.0);
+            // }
+
+            let ppp = b_ray
+                .collisions
+                .iter()
+                .zip(b_ray.reflections.iter())
+                .map(|(&co, &re)| {
+                    if re.x > 0.0 {
+                        (pt2(co.x, co.y), cola)
+                    } else {
+                        (pt2(co.x, co.y), colb)
+                    }
+                });
+
+            draw.polyline().points_colored(ppp);
         }
-        //});
-        draw.ellipse()
-            .no_fill()
-            .stroke(col)
-            .stroke_weight(3.0)
-            .x_y(self.position.x, self.position.y)
-            .w_h(50.0, 50.0);
     }
 
     pub fn collide(

@@ -119,7 +119,7 @@ fn model(app: &App) -> Model {
     let wall_padding = 0.07;
     let hole_pct = 0.25;
     let hole_n = 2;
-    let n_caster = 20;
+    let n_caster = 2;
     let max_bounces = 10;
     let rotation = 0.0;
     let collision_radius = 3.0;
@@ -439,10 +439,10 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             .for_each(|r| r.bounce_horizontally(&win, anim_speed))
     }
 
-    // model
-    //     .rays
-    //     .par_iter_mut()
-    //     .for_each(|ray| ray.collide(rot, anim, anim_speed, time, wallss, win));
+    model
+        .rays
+        .par_iter_mut()
+        .for_each(|ray| ray.collide(rot, anim, anim_speed, time, wallss, win));
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
@@ -530,10 +530,12 @@ fn view(app: &App, model: &Model, frame: Frame) {
         r.draw(
             &draw,
             100.0,
-            4.0,
+            model.ray_width,
             *model.palette.get_first(model.scheme_id, model.color_off),
+            *model.palette.get_second(model.scheme_id, model.color_off),
         );
     }
+
     // if model.draw_arrows {
     //     draw.arrow()
     //         .color(model.palette.get_first(model.scheme_id, model.color_off))
