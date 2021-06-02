@@ -17,10 +17,8 @@ impl Raycaster {
             let radian = deg_to_rad(i as f32);
             let mut ray = BouncingRay2D::new();
             ray.primary_ray.set_dir_from_angle(radian);
-            println!("{:?} d", ray.primary_ray.dir);
             ray.primary_ray.orig = position;
             bouncing_rays.push(ray);
-            println!("{:?} nn", bouncing_rays.len())
         }
 
         Raycaster {
@@ -66,20 +64,33 @@ impl Raycaster {
             // for coll in &b_ray.collisions {
             //     draw.ellipse().x_y(coll.x, coll.y).w_h(5.0, 5.0);
             // }
+            if b_ray.collisions.len() > 0 {
+                draw.line()
+                    .start(b_ray.primary_ray.orig)
+                    .end(b_ray.collisions[0])
+                    .color(cola);
+                let ppp =
+                    b_ray
+                        .collisions
+                        .iter()
+                        .zip(b_ray.reflections.iter())
+                        .map(|(&co, &re)| {
+                            if re.x > 0.0 {
+                                (pt2(co.x, co.y), cola)
+                            } else {
+                                (pt2(co.x, co.y), colb)
+                            }
+                        });
 
-            let ppp = b_ray
-                .collisions
-                .iter()
-                .zip(b_ray.reflections.iter())
-                .map(|(&co, &re)| {
-                    if re.x > 0.0 {
-                        (pt2(co.x, co.y), cola)
-                    } else {
-                        (pt2(co.x, co.y), colb)
-                    }
-                });
-
-            draw.polyline().points_colored(ppp);
+                draw.polyline().points_colored(ppp);
+            } else {
+                let end_point =
+                    b_ray.primary_ray.orig + b_ray.primary_ray.dir.with_magnitude(1000.0);
+                draw.line()
+                    .start(b_ray.primary_ray.orig)
+                    .end(end_point)
+                    .color(cola);
+            }
         }
     }
 
@@ -121,7 +132,8 @@ pub fn ray_collides(
     r.refl_intensity.clear();
     // TODO, move this in the main.rs
 
-    while !r.max_bounces_reached() {
+    //while !r.max_bounces_reached() {
+    while r.bounces < 4 {
         let collision: Vector2;
         let mut distance: f32 = Float::infinity();
         let mut surface_normal: Vector2 = vec2(0.0, 0.0);
