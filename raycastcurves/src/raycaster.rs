@@ -4,6 +4,8 @@ use crate::types::Curve;
 use nannou::prelude::*;
 use rayon::prelude::*;
 
+const EPSILON: f32 = 0.05;
+
 #[derive(Debug)]
 pub struct Raycaster {
     pub bouncing_rays: Vec<BouncingRay2D>,
@@ -153,7 +155,7 @@ pub fn ray_collides(
             r.bounces += 1;
             let refl = r.ray.reflect(surface_normal);
             r.refl_intensity.push(r.ray.dir.dot(refl).abs());
-            r.ray.orig = collision + refl.with_magnitude(0.03);
+            r.ray.orig = collision + refl.with_magnitude(EPSILON);
             r.ray.dir = refl;
             r.collisions.push(collision);
             r.reflections.push(refl);
