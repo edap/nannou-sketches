@@ -2356,6 +2356,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "raycastcurves"
+version = "0.1.0"
+dependencies = [
+ "edapx-colors",
+ "nannou",
+ "ray2d",
+ "rayon",
+]
+
+[[package]]
 name = "raycircle"
 version = "0.1.0"
 dependencies = [
