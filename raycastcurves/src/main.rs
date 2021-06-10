@@ -53,7 +53,6 @@ struct Model {
     animation_time: f32,
     draw_polygon: bool,
     polygon_contour_weight: f32,
-    texture: wgpu::Texture,
     clear_interval: usize,
 }
 
@@ -152,13 +151,6 @@ fn model(app: &App) -> Model {
     let polygon_contour_weight = 5.0;
     let draw_tex_overlay = false;
 
-    // texture
-    // Load the image from disk and upload it to a GPU texture.
-    let assets = app.assets_path().unwrap();
-    let img_path = assets.join("images").join("noise-texture1-tr.png");
-    //let img_path = assets.join("images").join("water.png");
-    //let img_path = assets.join("images").join("grunge-halftone-tr.png");
-    let texture = wgpu::Texture::from_path(app, img_path).unwrap();
 
     Model {
         walls,
@@ -191,7 +183,6 @@ fn model(app: &App) -> Model {
         polygon_contour_weight,
         draw_tex_overlay,
         clear_interval,
-        texture,
     }
 }
 

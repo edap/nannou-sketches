@@ -42,7 +42,6 @@ struct Model {
     draw_refl: bool,
     draw_polygon: bool,
     polygon_contour_weight: f32,
-    texture: wgpu::Texture,
     padding: f32,
 }
 
@@ -117,12 +116,6 @@ fn model(app: &App) -> Model {
     let polygon_contour_weight = 5.0;
     let draw_tex_overlay = false;
 
-    // texture
-    // Load the image from disk and upload it to a GPU texture.
-    let assets = app.assets_path().unwrap();
-    let img_path = assets.join("images").join("noise-texture1-tr.png");
-    //let img_path = assets.join("images").join("grunge-halftone-tr.png");
-    let texture = wgpu::Texture::from_path(app, img_path).unwrap();
 
     Model {
         tile_count_w,
@@ -148,7 +141,6 @@ fn model(app: &App) -> Model {
         padding,
         polygon_contour_weight,
         draw_tex_overlay,
-        texture,
     }
 }
 
@@ -350,10 +342,6 @@ fn view(app: &App, model: &Model, frame: Frame) {
     // for ray_ball in &model.rays_balls {
     //     //
     //     draw_ray_ball(&draw, &model, &ray_ball);
-    // }
-
-    // if model.draw_tex_overlay {
-    //     draw.texture(&model.texture).w_h(800.0, 800.0);
     // }
 
     let distanza = 400.0 + app.time.sin() * 300.0;
