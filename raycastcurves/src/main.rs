@@ -3,6 +3,7 @@ use nannou::prelude::*;
 use nannou::ui::prelude::*;
 use rayon::prelude::*;
 
+mod gui;
 mod types;
 use crate::types::Curve;
 mod mondrian;
@@ -30,7 +31,7 @@ struct Model {
     rays: Vec<Raycaster>,
     draw_gui: bool,
     ui: Ui,
-    ids: Ids,
+    ids: gui::Ids,
     ray_width: f32,
     rays_prob: f32,
     wall_width: f32,
@@ -56,35 +57,35 @@ struct Model {
     clear_interval: usize,
 }
 
-widget_ids! {
-    struct Ids {
-        wall_width,
-        wall_split,
-        wall_padding,
-        hole_pct,
-        hole_n,
-        tile_count_w,
-        button,
-        n_caster,
-        ray_width,
-        rays_prob,
-        max_bounces,
-        collision_radius,
-        rotation,
-        scheme_id,
-        blend_id,
-        color_off,
-        animation_time,
-        draw_polygon,
-        draw_arrows,
-        polygon_contour_weight,
-        animation,
-        animation_speed,
-        show_walls,
-        draw_tex_overlay,
-        clear_interval
-    }
-}
+// widget_ids! {
+//     struct Ids {
+//         wall_width,
+//         wall_split,
+//         wall_padding,
+//         hole_pct,
+//         hole_n,
+//         tile_count_w,
+//         button,
+//         n_caster,
+//         ray_width,
+//         rays_prob,
+//         max_bounces,
+//         collision_radius,
+//         rotation,
+//         scheme_id,
+//         blend_id,
+//         color_off,
+//         animation_time,
+//         draw_polygon,
+//         draw_arrows,
+//         polygon_contour_weight,
+//         animation,
+//         animation_speed,
+//         show_walls,
+//         draw_tex_overlay,
+//         clear_interval
+//     }
+// }
 
 fn model(app: &App) -> Model {
     let tile_count_w = 8;
@@ -110,7 +111,7 @@ fn model(app: &App) -> Model {
     let mut ui = app.new_ui().build().unwrap();
 
     // Generate some ids for our widgets.
-    let ids = Ids::new(ui.widget_id_generator());
+    let ids = gui::Ids::new(ui.widget_id_generator());
 
     let ray_width = 3.0;
     let wall_width = 2.0;
@@ -150,7 +151,6 @@ fn model(app: &App) -> Model {
     let draw_polygon = true;
     let polygon_contour_weight = 5.0;
     let draw_tex_overlay = false;
-
 
     Model {
         walls,
