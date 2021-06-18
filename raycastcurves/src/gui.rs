@@ -30,3 +30,21 @@ widget_ids! {
         clear_interval
     }
 }
+
+pub fn slider(val: f32, min: f32, max: f32) -> widget::Slider<'static, f32> {
+    widget::Slider::new(val, min, max)
+        .w_h(200.0, 30.0)
+        .label_font_size(15)
+        .rgb(0.3, 0.3, 0.3)
+        .label_rgb(1.0, 1.0, 1.0)
+        .border(0.0)
+}
+
+pub fn toggle(val: bool) -> widget::Toggle<'static> {
+    widget::Toggle::new(val)
+        .w_h(200.0, 30.0)
+        .label_font_size(15)
+        .rgb(0.3, 0.3, 0.3)
+        .label_rgb(1.0, 1.0, 1.0)
+        .border(0.0)
+}

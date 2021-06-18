@@ -82,7 +82,7 @@ fn model(app: &App) -> Model {
     // Create the UI.
     let ui_window = app.new_window()
         .title(app.exe_name().unwrap() + " controls")
-        .size(300, 200)
+        .size(300, 900)
         .view(ui_view)
         .event(ui_event)
         .key_pressed(key_pressed)
@@ -376,29 +376,10 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
 }
 
 fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
-
-    // Calling `set_widgets` allows us to instantiate some widgets.
     let ui = &mut model.ui.set_widgets();
     {
-        fn slider(val: f32, min: f32, max: f32) -> widget::Slider<'static, f32> {
-            widget::Slider::new(val, min, max)
-                .w_h(200.0, 30.0)
-                .label_font_size(15)
-                .rgb(0.3, 0.3, 0.3)
-                .label_rgb(1.0, 1.0, 1.0)
-                .border(0.0)
-        }
 
-        fn toggle(val: bool) -> widget::Toggle<'static> {
-            widget::Toggle::new(val)
-                .w_h(200.0, 30.0)
-                .label_font_size(15)
-                .rgb(0.3, 0.3, 0.3)
-                .label_rgb(1.0, 1.0, 1.0)
-                .border(0.0)
-        }
-
-        for value in slider(model.wall_width as f32, 1.0, 15.0)
+        for value in gui::slider(model.wall_width as f32, 1.0, 15.0)
             .top_left_with_margin(10.0)
             .label("wall width")
             .set(model.ids.wall_width, ui)
@@ -406,7 +387,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.wall_width = value;
         }
 
-        for value in slider(model.wall_split as f32, 0.0, 1.0)
+        for value in gui::slider(model.wall_split as f32, 0.0, 1.0)
             .down(3.0)
             .label("wall split")
             .set(model.ids.wall_split, ui)
@@ -414,7 +395,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.wall_split = value;
         }
 
-        for value in slider(model.wall_padding as f32, 0.2, 0.02)
+        for value in gui::slider(model.wall_padding as f32, 0.2, 0.02)
             .down(3.0)
             .label("wall padding")
             .set(model.ids.wall_padding, ui)
@@ -422,7 +403,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.wall_padding = value;
         }
 
-        for value in slider(model.hole_pct as f32, 0.0, 0.9)
+        for value in gui::slider(model.hole_pct as f32, 0.0, 0.9)
             .down(3.0)
             .label("hole")
             .set(model.ids.hole_pct, ui)
@@ -430,7 +411,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.hole_pct = value;
         }
 
-        for value in slider(model.hole_n as f32, 0.0, 6.0)
+        for value in gui::slider(model.hole_n as f32, 0.0, 6.0)
             .down(1.0)
             .label("hole_n")
             .set(model.ids.hole_n, ui)
@@ -438,7 +419,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.hole_n = value as usize;
         }
 
-        for value in slider(model.n_caster as f32, 1.0, 50.0)
+        for value in gui::slider(model.n_caster as f32, 1.0, 50.0)
             .down(3.0)
             .label("n_caster ")
             .set(model.ids.n_caster, ui)
@@ -446,7 +427,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.n_caster = value as u32;
         }
 
-        for value in slider(model.tile_count_w as f32, 1.0, 20.0)
+        for value in gui::slider(model.tile_count_w as f32, 1.0, 20.0)
             .down(3.0)
             .label("tile_count_w")
             .set(model.ids.tile_count_w, ui)
@@ -480,7 +461,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             make_raycasters(&mut model.rays, &win, model.tile_count_w, model.n_caster)
         }
 
-        for value in slider(model.collision_radius as f32, 0.0, 185.0)
+        for value in gui::slider(model.collision_radius as f32, 0.0, 185.0)
             .down(3.0)
             .label("collision radius")
             .set(model.ids.collision_radius, ui)
@@ -488,150 +469,32 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.collision_radius = value;
         }
 
-        for value in slider(model.ray_width, 1.0, 10.0)
+        for value in gui::slider(model.ray_width, 1.0, 10.0)
             .down(3.0)
             .label("ray width")
             .set(model.ids.ray_width, ui)
         {
             model.ray_width = value;
         }
-        for value in slider(model.rays_prob as f32, 0.0, 1.0)
+        for value in gui::slider(model.rays_prob as f32, 0.0, 1.0)
             .down(3.0)
             .label("rays prob.")
             .set(model.ids.rays_prob, ui)
         {
             model.rays_prob = value;
         }
-        for value in slider(model.max_bounces as f32, 1.0, 400.0)
+        for value in gui::slider(model.max_bounces as f32, 1.0, 400.0)
             .down(3.0)
             .label("max_bounces")
             .set(model.ids.max_bounces, ui)
         {
             model.max_bounces = value as usize;
-             fn slider(val: f32, min: f32, max: f32) -> widget::Slider<'static, f32> {
-            widget::Slider::new(val, min, max)
-                .w_h(200.0, 30.0)
-                .label_font_size(15)
-                .rgb(0.3, 0.3, 0.3)
-                .label_rgb(1.0, 1.0, 1.0)
-                .border(0.0)
+
+
         }
 
-        fn toggle(val: bool) -> widget::Toggle<'static> {
-            widget::Toggle::new(val)
-                .w_h(200.0, 30.0)
-                .label_font_size(15)
-                .rgb(0.3, 0.3, 0.3)
-                .label_rgb(1.0, 1.0, 1.0)
-                .border(0.0)
-        }
 
-        for value in slider(model.wall_width as f32, 1.0, 15.0)
-            .top_left_with_margin(10.0)
-            .label("wall width")
-            .set(model.ids.wall_width, ui)
-        {
-            model.wall_width = value;
-        }
-
-        for value in slider(model.wall_split as f32, 0.0, 1.0)
-            .down(3.0)
-            .label("wall split")
-            .set(model.ids.wall_split, ui)
-        {
-            model.wall_split = value;
-        }
-
-        for value in slider(model.wall_padding as f32, 0.2, 0.02)
-            .down(3.0)
-            .label("wall padding")
-            .set(model.ids.wall_padding, ui)
-        {
-            model.wall_padding = value;
-        }
-
-        for value in slider(model.hole_pct as f32, 0.0, 0.9)
-            .down(3.0)
-            .label("hole")
-            .set(model.ids.hole_pct, ui)
-        {
-            model.hole_pct = value;
-        }
-
-        for value in slider(model.hole_n as f32, 0.0, 6.0)
-            .down(1.0)
-            .label("hole_n")
-            .set(model.ids.hole_n, ui)
-        {
-            model.hole_n = value as usize;
-        }
-
-        for value in slider(model.n_caster as f32, 1.0, 50.0)
-            .down(3.0)
-            .label("n_caster ")
-            .set(model.ids.n_caster, ui)
-        {
-            model.n_caster = value as u32;
-        }
-
-        for value in slider(model.tile_count_w as f32, 1.0, 20.0)
-            .down(3.0)
-            .label("tile_count_w")
-            .set(model.ids.tile_count_w, ui)
-        {
-            model.tile_count_w = value as u32;
-        }
-
-        for _click in widget::Button::new()
-            .down(3.0)
-            //.w_h(200.0, 60.0)
-            .label("Regenerate Walls")
-            .label_font_size(15)
-            .rgb(0.3, 0.3, 0.3)
-            .label_rgb(1.0, 1.0, 1.0)
-            .border(0.0)
-            .set(model.ids.button, ui)
-        {
-            let win = _app.window_rect();
-            make_walls(
-                &mut model.walls,
-                &win,
-                model.tile_count_w,
-                model.wall_split,
-                model.wall_padding,
-                model.hole_pct,
-                model.hole_n,
-                model.rays_prob,
-                model.rotation,
-                model.n_caster,
-            );
-            make_raycasters(&mut model.rays, &win, model.tile_count_w, model.n_caster)
-        }
-
-        for value in slider(model.collision_radius as f32, 0.0, 185.0)
-            .down(3.0)
-            .label("collision radius")
-            .set(model.ids.collision_radius, ui)
-        {
-            model.collision_radius = value;
-        }
-
-        for value in slider(model.ray_width, 1.0, 10.0)
-            .down(3.0)
-            .label("ray width")
-            .set(model.ids.ray_width, ui)
-        {
-            model.ray_width = value;
-        }
-        for value in slider(model.rays_prob as f32, 0.0, 1.0)
-            .down(3.0)
-            .label("rays prob.")
-            .set(model.ids.rays_prob, ui)
-        {
-            model.rays_prob = value;
-        }
-
-        for value in slider(model.clear_interval as f32, 5.0, 20.0)
+        for value in gui::slider(model.clear_interval as f32, 5.0, 20.0)
             .down(3.0)
             .label("clear_interval")
             .set(model.ids.clear_interval, ui)
@@ -639,7 +502,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.clear_interval = value as usize;
         }
 
-        for val in slider(model.rotation, -PI, PI)
+        for val in gui::slider(model.rotation, -PI, PI)
             .down(3.0)
             .label("Rotation")
             .set(model.ids.rotation, ui)
@@ -647,7 +510,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.rotation = val;
         }
 
-        for value in slider(model.scheme_id as f32, 0.0, 5.0)
+        for value in gui::slider(model.scheme_id as f32, 0.0, 5.0)
             .down(3.0)
             .label("scheme_id")
             .set(model.ids.scheme_id, ui)
@@ -655,7 +518,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.scheme_id = value as usize;
         }
 
-        for value in slider(model.blend_id as f32, 0.0, 3.0)
+        for value in gui::slider(model.blend_id as f32, 0.0, 3.0)
             .down(3.0)
             .label("blend_id")
             .set(model.ids.blend_id, ui)
@@ -663,7 +526,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.blend_id = value as usize;
         }
 
-        for value in slider(model.color_off as f32, 0.0, 4.0)
+        for value in gui::slider(model.color_off as f32, 0.0, 4.0)
             .down(3.0)
             .label("color_off")
             .set(model.ids.color_off, ui)
@@ -671,7 +534,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.color_off = value as usize;
         }
 
-        for value in slider(model.polygon_contour_weight, 1.0, 30.0)
+        for value in gui::slider(model.polygon_contour_weight, 1.0, 30.0)
             .down(3.0)
             .label("polygon cont weight")
             .set(model.ids.polygon_contour_weight, ui)
@@ -679,7 +542,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.polygon_contour_weight = value;
         }
 
-        for v in toggle(model.draw_polygon as bool)
+        for v in gui::toggle(model.draw_polygon as bool)
             .down(3.0)
             .label("Draw poly")
             .set(model.ids.draw_polygon, ui)
@@ -687,7 +550,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.draw_polygon = v;
         }
 
-        for v in toggle(model.draw_arrows as bool)
+        for v in gui::toggle(model.draw_arrows as bool)
             .down(3.0)
             .label("Draw Arrows")
             .set(model.ids.draw_arrows, ui)
@@ -695,7 +558,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.draw_arrows = v;
         }
 
-        for v in toggle(model.draw_tex_overlay as bool)
+        for v in gui::toggle(model.draw_tex_overlay as bool)
             .down(3.0)
             .label("Draw Overlay")
             .set(model.ids.draw_tex_overlay, ui)
@@ -703,7 +566,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.draw_tex_overlay = v;
         }
 
-        for v in toggle(model.animation as bool)
+        for v in gui::toggle(model.animation as bool)
             .down(3.0)
             .label("Animation")
             .set(model.ids.animation, ui)
@@ -711,7 +574,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.animation = v;
         }
 
-        for value in slider(model.animation_speed as f32, 80.0, 0.01)
+        for value in gui::slider(model.animation_speed as f32, 80.0, 0.01)
             .down(3.0)
             .label("animation speed")
             .set(model.ids.animation_speed, ui)
@@ -719,7 +582,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.animation_speed = value;
         }
 
-        for v in toggle(model.show_walls as bool)
+        for v in gui::toggle(model.show_walls as bool)
             .down(3.0)
             .label("Show wall")
             .set(model.ids.show_walls, ui)
@@ -728,7 +591,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         }
     }
 }
-}
+
 
 fn ui_view(app: &App, model: &Model, frame: Frame) {
     model.ui.draw_to_frame_if_changed(app, &frame).unwrap();
