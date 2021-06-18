@@ -30,7 +30,6 @@ struct Model {
     tile_count_w: u32,
     n_caster: u32,
     rays: Vec<Raycaster>,
-    draw_gui: bool,
     ui: Ui,
     ids: gui::Ids,
     ray_width: f32,
@@ -75,9 +74,9 @@ fn model(app: &App) -> Model {
 
     let mut walls: Vec<Curve> = Vec::new();
     let mut rays: Vec<Raycaster> = Vec::new();
-    let win = app.window_rect();
+    //l = app.window_rect();
+    let win = app.window(main_window).unwrap().rect();
 
-    let draw_gui = true;
 
     // Create the UI.
     let ui_window = app.new_window()
@@ -122,9 +121,6 @@ fn model(app: &App) -> Model {
         wall_padding,
         hole_pct,
         hole_n,
-        rays_prob,
-        rotation,
-        n_caster,
     );
     make_raycasters(&mut rays, &win, tile_count_w, n_caster);
     let show_walls = true;
@@ -143,7 +139,6 @@ fn model(app: &App) -> Model {
         tile_count_w,
         rays,
         max_bounces,
-        draw_gui,
         ui,
         ids,
         wall_width,
@@ -174,15 +169,15 @@ fn model(app: &App) -> Model {
 
 }
 
-fn update(_app: &App, model: &mut Model, _update: Update) {
+fn update(app: &App, model: &mut Model, _update: Update) {
 
 
-    let time = _app.time;
+    let time = app.time;
     let rot = model.rotation;
     let anim = model.animation;
     let anim_speed = model.animation_speed;
     let wallss = &model.walls;
-    let win = _app.window_rect();
+    let win = app.window(model.main_window).unwrap().rect();
 
     if model.animation {
         model
@@ -370,7 +365,6 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
                 None => {}
             }
         }
-        Key::G => model.draw_gui = !model.draw_gui,
         _other_key => {}
     }
 }
@@ -445,7 +439,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             .border(0.0)
             .set(model.ids.button, ui)
         {
-            let win = _app.window_rect();
+            let win = _app.window(model.main_window).unwrap().rect();
             make_walls(
                 &mut model.walls,
                 &win,
@@ -454,9 +448,6 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
                 model.wall_padding,
                 model.hole_pct,
                 model.hole_n,
-                model.rays_prob,
-                model.rotation,
-                model.n_caster,
             );
             make_raycasters(&mut model.rays, &win, model.tile_count_w, model.n_caster)
         }
@@ -489,8 +480,6 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             .set(model.ids.max_bounces, ui)
         {
             model.max_bounces = value as usize;
-
-
         }
 
 

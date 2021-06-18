@@ -67,27 +67,57 @@ impl Raycaster {
             //     draw.ellipse().x_y(coll.x, coll.y).w_h(5.0, 5.0);
             // }
             if b_ray.collisions.len() > 0 {
-                draw.line()
-                    .start(b_ray.primary_ray.orig)
-                    .end(b_ray.collisions[0])
-                    .color(cola);
-                let ppp =
-                    b_ray
-                        .collisions
-                        .iter()
-                        .zip(b_ray.reflections.iter())
-                        .map(|(&co, &re)| {
-                            if re.x > 0.0 {
-                                (pt2(co.x, co.y), cola)
-                            } else {
-                                (pt2(co.x, co.y), colb)
-                            }
-                        });
+                // draw.line()
+                //     .start(b_ray.primary_ray.orig)
+                //     .end(b_ray.collisions[0])
+                //     .color(cola);
+                // let ppp =
+                //     b_ray
+                //         .collisions
+                //         .iter()
+                //         .zip(b_ray.reflections.iter())
+                //         .map(|(&co, &re)| {
+                //             if re.x > 0.0 {
+                //                 (pt2(co.x, co.y), cola)
+                //             } else {
+                //                 (pt2(co.x, co.y), colb)
+                //             }
+                //         });
 
-                draw.polyline().points_colored(ppp);
+                // draw.polyline().points_colored(ppp);
+
+
+
+                let ppp = b_ray
+                    .collisions
+                    .iter()
+                    .zip(b_ray.reflections.iter())
+                    .map(|(&co, &re)| {
+                        if re.x > 0.0 {
+                            (pt2(co.x, co.y), cola)
+                        } else {
+                            (pt2(co.x, co.y), colb)
+                        }
+                    });
+
+                    if ppp.len() > 3 {
+                        draw.polygon()
+                            .stroke(cola)
+                            .stroke_weight(weight)
+                            .join_round()
+                            .points_colored(ppp);
+                        //draw.polygon().points_textured(&model.texture, ppp);
+                    }
+
+
+
+
+
+
+
             } else {
                 let end_point =
-                    b_ray.primary_ray.orig + b_ray.primary_ray.dir.with_magnitude(1000.0);
+                    b_ray.primary_ray.orig + b_ray.primary_ray.dir.with_magnitude(2000.0);
                 draw.line()
                     .start(b_ray.primary_ray.orig)
                     .end(end_point)
