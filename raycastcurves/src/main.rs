@@ -360,7 +360,7 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
         Key::S => {
             match app.window(model.main_window) {
                 Some(window) => {
-                    window.capture_frame(app.exe_name().unwrap() + ".png");
+                    window.capture_frame(app.time.to_string()  + ".png");
                 }
                 None => {}
             }
