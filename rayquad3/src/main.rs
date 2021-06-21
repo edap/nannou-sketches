@@ -33,7 +33,7 @@ struct Model {
     draw_refl: bool,
     draw_polygon: bool,
     polygon_contour_weight: f32,
-    texture: wgpu::Texture,
+    //texture: wgpu::Texture,
 }
 
 widget_ids! {
@@ -103,9 +103,9 @@ fn model(app: &App) -> Model {
     // texture
     // Load the image from disk and upload it to a GPU texture.
     let assets = app.assets_path().unwrap();
-    let img_path = assets.join("images").join("noise-texture1-tr.png");
+    //let img_path = assets.join("images").join("noise-texture1-tr.png");
     //let img_path = assets.join("images").join("grunge-halftone-tr.png");
-    let texture = wgpu::Texture::from_path(app, img_path).unwrap();
+    //let texture = wgpu::Texture::from_path(app, img_path).unwrap();
 
     Model {
         walls,
@@ -131,7 +131,7 @@ fn model(app: &App) -> Model {
         draw_polygon,
         polygon_contour_weight,
         draw_tex_overlay,
-        texture,
+        //texture,
     }
 }
 
@@ -437,9 +437,9 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .color(model.palette.get_first(model.scheme_id, model.color_off));
         }
     }
-    if model.draw_tex_overlay {
-        draw.texture(&model.texture).w_h(800.0, 800.0);
-    }
+    // if model.draw_tex_overlay {
+    //     draw.texture(&model.texture).w_h(800.0, 800.0);
+    // }
     draw.to_frame(app, &frame).unwrap();
 
     if model.draw_gui {
