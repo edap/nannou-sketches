@@ -1,6 +1,8 @@
 use crate::mondrian::split_squares;
 pub use crate::mondrian::Square;
 use crate::types::Curve;
+use crate::types::Material;
+use crate::types::SurfaceType;
 use nannou::prelude::*;
 
 pub fn make_walls(
@@ -55,6 +57,13 @@ pub fn create_curve_from_square(
     let mut start_from = 0;
     let mut end_to = start_from + wall_length - pad;
 
+    let mat = Material{
+        coloration: rgba(0.055, 0.8, 0.812, 0.6),
+        albedo: 0.6,
+        surface: SurfaceType::Diffuse,
+
+    };
+
     if hole > 0.1 {
         for i in (0..=360).step_by(1) {
             let rad = deg_to_rad(i as f32);
@@ -70,6 +79,7 @@ pub fn create_curve_from_square(
                 points.push(center + vec2(x, y));
                 walls.push(Curve {
                     points: points.clone(),
+                    material: mat,
                 });
                 points.clear();
                 start_from = i + pad;
@@ -87,6 +97,7 @@ pub fn create_curve_from_square(
         }
         walls.push(Curve {
             points: points.clone(),
+            material: mat,
         });
         points.clear();
 
