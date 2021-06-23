@@ -1,5 +1,10 @@
 use nannou::prelude::*;
 use ray2d::Ray2D;
+#[derive(Debug)]
+pub struct LightPath {
+    pub start:Vector2,
+    pub end:Vector2
+}
 
 #[derive(Debug)]
 pub struct BouncingRay2D {
@@ -10,6 +15,9 @@ pub struct BouncingRay2D {
     pub collisions: Vec<Vector2>,
     pub reflections: Vec<Vector2>,
     pub refl_intensity: Vec<f32>,
+
+    pub max_reflection: usize,
+    pub collision_paths: Vec<LightPath>,
 }
 
 impl BouncingRay2D {
@@ -17,6 +25,7 @@ impl BouncingRay2D {
         let collisions: Vec<Vector2> = Vec::new();
         let reflections: Vec<Vector2> = Vec::new();
         let refl_intensity: Vec<f32> = Vec::new();
+        let collision_paths: Vec<LightPath> = Vec::new();
         BouncingRay2D {
             primary_ray: Ray2D::new(),
             ray: Ray2D::new(),
@@ -25,6 +34,9 @@ impl BouncingRay2D {
             collisions,
             reflections,
             refl_intensity: refl_intensity,
+
+            max_reflection: 20,
+            collision_paths: collision_paths,
         }
     }
 

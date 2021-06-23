@@ -269,15 +269,15 @@ fn view(app: &App, model: &Model, frame: Frame) {
         }
     }
 
-    for r in &model.rays {
-        r.draw(
-            &draw,
-            model.polygon_contour_weight,
-            model.ray_width,
-            *model.palette.get_first(model.scheme_id, model.color_off),
-            *model.palette.get_second(model.scheme_id, model.color_off),
-        );
-    }
+    // for r in &model.rays {
+    //     r.draw(
+    //         &draw,
+    //         model.polygon_contour_weight,
+    //         model.ray_width,
+    //         *model.palette.get_first(model.scheme_id, model.color_off),
+    //         *model.palette.get_second(model.scheme_id, model.color_off),
+    //     );
+    // }
 
     for r in &model.rays {
         r.draw_inside(

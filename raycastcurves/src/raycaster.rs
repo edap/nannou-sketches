@@ -1,4 +1,5 @@
 use crate::bouncing::BouncingRay2D;
+use crate::bouncing::LightPath;
 use crate::types::Curve;
 #[allow(dead_code)]
 use nannou::prelude::*;
@@ -55,6 +56,38 @@ impl Raycaster {
     }
 
     pub fn draw_inside(&self, draw: &Draw, poly_weight: f32, weight: f32, cola: Rgb, colb: Rgb, colc: Rgb, cold: Rgb, cole: Rgb) {
+        for b_ray in self.bouncing_rays.iter() {
+            println!("tt {:?}", b_ray.collision_paths.len());
+            if b_ray.collision_paths.len() > 0{
+                let ppp =
+                b_ray
+                    .collision_paths
+                    .iter()
+                    .map(|lp| {
+
+                        //(pt2(lp.start.x, lp.start.y), cola, pt2(lp.end.x, lp.end.y), colb)
+                        (pt2(lp.start.x, lp.start.y), cola)
+      
+                    });
+                if ppp.len() > 3 {
+                    draw.polygon()
+                        .stroke(cola)
+                        .stroke_weight(poly_weight)
+                        .join_round()
+                        .points_colored(ppp);
+                        //draw.polygon().points_textured(&model.texture, ppp);
+                    }
+
+            } else {
+                let end_point =
+                    b_ray.primary_ray.orig + b_ray.primary_ray.dir.with_magnitude(2000.0);
+                draw.line()
+                    .start(b_ray.primary_ray.orig)
+                    .end(end_point)
+                    .weight(weight)
+                    .color(cola);
+            }
+        }
     }
 
     pub fn draw(&self, draw: &Draw, poly_weight: f32, weight: f32, cola: Rgb, colb: Rgb) {
@@ -159,6 +192,7 @@ pub fn ray_collides(
     r.reflections.clear();
     r.refl_intensity.clear();
     // TODO, move this in the main.rs
+    r.collision_paths.clear();
 
     //while !r.max_bounces_reached() {
     while r.bounces < 4 {
@@ -178,13 +212,20 @@ pub fn ray_collides(
         if distance < Float::infinity() {
             // collision point
             collision = r.ray.orig + r.ray.dir.with_magnitude(distance);
+            r.collisions.push(collision);
+            r.collision_paths.push(LightPath{start: r.ray.orig , end: collision});
             r.bounces += 1;
+
+            // check if the material reflect, in case add a reflcetion path
+
+
             let refl = r.ray.reflect(surface_normal);
             r.refl_intensity.push(r.ray.dir.dot(refl).abs());
             r.ray.orig = collision + refl.with_magnitude(EPSILON);
             r.ray.dir = refl;
-            r.collisions.push(collision);
+
             r.reflections.push(refl);
+            
         } else {
             break;
         };
