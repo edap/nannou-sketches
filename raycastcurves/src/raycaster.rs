@@ -114,7 +114,7 @@ impl Raycaster {
 
 
 
-
+            // draw rays without a collision
             } else {
                 let end_point =
                     b_ray.primary_ray.orig + b_ray.primary_ray.dir.with_magnitude(2000.0);
