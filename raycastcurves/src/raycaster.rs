@@ -54,7 +54,7 @@ impl Raycaster {
         }
     }
 
-    pub fn draw(&self, draw: &Draw, mag: f32, weight: f32, cola: Rgb, colb: Rgb) {
+    pub fn draw(&self, draw: &Draw, poly_weight: f32, weight: f32, cola: Rgb, colb: Rgb) {
         //self.bouncing_rays.iter_mut(|b_ray| {
         for b_ray in self.bouncing_rays.iter() {
             // draw.arrow()
@@ -86,41 +86,34 @@ impl Raycaster {
 
                 // draw.polyline().points_colored(ppp);
 
+                let ppp =
+                    b_ray
+                        .collisions
+                        .iter()
+                        .zip(b_ray.reflections.iter())
+                        .map(|(&co, &re)| {
+                            if re.x > 0.0 {
+                                (pt2(co.x, co.y), cola)
+                            } else {
+                                (pt2(co.x, co.y), colb)
+                            }
+                        });
 
-
-                let ppp = b_ray
-                    .collisions
-                    .iter()
-                    .zip(b_ray.reflections.iter())
-                    .map(|(&co, &re)| {
-                        if re.x > 0.0 {
-                            (pt2(co.x, co.y), cola)
-                        } else {
-                            (pt2(co.x, co.y), colb)
-                        }
-                    });
-
-                    if ppp.len() > 3 {
-                        draw.polygon()
-                            .stroke(cola)
-                            .stroke_weight(weight)
-                            .join_round()
-                            .points_colored(ppp);
-                        //draw.polygon().points_textured(&model.texture, ppp);
-                    }
-
-
-
-
-
-
-
+                if ppp.len() > 3 {
+                    draw.polygon()
+                        .stroke(cola)
+                        .stroke_weight(poly_weight)
+                        .join_round()
+                        .points_colored(ppp);
+                    //draw.polygon().points_textured(&model.texture, ppp);
+                }
             } else {
                 let end_point =
                     b_ray.primary_ray.orig + b_ray.primary_ray.dir.with_magnitude(2000.0);
                 draw.line()
                     .start(b_ray.primary_ray.orig)
                     .end(end_point)
+                    .weight(weight)
                     .color(cola);
             }
         }
