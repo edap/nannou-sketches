@@ -57,10 +57,10 @@ struct Model {
     clear_interval: usize,
 }
 
-
 fn model(app: &App) -> Model {
     let tile_count_w = 8;
-    let main_window = app.new_window()
+    let main_window = app
+        .new_window()
         //.size(1280, 720)
         .size(1600, 900)
         //.size(1777, 1000)
@@ -77,9 +77,9 @@ fn model(app: &App) -> Model {
     //l = app.window_rect();
     let win = app.window(main_window).unwrap().rect();
 
-
     // Create the UI.
-    let ui_window = app.new_window()
+    let ui_window = app
+        .new_window()
         .title(app.exe_name().unwrap() + " controls")
         .size(gui::WIN_W, gui::WIN_H)
         .view(ui_view)
@@ -87,7 +87,6 @@ fn model(app: &App) -> Model {
         .key_pressed(key_pressed)
         .build()
         .unwrap();
-
 
     let mut ui = app.new_ui().window(ui_window).build().unwrap();
     let ids = gui::Ids::new(ui.widget_id_generator());
@@ -166,12 +165,9 @@ fn model(app: &App) -> Model {
     };
     ui_event(&app, &mut the_model, WindowEvent::Focused);
     the_model
-
 }
 
 fn update(app: &App, model: &mut Model, _update: Update) {
-
-
     let time = app.time;
     let rot = model.rotation;
     let anim = model.animation;
@@ -273,13 +269,26 @@ fn view(app: &App, model: &Model, frame: Frame) {
         }
     }
 
+    // for r in &model.rays {
+    //     r.draw(
+    //         &draw,
+    //         model.polygon_contour_weight,
+    //         model.ray_width,
+    //         *model.palette.get_first(model.scheme_id, model.color_off),
+    //         *model.palette.get_second(model.scheme_id, model.color_off),
+    //     );
+    // }
+
     for r in &model.rays {
-        r.draw(
+        r.draw_inside(
             &draw,
-            100.0,
+            model.polygon_contour_weight,
             model.ray_width,
             *model.palette.get_first(model.scheme_id, model.color_off),
             *model.palette.get_second(model.scheme_id, model.color_off),
+            *model.palette.get_third(model.scheme_id, model.color_off),
+            *model.palette.get_fourth(model.scheme_id, model.color_off),
+            *model.palette.get_fifth(model.scheme_id, model.color_off),
         );
     }
 
@@ -352,19 +361,16 @@ fn view(app: &App, model: &Model, frame: Frame) {
     // }
 
     draw.to_frame(app, &frame).unwrap();
-
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
     match key {
-        Key::S => {
-            match app.window(model.main_window) {
-                Some(window) => {
-                    window.capture_frame(app.time.to_string()  + ".png");
-                }
-                None => {}
+        Key::S => match app.window(model.main_window) {
+            Some(window) => {
+                window.capture_frame(app.time.to_string() + ".png");
             }
-        }
+            None => {}
+        },
         _other_key => {}
     }
 }
@@ -372,7 +378,6 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
 fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
     let ui = &mut model.ui.set_widgets();
     {
-
         for value in gui::slider(model.wall_width as f32, 1.0, 15.0)
             .top_left_with_margin(10.0)
             .label("wall width")
@@ -424,8 +429,8 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         }
 
         for _click in gui::button()
-        .label("Regenerate Walls")
-        .set(model.ids.button, ui)
+            .label("Regenerate Walls")
+            .set(model.ids.button, ui)
         {
             let win = _app.window(model.main_window).unwrap().rect();
             make_walls(
@@ -465,7 +470,6 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         {
             model.max_bounces = value as usize;
         }
-
 
         for value in gui::slider(model.clear_interval as f32, 5.0, 20.0)
             .label("clear_interval")
@@ -552,7 +556,6 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         }
     }
 }
-
 
 fn ui_view(app: &App, model: &Model, frame: Frame) {
     model.ui.draw_to_frame_if_changed(app, &frame).unwrap();
