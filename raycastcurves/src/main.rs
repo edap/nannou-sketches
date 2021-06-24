@@ -20,6 +20,12 @@ pub use crate::raycaster::Raycaster;
 const EPSILON: f32 = 0.05;
 const ARROW_LENGTH: f32 = 40.0;
 
+// TODO implement whitted cast_ray function. Change max_bounces to max depth. Assumes that all your
+// Curves in the scene are transparents.
+// Calculate the color of the collision points on the curves. Assume white light (at the beginning). Save the depth level for each collision(?)
+// Draw the polygon grouping the points by depth level.
+// Add a bounding box for the curves.
+
 fn main() {
     nannou::app(model).update(update).run();
 }
