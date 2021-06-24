@@ -1,5 +1,6 @@
 pub use crate::bouncing::BouncingRay2D;
-pub use crate::raycaster::Raycaster;
+//pub use crate::raycaster::Raycaster;
+pub use crate::wraycaster::Wraycaster;
 use nannou::prelude::*;
 
 pub fn make_rays(
@@ -17,10 +18,10 @@ pub fn make_rays(
         let x;
         //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
         if _y % 2 == 0 {
-            r.primary_ray.dir = Vector2::from_angle(0.0);
+            r.primary_ray.dir = vec2(0.0.cos(), 0.0.sin());
             x = win.left();
         } else {
-            r.primary_ray.dir = Vector2::from_angle(-PI);
+            r.primary_ray.dir = vec2(-PI.cos(), -PI.sin());
             x = win.right();
         }
         r.ray.dir = r.primary_ray.dir;
@@ -33,7 +34,7 @@ pub fn make_rays(
 }
 
 pub fn make_raycasters(
-    rays: &mut Vec<Raycaster>,
+    rays: &mut Vec<Wraycaster>,
     win: &geom::Rect,
     tile_count_w: u32,
     n_caster: u32, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
@@ -48,15 +49,15 @@ pub fn make_raycasters(
         //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
 
         if _y % 2 == 0 {
-            dir = Vector2::from_angle(0.0);
+            dir =  vec2(0.0.cos(), 0.0.sin());
             x = win.left();
         } else {
-            dir = Vector2::from_angle(-PI);
+            dir = vec2(-PI.cos(), -PI.sin());
             x = win.right();
         }
 
         let pos = vec2(x, (_y * padding) as f32 - win.h() / 2 as f32);
-        let r = Raycaster::new(pos, dir);
+        let r = Wraycaster::new(pos, dir);
         rays.push(r);
     }
 }

@@ -5,6 +5,8 @@ use rayon::prelude::*;
 
 mod gui;
 mod types;
+mod ray_light;
+pub mod wraycaster;
 use crate::types::Curve;
 mod mondrian;
 pub use crate::mondrian::Square;
