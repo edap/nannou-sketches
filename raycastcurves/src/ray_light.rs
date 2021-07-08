@@ -48,4 +48,11 @@ impl RayLight {
         }
     }
 
+    pub fn reset(&mut self){
+        self.ray.orig = self.starting_pos;
+        self.ray.dir = self.starting_dir;
+        self.intersections.clear();
+        self.count_depth = 0;
+    }
+
 }

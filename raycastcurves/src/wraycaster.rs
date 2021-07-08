@@ -1,4 +1,5 @@
 use crate::ray_light::RayLight;
+use ray2d::Ray2D;
 use crate::ray_light::Intersection;
 use crate::types::Curve;
 #[allow(dead_code)]
@@ -133,29 +134,72 @@ impl Wraycaster {
         win: geom::Rect,
     ) {
         self.ray_lights.par_iter_mut().for_each(|pray| {
-            ray_collides(
-                pray,
-                rotation,
-                animation,
-                animation_speed,
-                time,
-                walls,
-                win,
-            )
+            // ray_collides(
+            //     pray,
+            //     rotation,
+            //     animation,
+            //     animation_speed,
+            //     time,
+            //     walls,
+            //     win,
+            // )
+            pray.reset();
+            cast_ray(
+                &mut pray.ray, &mut pray.count_depth, self.max_depth, &mut pray.intersections, walls)
         })
     }
 }
 
 // look at a whitted rt and implement thiss
 pub fn cast_ray(
-    r: &mut RayLight,
-    rotation: f32,
-    animation: bool,
-    animation_speed: f32,
-    time: f32,
+    ray: &mut Ray2D,
+    depth: &mut usize,
+    max_depth: usize,
+    intersections: &mut Vec<Intersection>,
     walls: &Vec<Curve>,
-    win: geom::Rect,
 ) {
+    if *depth < max_depth {
+        let collision: Vec2;
+        let mut distance: f32 = Float::infinity();
+        let mut surface_normal: Vec2 = vec2(0.0, 0.0);
+        // find the closest intersection point between the ray and the walls
+        for curve in walls.iter() {
+            if let Some(collision) = ray.intersect_polyline(&curve.points) {
+                // save the closest possible collision
+                if collision.0 < distance {
+                    distance = collision.0;
+                    surface_normal = collision.1;
+                }
+            }
+        }
+
+        if distance < Float::infinity() {
+            // collision point
+            collision = ray.orig + ray.dir.normalize() * distance;
+            let intersection = Intersection::new(collision,rgba(1.0, 0.0, 1.0, 1.0), 3);
+            intersections.push(intersection);
+            *depth = *depth + 1 ;
+
+
+
+            // check if the material reflect, in case add a reflcetion path
+            let refl = ray.reflect(surface_normal);
+            // r.refl_intensity.push(r.ray.dir.dot(refl).abs());
+            ray.orig = collision + refl.normalize() * EPSILON;
+            ray.dir = refl;
+            cast_ray(ray, depth, max_depth, intersections, walls);
+
+            // check if the material refract, in case add a refraction path
+            // check if the material transmit, in case add a transmission path
+
+
+
+
+            // r.reflections.push(refl);
+            
+        }
+
+    }
 }
 
 // https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-overview/light-transport-ray-tracing-whitted
