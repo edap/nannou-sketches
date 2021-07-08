@@ -1,4 +1,5 @@
 use crate::ray_light::RayLight;
+use crate::ray_light::Intersection;
 use crate::types::Curve;
 #[allow(dead_code)]
 use nannou::prelude::*;
@@ -8,34 +9,36 @@ const EPSILON: f32 = 0.05;
 
 #[derive(Debug)]
 pub struct Wraycaster {
-    pub primary_rays: Vec<RayLight>,
+    pub ray_lights: Vec<RayLight>,
     pub direction: Vec2,
+    pub max_depth: usize,
 }
 
 impl Wraycaster {
-    pub fn new(position: Vec2, direction: Vec2) -> Self {
-        let mut primary_rays: Vec<RayLight> = Vec::new();
+    pub fn new(position: Vec2, direction: Vec2, max_depth: usize) -> Self {
+        let mut ray_lights: Vec<RayLight> = Vec::new();
         for i in (0..360).step_by(6) {
             let radian = deg_to_rad(i as f32);
-            let mut ray_light = RayLight::new(position, vec2(radian.cos(), radian.sin()));
-            primary_rays.push(ray);
+            let mut ray_light = RayLight::new(position, vec2(radian.cos(), radian.sin()), max_depth);
+            ray_lights.push(ray_light);
         }
 
         Wraycaster {
-            primary_rays,
+            ray_lights,
             direction,
+            max_depth,
         }
     }
 
     pub fn move_to(&mut self, new_pos: Vec2) {
-        self.primary_rays.par_iter_mut().for_each(|r| {
+        self.ray_lights.par_iter_mut().for_each(|r| {
             r.ray.orig.x = new_pos.x;
             r.ray.orig.y = new_pos.y
         });
     }
 
     pub fn bounce_horizontally(&mut self, win: &geom::Rect, anim_speed: f32) {
-        for r in self.primary_rays.iter_mut() {
+        for r in self.ray_lights.iter_mut() {
             if self.direction.x > 0.0 {
                 r.ray.orig.x += 0.1 * anim_speed;
             } else {
@@ -53,14 +56,14 @@ impl Wraycaster {
     }
 
     pub fn draw_inside(&self, draw: &Draw, poly_weight: f32, weight: f32, cola: Rgb, colb: Rgb, colc: Rgb, cold: Rgb, cole: Rgb) {
-        for ray in self.primary_rays.iter() {
+        for ray in self.ray_lights.iter() {
 
         }
     }
 
     pub fn draw(&self, draw: &Draw, poly_weight: f32, weight: f32, cola: Rgb, colb: Rgb) {
-        //self.primary_rays.iter_mut(|b_ray| {
-        for ray in self.primary_rays.iter() {
+        //self.ray_lights.iter_mut(|b_ray| {
+        for pray in self.ray_lights.iter() {
             // draw.arrow()
             //     .color(cola)
             //     .weight(weight)
@@ -70,7 +73,7 @@ impl Wraycaster {
             // for coll in &b_ray.collisions {
             //     draw.ellipse().x_y(coll.x, coll.y).w_h(5.0, 5.0);
             // }
-            if ray.intersections.len() > 0 {
+            if pray.intersections.len() > 0 {
                 // draw.line()
                 //     .start(b_ray.primary_ray.orig)
                 //     .end(b_ray.collisions[0])
@@ -91,7 +94,7 @@ impl Wraycaster {
                 // draw.polyline().points_colored(ppp);
 
                 let ppp =
-                    b_ray
+                    pray
                         .intersections
                         .iter()
                         // .zip(b_ray.reflections.iter())
@@ -110,9 +113,9 @@ impl Wraycaster {
                 }
             } else {
                 let end_point =
-                    b_ray.primary_ray.orig + b_ray.primary_ray.dir.normalize() * 2000.0;
+                    pray.ray.orig + pray.ray.dir.normalize() * 2000.0;
                 draw.line()
-                    .start(b_ray.primary_ray.orig)
+                    .start(pray.ray.orig)
                     .end(end_point)
                     .weight(weight)
                     .color(cola);
@@ -129,9 +132,9 @@ impl Wraycaster {
         walls: &Vec<Curve>,
         win: geom::Rect,
     ) {
-        self.primary_rays.par_iter_mut().for_each(|b_ray| {
+        self.ray_lights.par_iter_mut().for_each(|pray| {
             ray_collides(
-                b_ray,
+                pray,
                 rotation,
                 animation,
                 animation_speed,
@@ -143,6 +146,7 @@ impl Wraycaster {
     }
 }
 
+// look at a whitted rt and implement thiss
 pub fn cast_ray(
     r: &mut RayLight,
     rotation: f32,
@@ -154,7 +158,8 @@ pub fn cast_ray(
 ) {
 }
 
-// TODO, make it a method of the bouncing2D
+// https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-overview/light-transport-ray-tracing-whitted
+// questo metodo dovfebbe essere ricorsivo, raycollides dovrebbe accumulare intersezioni per un singolo raylight
 pub fn ray_collides(
     r: &mut RayLight,
     rotation: f32,
@@ -164,13 +169,11 @@ pub fn ray_collides(
     walls: &Vec<Curve>,
     win: geom::Rect,
 ) {
-    r.collisions.clear();
-    r.reflections.clear();
-    r.refl_intensity.clear();
+    r.intersections.clear();
 
 
     //while !r.max_bounces_reached() {
-    while r.bounces < 4 {
+    while r.count_depth< r.max_depth {
         let collision: Vec2;
         let mut distance: f32 = Float::infinity();
         let mut surface_normal: Vec2 = vec2(0.0, 0.0);
@@ -187,23 +190,26 @@ pub fn ray_collides(
         if distance < Float::infinity() {
             // collision point
             collision = r.ray.orig + r.ray.dir.normalize() * distance;
-            r.collisions.push(collision);
-            r.bounces += 1;
+            let intersection = Intersection::new(collision,rgba(1.0, 0.0, 1.0, 1.0), 3);
+            r.intersections.push(intersection);
+            r.count_depth += 1;
 
             // check if the material reflect, in case add a reflcetion path
+            // check if the material refract, in case add a refraction path
+            // check if the material transmit, in case add a transmission path
 
 
             let refl = r.ray.reflect(surface_normal);
-            r.refl_intensity.push(r.ray.dir.dot(refl).abs());
-            r.ray.orig = collision + refl.normalize() * EPSILON;
-            r.ray.dir = refl;
+            // r.refl_intensity.push(r.ray.dir.dot(refl).abs());
+            // r.ray.orig = collision + refl.normalize() * EPSILON;
+            // r.ray.dir = refl;
 
-            r.reflections.push(refl);
+            // r.reflections.push(refl);
             
         } else {
             break;
         };
     }
-    r.reset();
+    //r.reset();
     //r.ray.set_dir_from_angle(rotation);
 }

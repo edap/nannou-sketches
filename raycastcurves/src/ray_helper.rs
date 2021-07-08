@@ -38,6 +38,7 @@ pub fn make_raycasters(
     win: &geom::Rect,
     tile_count_w: u32,
     n_caster: u32, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
+    max_reflection: usize
 ) {
     rays.clear();
     let padding = win.h() as u32 / n_caster;
@@ -57,7 +58,7 @@ pub fn make_raycasters(
         }
 
         let pos = vec2(x, (_y * padding) as f32 - win.h() / 2 as f32);
-        let r = Wraycaster::new(pos, dir);
+        let r = Wraycaster::new(pos, dir, max_reflection);
         rays.push(r);
     }
 }

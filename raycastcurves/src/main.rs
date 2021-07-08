@@ -17,7 +17,7 @@ use crate::ray_helper::make_raycasters;
 mod wall_helper;
 use crate::wall_helper::make_walls;
 mod raycaster;
-pub use crate::raycaster::Raycaster;
+pub use crate::wraycaster::Wraycaster;
 
 const EPSILON: f32 = 0.05;
 const ARROW_LENGTH: f32 = 40.0;
@@ -37,7 +37,7 @@ struct Model {
     walls: Vec<Curve>,
     tile_count_w: u32,
     n_caster: u32,
-    rays: Vec<Raycaster>,
+    rays: Vec<Wraycaster>,
     ui: Ui,
     ids: gui::Ids,
     ray_width: f32,
@@ -81,7 +81,7 @@ fn model(app: &App) -> Model {
         .unwrap();
 
     let mut walls: Vec<Curve> = Vec::new();
-    let mut rays: Vec<Raycaster> = Vec::new();
+    let mut rays: Vec<Wraycaster> = Vec::new();
     //l = app.window_rect();
     let win = app.window(main_window).unwrap().rect();
 
@@ -120,6 +120,7 @@ fn model(app: &App) -> Model {
     let color_off = 4;
     let palette = Palette::new();
     let clear_interval = 14;
+    let max_depth = 4;
     make_walls(
         &mut walls,
         &win,
@@ -129,7 +130,7 @@ fn model(app: &App) -> Model {
         hole_pct,
         hole_n,
     );
-    make_raycasters(&mut rays, &win, tile_count_w, n_caster);
+    make_raycasters(&mut rays, &win, tile_count_w, n_caster, max_depth);
     let show_walls = true;
     let animation = true;
     let draw_arrows = true;
@@ -450,7 +451,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
                 model.hole_pct,
                 model.hole_n,
             );
-            make_raycasters(&mut model.rays, &win, model.tile_count_w, model.n_caster)
+            make_raycasters(&mut model.rays, &win, model.tile_count_w, model.n_caster, model.max_bounces)
         }
 
         for value in gui::slider(model.collision_radius as f32, 0.0, 185.0)

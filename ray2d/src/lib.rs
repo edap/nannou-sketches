@@ -3,8 +3,8 @@ use nannou::prelude::*;
 
 #[derive(Debug)]
 pub struct Ray2D {
-    pub orig: Vector2,
-    pub dir: Vector2,
+    pub orig: Vec2,
+    pub dir: Vec2,
 }
 
 impl Ray2D {
@@ -15,19 +15,20 @@ impl Ray2D {
         }
     }
 
-    pub fn reflect(&self, surface_normal: Vector2) -> Vector2 {
+    pub fn reflect(&self, surface_normal: Vec2) -> Vec2 {
         //I - 2.0 * dot(N, I) * N
         // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/reflect.xhtml
         //
-        self.dir - surface_normal.with_magnitude(2.0 * surface_normal.dot(self.dir))
+        self.dir - surface_normal.normalize() * (2.0 * surface_normal.dot(self.dir))
     }
 
-    pub fn refract(&self, surface_normal: Vector2, ior: f32) -> Vector2 {
+    pub fn refract(&self, surface_normal: Vec2, ior: f32) -> Vec2 {
         // https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/reflection-refraction-fresnel
 
         let mut cosi = clamp(-1.0, 1.0, self.dir.dot(surface_normal));
         let (mut etai, mut etat) = (1.0, ior);
-        let mut n = surface_normal;
+        // it should already come in normalized, but who
+        let mut n = surface_normal.normalize();
         if cosi < 0.0 {
             cosi = -cosi;
         } else {
@@ -38,9 +39,9 @@ impl Ray2D {
         let k = 1.0 - eta * eta * (1.0 - cosi * cosi);
         if k < f32::zero() {
             //vec2(0.0, 0.0)
-            self.dir.with_magnitude(0.0)
+            self.dir.normalize() * 0.0
         } else {
-            self.dir.with_magnitude(eta) + n.with_magnitude(eta * cosi - k.sqrt())
+            self.dir.normalize() * eta + n.normalize() * (eta * cosi - k.sqrt())
         }
     }
 
@@ -49,7 +50,7 @@ impl Ray2D {
             .color(col)
             .weight(weight)
             .start(self.orig)
-            .end(self.dir.with_magnitude(mag));
+            .end(self.dir.normalize() * mag);
     }
 
     pub fn look_at(&mut self, x: f32, y: f32) {
@@ -59,7 +60,7 @@ impl Ray2D {
     }
 
     pub fn set_dir_from_angle(&mut self, a_radians: f32) {
-        self.dir = Vector2::from_angle(a_radians);
+        self.dir = vec2(a_radians.cos(), a_radians.sin())
     }
 
     pub fn intersect_segment(&self, x1: f32, y1: f32, x2: f32, y2: f32) -> Option<f32> {
@@ -79,12 +80,12 @@ impl Ray2D {
         }
     }
 
-    pub fn intersect_polyline(&self, points: &Vec<Vector2>) -> Option<(f32, Vector2)> {
+    pub fn intersect_polyline(&self, points: &Vec<Vec2>) -> Option<(f32, Vec2)> {
         if points.len() <= 1 {
             return None;
         }
         let mut distance: f32 = Float::infinity();
-        let mut surface_normal: Vector2 = vec2(0.0, 0.0);
+        let mut surface_normal: Vec2 = vec2(0.0, 0.0);
         // find the closest intersection point between the ray and the walls
         for index in 0..points.len() - 1 {
             if let Some(collision_distance) = self.intersect_segment(
@@ -107,7 +108,7 @@ impl Ray2D {
         }
     }
 
-    pub fn intersect_circle(&self, center: Vector2, radius: f32) -> Option<f32> {
+    pub fn intersect_circle(&self, center: Vec2, radius: f32) -> Option<f32> {
         // let h = center - self.orig;
         // let lf = self.dir.dot(h);
         // let mut s = radius.powi(2) - h.dot(h) + lf.powi(2);
@@ -150,8 +151,8 @@ impl Ray2D {
 // }
 
 // pub enum Element {
-//     Circle(Vector2, f32),
-//     Polyline(&Vec<Vector2>),
+//     Circle(Vec2, f32),
+//     Polyline(&Vec<Vec2>),
 //     Segment(f32, f32, f32, f32),
 //     //Plane(Plane),
 // }
