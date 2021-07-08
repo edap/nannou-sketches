@@ -57,7 +57,57 @@ impl Wraycaster {
     }
 
     pub fn draw_inside(&self, draw: &Draw, poly_weight: f32, weight: f32, cola: Rgb, colb: Rgb, colc: Rgb, cold: Rgb, cole: Rgb) {
-        for ray in self.ray_lights.iter() {
+        for pray in self.ray_lights.iter() {
+
+
+            if pray.intersections.len() > 0 {
+                // draw.line()
+                //     .start(b_ray.primary_ray.orig)
+                //     .end(b_ray.collisions[0])
+                //     .color(cola);
+                // let ppp =
+                //     b_ray
+                //         .collisions
+                //         .iter()
+                //         .zip(b_ray.reflections.iter())
+                //         .map(|(&co, &re)| {
+                //             if re.x > 0.0 {
+                //                 (pt2(co.x, co.y), cola)
+                //             } else {
+                //                 (pt2(co.x, co.y), colb)
+                //             }
+                //         });
+
+                // draw.polyline().points_colored(ppp);
+
+                let ppp =
+                    pray
+                        .intersections
+                        .iter()
+                        // .zip(b_ray.reflections.iter())
+                        // .map(|(&co, &re)| {
+                        .map(|inter| {
+                            (pt2(inter.pos.x, inter.pos.y), inter.color)
+                        });
+
+                if ppp.len() > 3 {
+                    draw.polygon()
+                        .stroke(cola)
+                        .stroke_weight(poly_weight)
+                        .join_round()
+                        .points_colored(ppp);
+                    //draw.polygon().points_textured(&model.texture, ppp);
+                }
+            } else {
+                let end_point =
+                    pray.ray.orig + pray.ray.dir.normalize() * 2000.0;
+                draw.line()
+                    .start(pray.ray.orig)
+                    .end(end_point)
+                    .weight(weight)
+                    .color(cola);
+            }
+
 
         }
     }
@@ -74,6 +124,7 @@ impl Wraycaster {
             // for coll in &b_ray.collisions {
             //     draw.ellipse().x_y(coll.x, coll.y).w_h(5.0, 5.0);
             // }
+            println!("{:?}", pray.intersections.len());
             if pray.intersections.len() > 0 {
                 // draw.line()
                 //     .start(b_ray.primary_ray.orig)
@@ -145,7 +196,7 @@ impl Wraycaster {
             // )
             pray.reset();
             cast_ray(
-                &mut pray.ray, &mut pray.count_depth, self.max_depth, &mut pray.intersections, walls)
+                &mut pray.ray, &mut pray.count_depth, pray.max_depth, &mut pray.intersections, walls)
         })
     }
 }
@@ -182,7 +233,7 @@ pub fn cast_ray(
 
 
 
-            // check if the material reflect, in case add a reflcetion path
+            // check if the material reflect, cast a ray in the reflection direction
             let refl = ray.reflect(surface_normal);
             // r.refl_intensity.push(r.ray.dir.dot(refl).abs());
             ray.orig = collision + refl.normalize() * EPSILON;
