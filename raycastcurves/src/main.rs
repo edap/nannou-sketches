@@ -129,6 +129,7 @@ fn model(app: &App) -> Model {
         wall_padding,
         hole_pct,
         hole_n,
+        palette.get_first(scheme_id, color_off),
     );
     make_raycasters(&mut rays, &win, tile_count_w, n_caster, max_depth);
     let show_walls = true;
@@ -450,6 +451,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
                 model.wall_padding,
                 model.hole_pct,
                 model.hole_n,
+          model.palette.get_first(model.scheme_id, model.color_off),
             );
             make_raycasters(&mut model.rays, &win, model.tile_count_w, model.n_caster, model.max_bounces)
         }

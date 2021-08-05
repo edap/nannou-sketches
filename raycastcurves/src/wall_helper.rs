@@ -13,6 +13,7 @@ pub fn make_walls(
     perc_padding: f32,
     hole_pct: f32,
     hole_n: usize,
+    color: Rgba,
 ) {
     walls.clear();
     let margin: i32 = 100;
@@ -30,7 +31,7 @@ pub fn make_walls(
     }
     for square in &squares {
         let padding = step as f32 * perc_padding;
-        create_curve_from_square(&square, padding, hole_pct, hole_n, walls);
+        create_curve_from_square(&square, padding, hole_pct, hole_n, walls, color);
     }
 }
 
@@ -41,6 +42,7 @@ pub fn create_curve_from_square(
     hole: f32,
     hole_n: usize,
     walls: &mut Vec<Curve>,
+    color: Rgba
 ) {
     let center = vec2(
         square.x + square.width / 2.0,
@@ -57,12 +59,7 @@ pub fn create_curve_from_square(
     let mut start_from = 0;
     let mut end_to = start_from + wall_length - pad;
 
-    let mat = Material{
-        coloration: rgba(0.055, 0.8, 0.812, 0.6),
-        albedo: 0.6,
-        surface: SurfaceType::Diffuse,
-
-    };
+    let mat = Material::default();
 
     if hole > 0.1 {
         for i in (0..=360).step_by(1) {

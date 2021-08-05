@@ -5,6 +5,7 @@ pub enum SurfaceType {
     Diffuse,
     Reflective { reflectivity: f32 },
     Refractive { index: f32, transparency: f32 },
+    ReflectiveAndRefractive { reflectivity: f32, index: f32, transparency: f32},
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -14,8 +15,17 @@ pub struct Material {
     pub surface: SurfaceType,
 }
 
+impl Default for Material {
+    fn default() -> Self {
+        Material {
+            coloration: rgba(0.0, 0.0, 1.0, 1.0),
+            albedo: 1.0,
+            surface: SurfaceType::Reflective { reflectivity: 1.0 }
+        }
+    }
+}
 
 pub struct Curve {
-    pub points: Vec<Vector2>,
+    pub points: Vec<Vec2>,
     pub material: Material,
 }
