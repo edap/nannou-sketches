@@ -4,8 +4,8 @@ use nannou::prelude::*;
 pub enum SurfaceType {
     Diffuse,
     Reflective { reflectivity: f32 },
-    Refractive { index: f32, transparency: f32 },
-    ReflectiveAndRefractive { reflectivity: f32, index: f32, transparency: f32},
+    Refractive { ior: f32},
+    ReflectiveAndRefractive { reflectivity: f32, ior: f32},
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -20,7 +20,9 @@ impl Default for Material {
         Material {
             coloration: rgba(0.0, 0.0, 1.0, 1.0),
             albedo: 1.0,
-            surface: SurfaceType::Reflective { reflectivity: 1.0 }
+            //surface: SurfaceType::Refractive {ior: 1.5}
+            surface: SurfaceType::ReflectiveAndRefractive {reflectivity: 1.0, ior: 1.5}
+            
         }
     }
 }

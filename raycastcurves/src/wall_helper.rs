@@ -13,7 +13,8 @@ pub fn make_walls(
     perc_padding: f32,
     hole_pct: f32,
     hole_n: usize,
-    color: Rgba,
+    color_a: Rgba,
+    color_b: Rgba,
 ) {
     walls.clear();
     let margin: i32 = 100;
@@ -31,10 +32,18 @@ pub fn make_walls(
     }
     for square in &squares {
         let padding = step as f32 * perc_padding;
-        create_curve_from_square(&square, padding, hole_pct, hole_n, walls, color);
+        create_curve_from_square(&square, padding, hole_pct, hole_n, walls);
     }
+    change_color_walls(walls, color_a, color_b);
 }
 
+
+pub fn change_color_walls(walls: &mut Vec<Curve>, color_a: Rgba, color_b: Rgba){
+    walls.iter_mut().for_each(|curve| {
+        let color : Rgba = if random_range(0.0, 1.0) > 0.5 { color_a } else {color_b} ;
+        curve.material.coloration = color;
+    });
+}
 
 pub fn create_curve_from_square(
     square: &Square,
@@ -42,7 +51,6 @@ pub fn create_curve_from_square(
     hole: f32,
     hole_n: usize,
     walls: &mut Vec<Curve>,
-    color: Rgba
 ) {
     let center = vec2(
         square.x + square.width / 2.0,
@@ -99,6 +107,4 @@ pub fn create_curve_from_square(
         points.clear();
 
     }
-
-
 }

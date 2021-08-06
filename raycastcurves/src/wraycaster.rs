@@ -58,6 +58,7 @@ impl Wraycaster {
     }
 
     pub fn draw_inside(&self, draw: &Draw, poly_weight: f32, weight: f32, cola: Rgb, colb: Rgb, colc: Rgb, cold: Rgb, cole: Rgb) {
+        let white : Rgba = rgba(1.0, 1.0, 1.0, 1.0);
         for pray in self.ray_lights.iter() {
 
 
@@ -94,6 +95,7 @@ impl Wraycaster {
                 if ppp.len() > 3 {
                     draw.polygon()
                         //.stroke(cola)
+                        //.stroke_weight(poly_weight)
                         .stroke_weight(poly_weight)
                         .join_round()
                         .points_colored(ppp);
@@ -105,7 +107,8 @@ impl Wraycaster {
                     .start(pray.ray.orig)
                     .end(end_point)
                     .weight(weight)
-                    .color(cola);
+                    .color(white);
+                    //.color(cola);
             }
 
 
@@ -186,6 +189,7 @@ impl Wraycaster {
     ) {
         self.ray_lights.par_iter_mut().for_each(|pray| {
             pray.reset();
+            println!("DDD {:?}", pray.count_depth);
             cast_ray(
                 &mut pray.ray, &mut pray.count_depth, pray.max_depth, &mut pray.intersections, walls)
         })
@@ -222,24 +226,25 @@ pub fn cast_ray(
             *depth = *depth + 1 ;
             // collision point
             collision = ray.orig + ray.dir.normalize() * distance;
-            let alpha : f32 = 1.0 - (max_depth as f32 / *depth as f32);
-            let color = rgba(material.coloration.red, 
+            let mut alpha : f32 = 1.0 - ( *depth as f32 / max_depth as f32);
+            let color: Rgba = rgba(material.coloration.red, 
                 material.coloration.green,
                 material.coloration.blue,
-                1.0);
+                alpha);
+
+                //println!("d {:?} r {:?} a {:?}", *depth, (max_depth as f32 / *depth as f32), alpha);
+
             
             let intersection = Intersection::new(collision, color, *depth);
 
             // let intersection = Intersection::new(collision, material.coloration, *depth);
-            // intersections.push(intersection);
+            intersections.push(intersection);
 
 
             //now, start with the secondary rays.
 
             match material.surface {
                 SurfaceType::Reflective { reflectivity } => {
-                    println!("It is ref");
-                    println!("dept {:?}", *depth);
                     // check if the material reflect, cast a ray in the reflection direction
                     let refl = ray.reflect(surface_normal);
                     // r.refl_intensity.push(r.ray.dir.dot(refl).abs());
@@ -247,10 +252,26 @@ pub fn cast_ray(
                     ray.dir = refl;
                     cast_ray(ray, depth, max_depth, intersections, walls);
                 },
-                SurfaceType::Refractive { index, transparency } => {
+                SurfaceType::Refractive { ior } => {
+                    let refr = ray.refract(surface_normal, ior);
+                    ray.orig = collision + refr.normalize() * EPSILON;
+                    ray.dir = refr;
+                    cast_ray(ray, depth, max_depth, intersections, walls);
 
                 },
-                SurfaceType::ReflectiveAndRefractive {reflectivity, index, transparency } => {
+                SurfaceType::ReflectiveAndRefractive {reflectivity, ior } => {
+                    let refr = ray.refract(surface_normal, ior);
+                    let refl = ray.reflect(surface_normal);
+
+                    //refl
+                    ray.orig = collision + refl.normalize() * EPSILON;
+                    ray.dir = refl;
+                    cast_ray(ray, depth, max_depth, intersections, walls);
+
+                    //refr
+                    ray.orig = collision + refr.normalize() * EPSILON;
+                    ray.dir = refr;
+                    cast_ray(ray, depth, max_depth, intersections, walls);
 
                 },
                 SurfaceType::Diffuse => {},
@@ -269,12 +290,4 @@ pub fn cast_ray(
         }
 
     }
-}
-
-
-
-
-
-
-
-// questo metodo dovfebbe essere ricorsivo, raycollides dovrebbe accumulare intersezioni per un singolo raylight
+}   

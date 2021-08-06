@@ -16,6 +16,7 @@ mod ray_helper;
 use crate::ray_helper::make_raycasters;
 mod wall_helper;
 use crate::wall_helper::make_walls;
+use crate::wall_helper::change_color_walls;
 mod raycaster;
 pub use crate::wraycaster::Wraycaster;
 
@@ -130,6 +131,7 @@ fn model(app: &App) -> Model {
         hole_pct,
         hole_n,
         palette.get_first(scheme_id, color_off),
+        palette.get_second(scheme_id, color_off),
     );
     make_raycasters(&mut rays, &win, tile_count_w, n_caster, max_depth);
     let show_walls = true;
@@ -182,7 +184,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     let rot = model.rotation;
     let anim = model.animation;
     let anim_speed = model.animation_speed;
-    let wallss = &model.walls;
+    let walls = &model.walls;
     let win = app.window(model.main_window).unwrap().rect();
 
     if model.animation {
@@ -195,7 +197,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     model
         .rays
         .par_iter_mut()
-        .for_each(|ray| ray.collide(rot, anim, anim_speed, time, wallss, win));
+        .for_each(|ray| ray.collide(rot, anim, anim_speed, time, walls, win));
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
@@ -273,7 +275,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             //println!("{:?}", curve.points.len());
             draw.polyline()
                 .weight(model.wall_width)
-                .color(model.palette.get_second(model.scheme_id, model.color_off))
+                .color(curve.material.coloration)
                 .points(curve.points.clone());
             //.caps_round();
         }
@@ -452,6 +454,8 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
                 model.hole_pct,
                 model.hole_n,
           model.palette.get_first(model.scheme_id, model.color_off),
+          model.palette.get_second(model.scheme_id, model.color_off),
+          
             );
             make_raycasters(&mut model.rays, &win, model.tile_count_w, model.n_caster, model.max_bounces)
         }
@@ -501,6 +505,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             .set(model.ids.scheme_id, ui)
         {
             model.scheme_id = value as usize;
+            change_color_walls(&mut model.walls, model.palette.get_first(model.scheme_id, model.color_off), model.palette.get_second(model.scheme_id, model.color_off));
         }
 
         for value in gui::slider(model.blend_id as f32, 0.0, 3.0)
@@ -515,6 +520,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             .set(model.ids.color_off, ui)
         {
             model.color_off = value as usize;
+            change_color_walls(&mut model.walls, model.palette.get_first(model.scheme_id, model.color_off), model.palette.get_second(model.scheme_id, model.color_off));
         }
 
         for value in gui::slider(model.polygon_contour_weight, 1.0, 30.0)
