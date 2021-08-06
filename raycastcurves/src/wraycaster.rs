@@ -22,7 +22,7 @@ impl Wraycaster {
         let mut ray_lights: Vec<RayLight> = Vec::new();
         for i in (0..360).step_by(6) {
             let radian = deg_to_rad(i as f32);
-            let mut ray_light = RayLight::new(position, vec2(radian.cos(), radian.sin()), max_depth);
+            let ray_light = RayLight::new(position, vec2(radian.cos(), radian.sin()), max_depth);
             ray_lights.push(ray_light);
         }
 
@@ -57,7 +57,7 @@ impl Wraycaster {
         }
     }
 
-    pub fn draw_inside(&self, draw: &Draw, poly_weight: f32, weight: f32, cola: Rgb, colb: Rgb, colc: Rgb, cold: Rgb, cole: Rgb) {
+    pub fn draw_inside(&self, draw: &Draw, poly_weight: f32, weight: f32) {
         let white : Rgba = rgba(1.0, 1.0, 1.0, 1.0);
         for pray in self.ray_lights.iter() {
 
@@ -129,24 +129,7 @@ impl Wraycaster {
             // }
             println!("{:?}", pray.intersections.len());
             if pray.intersections.len() > 0 {
-                // draw.line()
-                //     .start(b_ray.primary_ray.orig)
-                //     .end(b_ray.collisions[0])
-                //     .color(cola);
-                // let ppp =
-                //     b_ray
-                //         .collisions
-                //         .iter()
-                //         .zip(b_ray.reflections.iter())
-                //         .map(|(&co, &re)| {
-                //             if re.x > 0.0 {
-                //                 (pt2(co.x, co.y), cola)
-                //             } else {
-                //                 (pt2(co.x, co.y), colb)
-                //             }
-                //         });
 
-                // draw.polyline().points_colored(ppp);
 
                 let ppp =
                     pray
@@ -173,8 +156,64 @@ impl Wraycaster {
                     .start(pray.ray.orig)
                     .end(end_point)
                     .weight(weight)
+                    .caps_round()
                     .color(cola);
             }
+        }
+    }
+
+    pub fn draw_arrows(&self, draw: &Draw, weight: f32) {
+        let white : Rgba = rgba(1.0, 1.0, 1.0, 1.0);
+        for pray in self.ray_lights.iter() {
+
+            if pray.intersections.len() > 1 {
+                draw.arrow()
+                .start(pray.starting_pos)
+                .end(pray.intersections[0].pos)
+                .stroke_weight(weight)
+                .color(white);
+
+            }
+
+            if pray.intersections.len() > 2 {
+                for n in 0..pray.intersections.len() -1 {
+                    draw.arrow()
+                    .start(pray.intersections[n].pos)
+                    .end(pray.intersections[n+1].pos)
+                    .stroke_weight(weight)
+                    .color(pray.intersections[n].color);
+
+                }
+            }
+        }
+    }
+
+    pub fn draw_rays(&self, draw: &Draw, weight: f32) {
+        let white : Rgba = rgba(1.0, 1.0, 1.0, 1.0);
+        for pray in self.ray_lights.iter() {
+
+            if pray.intersections.len() > 1 {
+                draw.line()
+                    .start(pray.starting_pos)
+                    .end(pray.intersections[0].pos)
+                    .stroke_weight(weight)
+                    .caps_round()
+                    .color(white);
+
+            }
+
+            if pray.intersections.len() > 2 {
+                let ppp = pray.intersections
+                        .iter()
+                        .map(|inter| {
+                            (pt2(inter.pos.x, inter.pos.y), inter.color)
+                        });
+
+                draw.polyline().stroke_weight(weight).caps_round().join_round().points_colored(ppp);  
+            }
+
+
+          
         }
     }
 
@@ -227,6 +266,9 @@ pub fn cast_ray(
             // collision point
             collision = ray.orig + ray.dir.normalize() * distance;
             let mut alpha : f32 = 1.0 - ( *depth as f32 / max_depth as f32);
+            alpha = alpha.max(1.0).min(0.0);
+
+            //let mut color : Hsla = material.coloration.to_hsl();
             let color: Rgba = rgba(material.coloration.red, 
                 material.coloration.green,
                 material.coloration.blue,

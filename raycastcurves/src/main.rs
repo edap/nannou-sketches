@@ -218,39 +218,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     //     }
     // }
 
-    // for r in &model.rays {
-    //     draw.arrow()
-    //         .color(model.palette.get_scheme(model.scheme_id)[0])
-    //         .start(r.ray.orig)
-    //         .weight(model.ray_width * 2.0)
-    //         .end(r.ray.orig + r.ray.dir.with_magnitude(20.0));
-    //     for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
-    //         draw.ellipse()
-    //             .no_fill()
-    //             .stroke(model.palette.get_scheme(model.scheme_id)[2])
-    //             .stroke_weight(3.0)
-    //             .x_y(c.x, c.y)
-    //             .w_h(model.collision_radius * i, model.collision_radius * i);
-    //     }
 
-    //     let mut col = rgba(0.0, 0.0, 0.0, 0.0);
-    //     println!("collision dd{:?}", r.collisions.len());
-    //     let ppp = r
-    //         .collisions
-    //         .iter()
-    //         .zip(r.reflections.iter())
-    //         .map(|(&co, &re)| {
-    //             if re.x > 0.0 {
-    //                 col = model.palette.get_scheme(model.scheme_id)[2]
-    //             } else {
-    //                 col = model.palette.get_scheme(model.scheme_id)[3]
-    //             }
-    //             (pt2(co.x, co.y), col)
-    //         });
-
-    //     if model.draw_polygon {
-    //         draw.polygon().points_colored(ppp);
-    //     };
 
     //     draw.path()
     //         .stroke()
@@ -269,7 +237,6 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     //}
 
-    // draw the walls
     if model.show_walls {
         for curve in model.walls.iter() {
             //println!("{:?}", curve.points.len());
@@ -277,31 +244,19 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .weight(model.wall_width)
                 .color(curve.material.coloration)
                 .points(curve.points.clone());
-            //.caps_round();
         }
     }
 
-    // for r in &model.rays {
-    //     r.draw(
-    //         &draw,
-    //         model.polygon_contour_weight,
-    //         model.ray_width,
-    //         *model.palette.get_first(model.scheme_id, model.color_off),
-    //         *model.palette.get_second(model.scheme_id, model.color_off),
-    //     );
-    // }
-
     for r in &model.rays {
-        r.draw_inside(
-            &draw,
-            model.polygon_contour_weight,
-            model.ray_width,
-            *model.palette.get_first(model.scheme_id, model.color_off),
-            *model.palette.get_second(model.scheme_id, model.color_off),
-            *model.palette.get_third(model.scheme_id, model.color_off),
-            *model.palette.get_fourth(model.scheme_id, model.color_off),
-            *model.palette.get_fifth(model.scheme_id, model.color_off),
-        );
+        if model.draw_polygon {
+            r.draw_inside( &draw, model.polygon_contour_weight, model.ray_width);
+        }
+
+        if model.draw_arrows {
+            r.draw_arrows( &draw,model.ray_width);
+        }
+
+        r.draw_rays(&draw, model.ray_width);
     }
 
     // if model.draw_arrows {
@@ -362,15 +317,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
     //         .color(model.palette.get_first(model.scheme_id, model.color_off));
     // }
 
-    // for (&c, &r) in r.collisions.iter().zip(r.reflections.iter()) {
-    //     if model.draw_arrows {
-    //         draw.arrow()
-    //             .start(c)
-    //             .end(c + r.with_magnitude(40.0))
-    //             .stroke_weight(model.ray_width)
-    //             .color(model.palette.get_first(model.scheme_id, model.color_off));
-    //     }
-    // }
+
 
     draw.to_frame(app, &frame).unwrap();
 }
