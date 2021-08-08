@@ -45,6 +45,31 @@ impl Ray2D {
         }
     }
 
+    // in case of material like glass, that are both refractive and reflective, fresnel equation find out how much 
+    // light is refracted and how much light is reflected
+    // reference https://www.scratchapixel.com/lessons/3d-basic-rendering/introduction-to-shading/reflection-refraction-fresnel
+    pub fn fresnel(&self, surface_normal: Vec2, ior: f32) -> f64 {
+        let i_dot_n = self.dir.dot(surface_normal) as f64;
+        let mut eta_i = 1.0;
+        let mut eta_t = ior as f64;
+        if i_dot_n > 0.0 {
+            eta_i = eta_t;
+            eta_t = 1.0;
+        }
+    
+        let sin_t = eta_i / eta_t * (1.0 as f64 - i_dot_n * i_dot_n).max(0.0).sqrt();
+        if sin_t > 1.0 {
+            //Total internal reflection
+            return 1.0;
+        } else {
+            let cos_t = (1.0 - sin_t * sin_t).max(0.0).sqrt();
+            let cos_i = cos_t.abs();
+            let r_s = ((eta_t * cos_i) - (eta_i * cos_t)) / ((eta_t * cos_i) + (eta_i * cos_t));
+            let r_p = ((eta_i * cos_i) - (eta_t * cos_t)) / ((eta_i * cos_i) + (eta_t * cos_t));
+            return (r_s * r_s + r_p * r_p) / 2.0;
+        }
+    }
+
     pub fn draw(&self, draw: &Draw, mag: f32, weight: f32, col: Rgb) {
         draw.arrow()
             .color(col)

@@ -4,12 +4,12 @@ use ray2d::Ray2D;
 
 pub struct Intersection {
     pub pos: Vec2,
-    pub color: Rgba,
+    pub color: Hsla,
     pub depth: usize,
 }
 
 impl Intersection{
-    pub fn new(pos: Vec2, color: Rgba, depth: usize) -> Self { 
+    pub fn new(pos: Vec2, color: Hsla, depth: usize) -> Self { 
         Intersection {
             pos,
             color,

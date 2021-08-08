@@ -15,12 +15,14 @@ pub struct Wraycaster {
     pub ray_lights: Vec<RayLight>,
     pub direction: Vec2,
     pub max_depth: usize,
+    pub density: usize,
 }
 
 impl Wraycaster {
-    pub fn new(position: Vec2, direction: Vec2, max_depth: usize) -> Self {
+    pub fn new(position: Vec2, direction: Vec2, max_depth: usize, density: usize) -> Self {
         let mut ray_lights: Vec<RayLight> = Vec::new();
-        for i in (0..360).step_by(6) {
+        for i in (0..360).step_by(density) {
+
             let radian = deg_to_rad(i as f32);
             let ray_light = RayLight::new(position, vec2(radian.cos(), radian.sin()), max_depth);
             ray_lights.push(ray_light);
@@ -30,6 +32,7 @@ impl Wraycaster {
             ray_lights,
             direction,
             max_depth,
+            density,
         }
     }
 
@@ -193,12 +196,24 @@ impl Wraycaster {
         for pray in self.ray_lights.iter() {
 
             if pray.intersections.len() > 1 {
+                // let l = vec!(pt2(pray.starting_pos.x, pray.starting_pos.y), pt2(pray.intersections[0].pos.x, pray.intersections[0].pos.y));
+                // let ll = l.iter().map(|pt|{
+                //     (, )
+                // });
+                //     (pt2(pray.starting_pos.x, pray.starting_pos.y),white),
+                //     (pt2(pray.intersections[0].pos.x, pray.intersections[0].pos.y), pray.intersections[0].color)).map();
+                
                 draw.line()
                     .start(pray.starting_pos)
                     .end(pray.intersections[0].pos)
                     .stroke_weight(weight)
                     .caps_round()
-                    .color(white);
+                    //.color(white);
+                    .color(pray.intersections[0].color);
+
+                //draw.polyline().stroke_weight(weight).caps_round().join_round().points_colored(ll); 
+
+                
 
             }
 
@@ -228,7 +243,8 @@ impl Wraycaster {
     ) {
         self.ray_lights.par_iter_mut().for_each(|pray| {
             pray.reset();
-            println!("DDD {:?}", pray.count_depth);
+            //println!("DDD {:?}", pray.count_depth);
+            let mut light_amount = 1.0;
             cast_ray(
                 &mut pray.ray, &mut pray.count_depth, pray.max_depth, &mut pray.intersections, walls)
         })
@@ -266,35 +282,31 @@ pub fn cast_ray(
             // collision point
             collision = ray.orig + ray.dir.normalize() * distance;
             let mut alpha : f32 = 1.0 - ( *depth as f32 / max_depth as f32);
-            alpha = alpha.max(1.0).min(0.0);
+            alpha = alpha.min(0.0).max(1.0);
+            let mut hsla: Hsla = material.coloration.into();
+            hsla.alpha = alpha;
 
-            //let mut color : Hsla = material.coloration.to_hsl();
-            let color: Rgba = rgba(material.coloration.red, 
-                material.coloration.green,
-                material.coloration.blue,
-                alpha);
-
-                //println!("d {:?} r {:?} a {:?}", *depth, (max_depth as f32 / *depth as f32), alpha);
-
-            
-            let intersection = Intersection::new(collision, color, *depth);
-
-            // let intersection = Intersection::new(collision, material.coloration, *depth);
-            intersections.push(intersection);
-
-
-            //now, start with the secondary rays.
+            //secondary rays.
 
             match material.surface {
                 SurfaceType::Reflective { reflectivity } => {
-                    // check if the material reflect, cast a ray in the reflection direction
+
                     let refl = ray.reflect(surface_normal);
+                    // let intensity = ray.dir.dot(refl).abs();
+                    // hsla.lightness = hsla.lightness * intensity;
+                    //println!("light {:?}", hsla.lightness);
+                    let intersection = Intersection::new(collision, hsla, *depth);
+                    intersections.push(intersection);
+
                     // r.refl_intensity.push(r.ray.dir.dot(refl).abs());
                     ray.orig = collision + refl.normalize() * EPSILON;
                     ray.dir = refl;
                     cast_ray(ray, depth, max_depth, intersections, walls);
                 },
                 SurfaceType::Refractive { ior } => {
+                    let intersection = Intersection::new(collision, hsla, *depth);
+                    intersections.push(intersection);
+
                     let refr = ray.refract(surface_normal, ior);
                     ray.orig = collision + refr.normalize() * EPSILON;
                     ray.dir = refr;
@@ -302,32 +314,76 @@ pub fn cast_ray(
 
                 },
                 SurfaceType::ReflectiveAndRefractive {reflectivity, ior } => {
-                    let refr = ray.refract(surface_normal, ior);
+                    let fresnel = ray.fresnel(surface_normal, ior);
+                    let outside = ray.dir.dot(surface_normal) < 0.0;
                     let refl = ray.reflect(surface_normal);
+                    println!("fre {:?}", fresnel);
 
-                    //refl
-                    ray.orig = collision + refl.normalize() * EPSILON;
-                    ray.dir = refl;
-                    cast_ray(ray, depth, max_depth, intersections, walls);
 
-                    //refr
-                    ray.orig = collision + refr.normalize() * EPSILON;
+
+
+                    // always refract, as we are dealong most with segments and curves and they don't have an inside or outside
+                    // side
+                    let refr = ray.refract(surface_normal, ior);
                     ray.dir = refr;
+                    ray.orig = collision + refr.normalize() * EPSILON;
                     cast_ray(ray, depth, max_depth, intersections, walls);
+                    
+                    // refl
+                    ray.dir = refl;
+                    ray.orig = collision + refl.normalize() * EPSILON;
+                    cast_ray(ray, depth, max_depth, intersections, walls);
+                    
+
+
+
+                    // 2nd way, check if outside or inside refl und refr
+
+
+
+                    // // compute refraction if it is not a case of total internal reflection
+                    // if fresnel < 1.0{
+                    //     //refraction
+                    //     let refr = ray.refract(surface_normal, ior);
+                    //     if outside{
+                    //         ray.orig = collision - refr.normalize() * EPSILON;
+                    //     }else{
+                    //         ray.orig = collision + refr.normalize() * EPSILON;
+                    //     }                 
+                    //     ray.dir = refr;
+                    //     cast_ray(ray, depth, max_depth, intersections, walls);
+                    // }
+
+
+
+                    // //reflection
+                    // if outside{
+                    //     ray.orig = collision + refl.normalize() * EPSILON;
+                    // }else{
+                    //     ray.orig = collision - refl.normalize() * EPSILON;
+                    // }
+                    // ray.dir = refl;
+                    // cast_ray(ray, depth, max_depth, intersections, walls);
+
+
+
+                    let intersection = Intersection::new(collision, hsla, *depth);
+                    intersections.push(intersection);
+
+
+
 
                 },
-                SurfaceType::Diffuse => {},
+                SurfaceType::Diffuse => {
+                    let intersection = Intersection::new(collision, hsla, *depth);
+                    intersections.push(intersection);
+
+                },
 
             }
 
+            // 100% transmit?
 
-            // check if the material refract, in case add a refraction path
-            // check if the material transmit, in case add a transmission path
-
-
-
-
-            // r.reflections.push(refl);
             
         }
 

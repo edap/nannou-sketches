@@ -19,6 +19,7 @@ widget_ids! {
         tile_count_w,
         button,
         n_caster,
+        raycaster_density,
         ray_width,
         rays_prob,
         max_bounces,

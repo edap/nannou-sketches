@@ -38,6 +38,7 @@ struct Model {
     walls: Vec<Curve>,
     tile_count_w: u32,
     n_caster: u32,
+    raycaster_density: usize,
     rays: Vec<Wraycaster>,
     ui: Ui,
     ids: gui::Ids,
@@ -122,6 +123,7 @@ fn model(app: &App) -> Model {
     let palette = Palette::new();
     let clear_interval = 14;
     let max_depth = 4;
+    let raycaster_density = 6;
     make_walls(
         &mut walls,
         &win,
@@ -133,7 +135,7 @@ fn model(app: &App) -> Model {
         palette.get_first(scheme_id, color_off),
         palette.get_second(scheme_id, color_off),
     );
-    make_raycasters(&mut rays, &win, tile_count_w, n_caster, max_depth);
+    make_raycasters(&mut rays, &win, tile_count_w, n_caster, max_depth, raycaster_density);
     let show_walls = true;
     let animation = true;
     let draw_arrows = true;
@@ -147,6 +149,7 @@ fn model(app: &App) -> Model {
         main_window,
         walls,
         n_caster,
+        raycaster_density,
         tile_count_w,
         rays,
         max_bounces,
@@ -380,6 +383,13 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.n_caster = value as u32;
         }
 
+        for value in gui::slider(model.raycaster_density as f32, 1.0, 36.0)
+            .label("raycaster_density ")
+            .set(model.ids.raycaster_density, ui)
+        {
+            model.raycaster_density = value as usize;
+        }
+
         for value in gui::slider(model.tile_count_w as f32, 1.0, 20.0)
             .label("tile_count_w")
             .set(model.ids.tile_count_w, ui)
@@ -404,7 +414,8 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
           model.palette.get_second(model.scheme_id, model.color_off),
           
             );
-            make_raycasters(&mut model.rays, &win, model.tile_count_w, model.n_caster, model.max_bounces)
+
+            make_raycasters(&mut model.rays, &win, model.tile_count_w, model.n_caster, model.max_bounces, model.raycaster_density)
         }
 
         for value in gui::slider(model.collision_radius as f32, 0.0, 185.0)
@@ -426,7 +437,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         {
             model.rays_prob = value;
         }
-        for value in gui::slider(model.max_bounces as f32, 1.0, 400.0)
+        for value in gui::slider(model.max_bounces as f32, 1.0, 12.0)
             .label("max_bounces")
             .set(model.ids.max_bounces, ui)
         {

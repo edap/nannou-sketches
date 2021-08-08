@@ -21,12 +21,13 @@ impl Default for Material {
             coloration: rgba(0.0, 0.0, 1.0, 1.0),
             albedo: 1.0,
             //surface: SurfaceType::Refractive {ior: 1.5}
-            surface: SurfaceType::ReflectiveAndRefractive {reflectivity: 1.0, ior: 1.5}
+            surface: SurfaceType::ReflectiveAndRefractive {reflectivity: 1.0, ior: 1.4}
             
         }
     }
 }
 
+// TODO, add a bouding box
 pub struct Curve {
     pub points: Vec<Vec2>,
     pub material: Material,
