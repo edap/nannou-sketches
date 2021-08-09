@@ -55,9 +55,11 @@ struct Model {
     max_bounces: usize,
     blend_id: usize,
     color_off: usize,
+    light_color_pct: f32,
     palette: Palette,
     show_walls: bool,
     draw_arrows: bool,
+    draw_rays: bool,
     draw_not_colliding_rays: bool,
     animation: bool,
     animation_speed: f32,
@@ -120,6 +122,7 @@ fn model(app: &App) -> Model {
     let scheme_id = 5;
     let blend_id = 0;
     let color_off = 4;
+    let light_color_pct: f32 = 0.5;
     let palette = Palette::new();
     let clear_interval = 14;
     let max_depth = 4;
@@ -142,6 +145,7 @@ fn model(app: &App) -> Model {
     let animation_speed = 2.0;
     let animation_time = 0.0;
     let draw_polygon = true;
+    let draw_rays = false;
     let polygon_contour_weight = 5.0;
     let draw_not_colliding_rays = false;
 
@@ -167,12 +171,14 @@ fn model(app: &App) -> Model {
         scheme_id,
         blend_id,
         color_off,
+        light_color_pct,
         palette,
         show_walls,
         animation,
         animation_speed,
         animation_time,
         draw_polygon,
+        draw_rays,
         draw_arrows,
         polygon_contour_weight,
         draw_not_colliding_rays,
@@ -259,7 +265,9 @@ fn view(app: &App, model: &Model, frame: Frame) {
             r.draw_arrows( &draw,model.ray_width);
         }
 
-        r.draw_rays(&draw, model.ray_width, model.draw_not_colliding_rays);
+        if model.draw_rays {
+            r.draw_rays(&draw, model.ray_width, model.draw_not_colliding_rays, model.light_color_pct);
+        }
     }
 
     // if model.draw_arrows {
@@ -425,7 +433,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.collision_radius = value;
         }
 
-        for value in gui::slider(model.ray_width, 1.0, 10.0)
+        for value in gui::slider(model.ray_width, 0.5, 10.0)
             .label("ray width")
             .set(model.ids.ray_width, ui)
         {
@@ -480,8 +488,14 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.color_off = value as usize;
             change_color_walls(&mut model.walls, model.palette.get_first(model.scheme_id, model.color_off), model.palette.get_second(model.scheme_id, model.color_off));
         }
+        for value in gui::slider(model.light_color_pct as f32, 0.0, 1.0)
+            .label("light color %")
+            .set(model.ids.light_color_pct, ui)
+        {
+            model.light_color_pct = value;
+        }
 
-        for value in gui::slider(model.polygon_contour_weight, 1.0, 30.0)
+        for value in gui::slider(model.polygon_contour_weight, 0.5, 30.0)
             .label("polygon cont weight")
             .set(model.ids.polygon_contour_weight, ui)
         {
@@ -495,6 +509,13 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.draw_polygon = v;
         }
 
+        for v in gui::toggle(model.draw_rays as bool)
+        .label("Draw rays")
+        .set(model.ids.draw_rays, ui)
+    {
+        model.draw_rays = v;
+    }
+
         for v in gui::toggle(model.draw_arrows as bool)
             .label("Draw Arrows")
             .set(model.ids.draw_arrows, ui)
@@ -503,7 +524,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         }
 
         for v in gui::toggle(model.draw_not_colliding_rays as bool)
-            .label("Draw Raycaster")
+            .label("Draw Not Colliding rays")
             .set(model.ids.draw_not_colliding_rays, ui)
         {
             model.draw_not_colliding_rays = v;

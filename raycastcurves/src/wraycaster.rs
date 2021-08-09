@@ -1,4 +1,5 @@
 use crate::ray_light::RayLight;
+use nannou::color::Mix;
 use ray2d::Ray2D;
 use crate::ray_light::Intersection;
 use crate::types::Curve;
@@ -73,7 +74,7 @@ impl Wraycaster {
                                         .map(|(&pt, &col)|{
                                         (pt,col)
                     });
-                    if poly_weight > 0.0 {
+                    if poly_weight > 0.5 {
                         draw.polygon().stroke_weight(poly_weight).caps_round().join_round().stroke(pray.color).points_colored(first_two_points_colored);
 
                     } else {
@@ -96,7 +97,7 @@ impl Wraycaster {
                             (pt, col)
                         });
 
-                    if poly_weight > 0.0 {
+                    if poly_weight > 0.5 {
                         draw.polygon().stroke_weight(poly_weight).caps_round().join_round().stroke(pray.color).points_colored(points_colored);
 
                     } else {
@@ -143,12 +144,8 @@ impl Wraycaster {
         }
     }
 
-    pub fn draw_rays(&self, draw: &Draw, weight: f32, draw_not_colliding_rays: bool) {
-        
-
+    pub fn draw_rays(&self, draw: &Draw, weight: f32, draw_not_colliding_rays: bool, light_color_pct: f32) {
         for pray in self.ray_lights.iter() {
-
-
             match pray.intersections.len() {
                 1 => {
                     let first_two_points = vec!(pray.starting_pos, pray.intersections[0].pos);
@@ -157,9 +154,12 @@ impl Wraycaster {
                         first_two_points.iter()
                                         .zip(colors.iter())
                                         .map(|(&pt, &col)|{
-                                        (pt,col)
+                                        //(pt,col)
+                                        (pt,col.mix(&pray.color, light_color_pct))
                     });
-                    draw.polyline().stroke_weight(weight).caps_round().join_round().points_colored(first_two_points_colored); 
+                    draw.polyline().stroke_weight(weight).caps_round().join_round().points_colored(first_two_points_colored);
+
+           
                 } 
                 2..=200 => {
                     let first_point = vec!(pray.starting_pos);
@@ -173,10 +173,11 @@ impl Wraycaster {
                     let points_colored = points.into_iter()
                         .zip(colors.into_iter())
                         .map(|(&pt, &col)|{
-                            (pt, col)
+                            //(pt, col)
+                            (pt,col.mix(&pray.color, light_color_pct))
                         });
-                    draw.polyline().stroke_weight(weight).caps_round().join_round().points_colored(points_colored);
-
+                        draw.polyline().stroke_weight(weight).caps_round().join_round().points_colored(points_colored);
+          
                 } 
                 0 if draw_not_colliding_rays=> {
                     let end_point = pray.ray.orig + pray.ray.dir.normalize() * 2000.0;
