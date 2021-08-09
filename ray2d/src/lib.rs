@@ -1,7 +1,7 @@
 #[allow(dead_code)]
 use nannou::prelude::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Ray2D {
     pub orig: Vec2,
     pub dir: Vec2,

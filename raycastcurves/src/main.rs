@@ -58,7 +58,7 @@ struct Model {
     palette: Palette,
     show_walls: bool,
     draw_arrows: bool,
-    draw_tex_overlay: bool,
+    draw_not_colliding_rays: bool,
     animation: bool,
     animation_speed: f32,
     animation_time: f32,
@@ -143,7 +143,7 @@ fn model(app: &App) -> Model {
     let animation_time = 0.0;
     let draw_polygon = true;
     let polygon_contour_weight = 5.0;
-    let draw_tex_overlay = false;
+    let draw_not_colliding_rays = false;
 
     let mut the_model = Model {
         main_window,
@@ -175,7 +175,7 @@ fn model(app: &App) -> Model {
         draw_polygon,
         draw_arrows,
         polygon_contour_weight,
-        draw_tex_overlay,
+        draw_not_colliding_rays,
         clear_interval,
     };
     ui_event(&app, &mut the_model, WindowEvent::Focused);
@@ -252,14 +252,14 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     for r in &model.rays {
         if model.draw_polygon {
-            r.draw_inside( &draw, model.polygon_contour_weight, model.ray_width);
+            r.draw_polygon( &draw, model.polygon_contour_weight, model.ray_width, model.draw_not_colliding_rays);
         }
 
         if model.draw_arrows {
             r.draw_arrows( &draw,model.ray_width);
         }
 
-        r.draw_rays(&draw, model.ray_width);
+        r.draw_rays(&draw, model.ray_width, model.draw_not_colliding_rays);
     }
 
     // if model.draw_arrows {
@@ -502,11 +502,11 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.draw_arrows = v;
         }
 
-        for v in gui::toggle(model.draw_tex_overlay as bool)
-            .label("Draw Overlay")
-            .set(model.ids.draw_tex_overlay, ui)
+        for v in gui::toggle(model.draw_not_colliding_rays as bool)
+            .label("Draw Raycaster")
+            .set(model.ids.draw_not_colliding_rays, ui)
         {
-            model.draw_tex_overlay = v;
+            model.draw_not_colliding_rays = v;
         }
 
         for v in gui::toggle(model.animation as bool)

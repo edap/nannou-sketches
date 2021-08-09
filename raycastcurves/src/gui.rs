@@ -35,7 +35,7 @@ widget_ids! {
         animation,
         animation_speed,
         show_walls,
-        draw_tex_overlay,
+        draw_not_colliding_rays,
         clear_interval
     }
 }
