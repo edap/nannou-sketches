@@ -40,6 +40,7 @@ struct Model {
     n_caster: u32,
     raycaster_density: usize,
     rays: Vec<Wraycaster>,
+    rays_position_mode : usize,
     ui: Ui,
     ids: gui::Ids,
     ray_width: f32,
@@ -62,6 +63,7 @@ struct Model {
     draw_rays: bool,
     draw_not_colliding_rays: bool,
     animation: bool,
+    animation_mode: usize,
     animation_speed: f32,
     animation_time: f32,
     draw_polygon: bool,
@@ -74,6 +76,7 @@ fn model(app: &App) -> Model {
     let main_window = app
         .new_window()
         //.size(1280, 720)
+        //.size(900, 900)
         .size(1600, 900)
         //.size(1777, 1000)
         //.size(1920,1080)
@@ -118,6 +121,7 @@ fn model(app: &App) -> Model {
     let rotation = 0.0;
     let collision_radius = 3.0;
     let rays_prob = 0.0;
+    let rays_position_mode = 0;
 
     let scheme_id = 5;
     let blend_id = 0;
@@ -138,11 +142,15 @@ fn model(app: &App) -> Model {
         palette.get_first(scheme_id, color_off),
         palette.get_second(scheme_id, color_off),
     );
-    make_raycasters(&mut rays, &win, tile_count_w, n_caster, max_depth, raycaster_density);
+    make_raycasters(&mut rays, &win, tile_count_w, n_caster, max_depth, raycaster_density, &walls, rays_position_mode, rays_prob);
+    // walls: & Vec<Curve>,
+    // rays_position_mode: usize,
+    // rays_probability: f32,
     let show_walls = true;
-    let animation = true;
+    let animation = false;
     let draw_arrows = true;
     let animation_speed = 2.0;
+    let animation_mode = 0;
     let animation_time = 0.0;
     let draw_polygon = true;
     let draw_rays = false;
@@ -156,6 +164,7 @@ fn model(app: &App) -> Model {
         raycaster_density,
         tile_count_w,
         rays,
+        rays_position_mode,
         max_bounces,
         ui,
         ids,
@@ -176,6 +185,7 @@ fn model(app: &App) -> Model {
         show_walls,
         animation,
         animation_speed,
+        animation_mode,
         animation_time,
         draw_polygon,
         draw_rays,
@@ -195,12 +205,14 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     let anim_speed = model.animation_speed;
     let walls = &model.walls;
     let win = app.window(model.main_window).unwrap().rect();
+    let animation_mode = model.animation_mode;
 
     if model.animation {
+        // Animate raycaster
         model
             .rays
             .par_iter_mut()
-            .for_each(|r| r.bounce_horizontally(&win, anim_speed))
+            .for_each(|r| r.animate(&win, anim_speed, animation_mode))
     }
 
     model
@@ -212,39 +224,14 @@ fn update(app: &App, model: &mut Model, _update: Update) {
 fn view(app: &App, model: &Model, frame: Frame) {
     let blends = [BLEND_NORMAL, BLEND_ADD, BLEND_SUBTRACT, BLEND_LIGHTEST];
     let draw = app.draw().color_blend(blends[model.blend_id].clone());
-    frame.clear(model.palette.get_fifth(model.scheme_id, model.color_off));
-
-    // // draw the walls
-    // if model.show_walls {
-    //     for curve in model.walls.iter() {
-    //         //println!("{:?}", curve.points.len());
-    //         draw.polyline()
-    //             .weight(model.wall_width)
-    //             .color(model.palette.get_second(model.scheme_id, model.color_off))
-    //             // look at points_colored
-    //             .points(curve.points.clone());
-    //         //.caps_round();
-    //     }
-    // }
+    //frame.clear(model.palette.get_fifth(model.scheme_id, model.color_off));
 
 
+    //frame.clear(BLACK);
+    //let draw = app.draw();
+    draw.background()
+        .color(model.palette.get_fifth(model.scheme_id, model.color_off));
 
-    //     draw.path()
-    //         .stroke()
-    //         .stroke_weight(model.ray_width)
-    //         .caps_round()
-    //         .points(r.collisions.iter().cloned())
-    //         .color(model.palette.get_scheme(model.scheme_id)[0]);
-
-    //     for (&c, &r) in r.collisions.iter().zip(r.reflections.iter()) {
-    //         draw.arrow()
-    //             .start(c)
-    //             .end(c + r.with_magnitude(20.0))
-    //             .stroke_weight(model.ray_width)
-    //             .color(model.palette.get_scheme(model.scheme_id)[4]);
-    //     }
-
-    //}
 
     if model.show_walls {
         for curve in model.walls.iter() {
@@ -270,66 +257,6 @@ fn view(app: &App, model: &Model, frame: Frame) {
         }
     }
 
-    // if model.draw_arrows {
-    //     draw.arrow()
-    //         .color(model.palette.get_first(model.scheme_id, model.color_off))
-    //         .start(r.ray.orig)
-    //         .stroke_weight(model.ray_width)
-    //         .end(r.ray.orig + r.ray.dir.with_magnitude(ARROW_LENGTH));
-    // }
-
-    // if r.collisions.len() > 3 && model.collision_radius > 0.0 {
-    //     for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
-    //         draw.ellipse()
-    //             .no_fill()
-    //             .stroke(model.palette.get_third(model.scheme_id, model.color_off))
-    //             .stroke_weight(3.0)
-    //             .x_y(c.x, c.y)
-    //             .w_h(model.collision_radius * i, model.collision_radius * i);
-    //     }
-    // }
-
-    // let mut col = rgba(0.0, 0.0, 0.0, 0.0);
-    // //let win = app.window_rect();
-    // let ppp = r
-    //     .collisions
-    //     .iter()
-    //     .zip(r.reflections.iter())
-    //     .map(|(&co, &re)| {
-    //         if re.x > 0.0 {
-    //             col = model.palette.get_third(model.scheme_id, model.color_off)
-    //         } else {
-    //             col = model.palette.get_fourth(model.scheme_id, model.color_off)
-    //         }
-    //         // let xc = map_range(co.x, win.left(), win.right(), 0.0, 1.0);
-    //         // let xy = map_range(co.y, win.bottom(), win.top(), 0.0, 1.0);
-    //         // let tex_coords = [xc, xy];
-    //         // (pt2(co.x, co.y), tex_coords)
-    //         (pt2(co.x, co.y), col)
-    //     });
-
-    // if model.draw_polygon {
-    //     if ppp.len() > 3 {
-    //         draw.polygon()
-    //             .stroke(model.palette.get_second(model.scheme_id, model.color_off))
-    //             .stroke_weight(model.polygon_contour_weight)
-    //             .join_round()
-    //             .points_colored(ppp);
-    //         //draw.polygon().points_textured(&model.texture, ppp);
-    //     }
-    // };
-
-    // if r.collisions.len() > 3 {
-    //     draw.path()
-    //         .stroke()
-    //         .caps_round()
-    //         .stroke_weight(model.ray_width)
-    //         .points(r.collisions.iter().cloned())
-    //         .color(model.palette.get_first(model.scheme_id, model.color_off));
-    // }
-
-
-
     draw.to_frame(app, &frame).unwrap();
 }
 
@@ -348,8 +275,9 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
 fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
     let ui = &mut model.ui.set_widgets();
     {
+        // WALLS
         for value in gui::slider(model.wall_width as f32, 1.0, 15.0)
-            .top_left_with_margin(10.0)
+            .top_left_with_margin(20.0)
             .label("wall width")
             .set(model.ids.wall_width, ui)
         {
@@ -383,26 +311,18 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         {
             model.hole_n = value as usize;
         }
-
-        for value in gui::slider(model.n_caster as f32, 1.0, 50.0)
-            .label("n_caster ")
-            .set(model.ids.n_caster, ui)
-        {
-            model.n_caster = value as u32;
-        }
-
-        for value in gui::slider(model.raycaster_density as f32, 1.0, 36.0)
-            .label("raycaster_density ")
-            .set(model.ids.raycaster_density, ui)
-        {
-            model.raycaster_density = value as usize;
-        }
-
         for value in gui::slider(model.tile_count_w as f32, 1.0, 20.0)
             .label("tile_count_w")
             .set(model.ids.tile_count_w, ui)
         {
             model.tile_count_w = value as u32;
+        }
+
+        for v in gui::toggle(model.show_walls as bool)
+        .label("Show wall")
+        .set(model.ids.show_walls, ui)
+        {
+            model.show_walls = v;
         }
 
         for _click in gui::button()
@@ -423,8 +343,37 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
           
             );
 
-            make_raycasters(&mut model.rays, &win, model.tile_count_w, model.n_caster, model.max_bounces, model.raycaster_density)
+            make_raycasters(&mut model.rays, &win, model.tile_count_w, model.n_caster, model.max_bounces, model.raycaster_density, &model.walls, model.rays_position_mode, model.rays_prob)
         }
+
+
+        // RAYCASTER
+        for value in gui::slider(model.n_caster as f32, 1.0, 50.0)
+            //.left(gui::PAD + gui::COL_W)
+            //.top_left_with_margin_on(model.ids.wall_width, 30.0)
+            .top_left_with_margins_on(model.ids.wall_width, 0.0, gui::PAD + gui::COL_W)
+            //.top_right_with_margins_on(model.ids.wall_width, gui::PAD, 15.0)
+            //.top_right_of(model.ids.wall_width)
+            .label("n_caster ")
+            .set(model.ids.n_caster, ui)
+        {
+            model.n_caster = value as u32;
+        }
+
+        for value in gui::slider(model.raycaster_density as f32, 1.0, 36.0)
+            .label("raycaster_density ")
+            .set(model.ids.raycaster_density, ui)
+        {
+            model.raycaster_density = value as usize;
+        }
+
+        for value in gui::slider(model.rays_position_mode as f32, 0.0, 1.0)
+        .label("raycaster pos mode ")
+        .set(model.ids.rays_position_mode, ui)
+        {
+            model.rays_position_mode = value as usize;
+        }
+
 
         for value in gui::slider(model.collision_radius as f32, 0.0, 185.0)
             .label("collision radius")
@@ -466,7 +415,10 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.rotation = val;
         }
 
+
+        // COLORS
         for value in gui::slider(model.scheme_id as f32, 0.0, 5.0)
+            .top_left_with_margins_on(model.ids.n_caster, 0.0, gui::PAD + gui::COL_W)
             .label("scheme_id")
             .set(model.ids.scheme_id, ui)
         {
@@ -512,9 +464,9 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         for v in gui::toggle(model.draw_rays as bool)
         .label("Draw rays")
         .set(model.ids.draw_rays, ui)
-    {
-        model.draw_rays = v;
-    }
+        {
+            model.draw_rays = v;
+        }
 
         for v in gui::toggle(model.draw_arrows as bool)
             .label("Draw Arrows")
@@ -537,6 +489,13 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.animation = v;
         }
 
+        for value in gui::slider(model.animation_mode as f32, 0.0, 1.0)
+        .label("animation_mode")
+        .set(model.ids.animation_mode, ui)
+    {
+        model.animation_mode = value as usize;
+    }
+
         for value in gui::slider(model.animation_speed as f32, 80.0, 0.01)
             .label("animation speed")
             .set(model.ids.animation_speed, ui)
@@ -544,12 +503,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.animation_speed = value;
         }
 
-        for v in gui::toggle(model.show_walls as bool)
-            .label("Show wall")
-            .set(model.ids.show_walls, ui)
-        {
-            model.show_walls = v;
-        }
+
     }
 }
 

@@ -31,4 +31,5 @@ impl Default for Material {
 pub struct Curve {
     pub points: Vec<Vec2>,
     pub material: Material,
+    pub ray_anchor_point: Option<Vec2>,
 }

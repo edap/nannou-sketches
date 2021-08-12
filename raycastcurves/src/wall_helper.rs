@@ -2,7 +2,6 @@ use crate::mondrian::split_squares;
 pub use crate::mondrian::Square;
 use crate::types::Curve;
 use crate::types::Material;
-use crate::types::SurfaceType;
 use nannou::prelude::*;
 
 pub fn make_walls(
@@ -85,6 +84,7 @@ pub fn create_curve_from_square(
                 walls.push(Curve {
                     points: points.clone(),
                     material: mat,
+                    ray_anchor_point: Some(center),
                 });
                 points.clear();
                 start_from = i + pad;
@@ -103,6 +103,7 @@ pub fn create_curve_from_square(
         walls.push(Curve {
             points: points.clone(),
             material: mat,
+            ray_anchor_point: Some(center),
         });
         points.clear();
 

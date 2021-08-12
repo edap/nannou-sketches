@@ -28,7 +28,7 @@ impl Wraycaster {
             let ray_light = RayLight::new(position, vec2(radian.cos(), radian.sin()), max_depth);
             ray_lights.push(ray_light);
         }
-
+        println!("dir {:?}", direction.x);
         Wraycaster {
             ray_lights,
             direction,
@@ -44,21 +44,35 @@ impl Wraycaster {
         });
     }
 
-    pub fn bounce_horizontally(&mut self, win: &geom::Rect, anim_speed: f32) {
-        for r in self.ray_lights.iter_mut() {
-            if self.direction.x > 0.0 {
-                r.starting_pos.x += 0.1 * anim_speed;
-            } else {
-                r.starting_pos.x -= 0.1 * anim_speed;
-            }
+    pub fn animate(&mut self, win: &geom::Rect, anim_speed: f32, animation_mode: usize) {
 
-            //r.ray.orig = r.ray.orig + r.ray.dir.with_magnitude(animation_speed);
-            if r.starting_pos.x >= win.right() as f32 {
-                r.starting_pos.x = win.left();
-            } else if r.starting_pos.x < win.left() as f32 {
-                r.starting_pos.x = win.right();
+        match animation_mode {
+            0 => {
+                // Bounce orizontally
+                for r in self.ray_lights.iter_mut() {
+                    if self.direction.x >= 0.0 {
+                        r.starting_pos.x += 0.1 * anim_speed;
+                    } else {
+                        r.starting_pos.x -= 0.1 * anim_speed;
+                    }
+        
+                    //r.ray.orig = r.ray.orig + r.ray.dir.with_magnitude(animation_speed);
+                    if r.starting_pos.x >= win.right() as f32 {
+                        //r.starting_pos.x = win.left();
+                        
+                        self.direction = vec2(-1.0.cos(), -1.0.sin()).normalize();
+                    } else if r.starting_pos.x < win.left() as f32 {
+                        self.direction = vec2(0.0.cos(), 0.0.sin()).normalize();
+                        //r.starting_pos.x = win.right();
+                    }
+                }
+
+            }
+            _ => {
+
             }
         }
+
     }
 
     pub fn draw_polygon(&self, draw: &Draw, poly_weight: f32, weight: f32, draw_not_colliding_rays: bool) {
@@ -278,11 +292,8 @@ pub fn cast_ray(
                 },
                 SurfaceType::ReflectiveAndRefractive {reflectivity, ior } => {
                     let fresnel = ray.fresnel(surface_normal, ior);
-                    //let outside = ray.dir.dot(surface_normal) < 0.0;
+                    let outside = ray.dir.dot(surface_normal) < 0.0;
                     let refl = ray.reflect(surface_normal);
-                    //println!("fre {:?}", fresnel);
-
-
 
 
                     // always refract, as we are dealong most with segments and curves and they don't have an inside or outside
@@ -291,7 +302,6 @@ pub fn cast_ray(
                     ray.dir = refr;
                     ray.orig = collision + refr.normalize() * EPSILON;
                     cast_ray(ray, depth, max_depth, intersections, walls, light_amount * (1.0 - fresnel));
-                    
                     // refl
                     ray.dir = refl;
                     ray.orig = collision + refl.normalize() * EPSILON;
@@ -300,11 +310,8 @@ pub fn cast_ray(
 
 
 
-                    // 2nd way, check if outside or inside refl und refr
-
-
-
-                    // // compute refraction if it is not a case of total internal reflection
+                    //2nd way, check if outside or inside refl und refr
+                    // compute refraction if it is not a case of total internal reflection
                     // if fresnel < 1.0{
                     //     //refraction
                     //     let refr = ray.refract(surface_normal, ior);
@@ -314,7 +321,7 @@ pub fn cast_ray(
                     //         ray.orig = collision + refr.normalize() * EPSILON;
                     //     }                 
                     //     ray.dir = refr;
-                    //     cast_ray(ray, depth, max_depth, intersections, walls);
+                    //     cast_ray(ray, depth, max_depth, intersections, walls, light_amount * (1.0 - fresnel));
                     // }
 
 
@@ -326,21 +333,16 @@ pub fn cast_ray(
                     //     ray.orig = collision - refl.normalize() * EPSILON;
                     // }
                     // ray.dir = refl;
-                    // cast_ray(ray, depth, max_depth, intersections, walls);
+                    // cast_ray(ray, depth, max_depth, intersections, walls, light_amount * fresnel);
 
 
 
                     let intersection = Intersection::new(collision, hsla, *depth);
                     intersections.push(intersection);
-
-
-
-
                 },
                 SurfaceType::Diffuse => {
                     let intersection = Intersection::new(collision, hsla, *depth);
                     intersections.push(intersection);
-
                 },
 
             }
