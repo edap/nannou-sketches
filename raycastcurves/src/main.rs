@@ -59,6 +59,8 @@ struct Model {
     light_color_pct: f32,
     palette: Palette,
     show_walls: bool,
+    clean_bg: bool,
+    transparent_bg: bool,
     draw_arrows: bool,
     draw_rays: bool,
     draw_not_colliding_rays: bool,
@@ -76,8 +78,8 @@ fn model(app: &App) -> Model {
     let main_window = app
         .new_window()
         //.size(1280, 720)
-        //.size(900, 900)
-        .size(1600, 900)
+        .size(900, 900)
+        //.size(1600, 900)
         //.size(1777, 1000)
         //.size(1920,1080)
         // .size( 3840,2160)
@@ -117,7 +119,7 @@ fn model(app: &App) -> Model {
     let hole_pct = 0.25;
     let hole_n = 2;
     let n_caster = 2;
-    let max_bounces = 10;
+    let max_bounces = 4;
     let rotation = 0.0;
     let collision_radius = 3.0;
     let rays_prob = 0.0;
@@ -156,6 +158,8 @@ fn model(app: &App) -> Model {
     let draw_rays = false;
     let polygon_contour_weight = 5.0;
     let draw_not_colliding_rays = false;
+    let clean_bg = true;
+    let transparent_bg = false;
 
     let mut the_model = Model {
         main_window,
@@ -190,6 +194,8 @@ fn model(app: &App) -> Model {
         draw_polygon,
         draw_rays,
         draw_arrows,
+        clean_bg,
+        transparent_bg,
         polygon_contour_weight,
         draw_not_colliding_rays,
         clear_interval,
@@ -212,7 +218,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         model
             .rays
             .par_iter_mut()
-            .for_each(|r| r.animate(&win, anim_speed, animation_mode))
+            .for_each(|r| r.animate(&win, anim_speed, animation_mode, time))
     }
 
     model
@@ -225,12 +231,21 @@ fn view(app: &App, model: &Model, frame: Frame) {
     let blends = [BLEND_NORMAL, BLEND_ADD, BLEND_SUBTRACT, BLEND_LIGHTEST];
     let draw = app.draw().color_blend(blends[model.blend_id].clone());
     //frame.clear(model.palette.get_fifth(model.scheme_id, model.color_off));
+    if model.transparent_bg {
+        let mut color = model.palette.get_fifth(model.scheme_id, model.color_off);
+        color.alpha = 0.0;
+        draw.background().color(color);
+    }
 
 
     //frame.clear(BLACK);
     //let draw = app.draw();
-    draw.background()
-        .color(model.palette.get_fifth(model.scheme_id, model.color_off));
+    if model.clean_bg &&  !model.transparent_bg{
+        let mut color = model.palette.get_fifth(model.scheme_id, model.color_off);
+        color.alpha = 1.0;
+        draw.background().color(color);
+    }
+
 
 
     if model.show_walls {
@@ -245,7 +260,10 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     for r in &model.rays {
         if model.draw_polygon {
-            r.draw_polygon( &draw, model.polygon_contour_weight, model.ray_width, model.draw_not_colliding_rays);
+            r.draw_polygon( &draw,
+                 model.polygon_contour_weight,
+                  model.ray_width,
+                   model.draw_not_colliding_rays);
         }
 
         if model.draw_arrows {
@@ -394,7 +412,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         {
             model.rays_prob = value;
         }
-        for value in gui::slider(model.max_bounces as f32, 1.0, 12.0)
+        for value in gui::slider(model.max_bounces as f32, 1.0, 6.0)
             .label("max_bounces")
             .set(model.ids.max_bounces, ui)
         {
@@ -452,6 +470,19 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             .set(model.ids.polygon_contour_weight, ui)
         {
             model.polygon_contour_weight = value;
+        }
+
+        for v in gui::toggle(model.clean_bg as bool)
+        .label("Draw Bg")
+        .set(model.ids.clean_bg, ui)
+        {
+            model.clean_bg = v;
+        }
+        for v in gui::toggle(model.transparent_bg as bool)
+        .label("Transparent Bg")
+        .set(model.ids.transparent_bg, ui)
+        {
+            model.transparent_bg = v;
         }
 
         for v in gui::toggle(model.draw_polygon as bool)

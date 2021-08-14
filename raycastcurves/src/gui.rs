@@ -35,6 +35,8 @@ widget_ids! {
         draw_rays,
         draw_polygon,
         draw_arrows,
+        clean_bg,
+        transparent_bg,
         polygon_contour_weight,
         animation,
         animation_mode,

@@ -28,7 +28,6 @@ impl Wraycaster {
             let ray_light = RayLight::new(position, vec2(radian.cos(), radian.sin()), max_depth);
             ray_lights.push(ray_light);
         }
-        println!("dir {:?}", direction.x);
         Wraycaster {
             ray_lights,
             direction,
@@ -44,7 +43,7 @@ impl Wraycaster {
         });
     }
 
-    pub fn animate(&mut self, win: &geom::Rect, anim_speed: f32, animation_mode: usize) {
+    pub fn animate(&mut self, win: &geom::Rect, anim_speed: f32, animation_mode: usize, time: f32) {
 
         match animation_mode {
             0 => {
@@ -67,6 +66,15 @@ impl Wraycaster {
                     }
                 }
 
+            }
+            1 => {
+                for r in self.ray_lights.iter_mut() {
+                    let radius = win.w() / 4.0;
+                    let x = (time * 0.001).cos() * radius;
+                    let y = (time * 0.001).sin() * radius;
+
+                    r.starting_pos = r.starting_pos + pt2(x, y);
+                }
             }
             _ => {
 
@@ -129,6 +137,8 @@ impl Wraycaster {
                 //     .color(pray.color);
                 // }
                 _ => {}
+
+
             }
         }
     }
