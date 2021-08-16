@@ -56,6 +56,7 @@ struct Model {
     max_bounces: usize,
     blend_id: usize,
     color_off: usize,
+    palette_alpha: f32,
     light_color_pct: f32,
     palette: Palette,
     show_walls: bool,
@@ -69,6 +70,7 @@ struct Model {
     animation_speed: f32,
     animation_time: f32,
     draw_polygon: bool,
+    draw_polygon_mode: usize,
     polygon_contour_weight: f32,
     clear_interval: usize,
 }
@@ -78,8 +80,8 @@ fn model(app: &App) -> Model {
     let main_window = app
         .new_window()
         //.size(1280, 720)
-        .size(900, 900)
-        //.size(1600, 900)
+        //.size(900, 900)
+        .size(1600, 900)
         //.size(1777, 1000)
         //.size(1920,1080)
         // .size( 3840,2160)
@@ -122,8 +124,8 @@ fn model(app: &App) -> Model {
     let max_bounces = 4;
     let rotation = 0.0;
     let collision_radius = 3.0;
-    let rays_prob = 0.0;
-    let rays_position_mode = 0;
+    let rays_prob = 0.8;
+    let rays_position_mode = 1;
 
     let scheme_id = 5;
     let blend_id = 0;
@@ -150,16 +152,18 @@ fn model(app: &App) -> Model {
     // rays_probability: f32,
     let show_walls = true;
     let animation = false;
-    let draw_arrows = true;
+    let draw_arrows = false;
     let animation_speed = 2.0;
     let animation_mode = 0;
     let animation_time = 0.0;
     let draw_polygon = true;
+    let draw_polygon_mode = 0;
     let draw_rays = false;
     let polygon_contour_weight = 5.0;
     let draw_not_colliding_rays = false;
     let clean_bg = true;
     let transparent_bg = false;
+    let palette_alpha = 1.0;
 
     let mut the_model = Model {
         main_window,
@@ -183,6 +187,7 @@ fn model(app: &App) -> Model {
         rotation,
         scheme_id,
         blend_id,
+        palette_alpha,
         color_off,
         light_color_pct,
         palette,
@@ -192,6 +197,7 @@ fn model(app: &App) -> Model {
         animation_mode,
         animation_time,
         draw_polygon,
+        draw_polygon_mode,
         draw_rays,
         draw_arrows,
         clean_bg,
@@ -263,7 +269,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             r.draw_polygon( &draw,
                  model.polygon_contour_weight,
                   model.ray_width,
-                   model.draw_not_colliding_rays);
+                   model.draw_not_colliding_rays, model.draw_polygon_mode);
         }
 
         if model.draw_arrows {
@@ -465,6 +471,15 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.light_color_pct = value;
         }
 
+        for value in gui::slider(model.palette_alpha as f32, 0.0, 1.0)
+        .label("palette_alpha")
+        .set(model.ids.palette_alpha, ui)
+        {
+            model.palette_alpha = value;
+            model.palette.set_alpha(value);
+            change_color_walls(&mut model.walls, model.palette.get_first(model.scheme_id, model.color_off), model.palette.get_second(model.scheme_id, model.color_off));
+        }
+
         for value in gui::slider(model.polygon_contour_weight, 0.5, 30.0)
             .label("polygon cont weight")
             .set(model.ids.polygon_contour_weight, ui)
@@ -491,6 +506,13 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         {
             model.draw_polygon = v;
         }
+
+        for value in gui::slider(model.draw_polygon_mode as f32, 0.0, 2.0)
+        .label("Draw poly mode")
+        .set(model.ids.draw_polygon_mode, ui)
+    {
+        model.draw_polygon_mode = value as usize;
+    }
 
         for v in gui::toggle(model.draw_rays as bool)
         .label("Draw rays")

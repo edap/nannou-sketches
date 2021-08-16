@@ -113,6 +113,11 @@ impl Palette {
         }
     }
 
+    pub fn set_alpha(& mut self, alpha: f32){
+        println!("alpha :{:?}", alpha);
+        &self.colors.iter_mut().map(|c| {c.alpha = alpha});
+    }
+
     pub fn get_scheme(&self, id: usize) -> &[Rgba] {
         let mut index = id;
         if index >= (self.len / COLOR_PER_SCHEME) {
@@ -138,4 +143,5 @@ impl Palette {
     pub fn get_fifth(&self, scheme_id: usize, offset: usize) -> Rgba {
         return self.get_scheme(scheme_id)[(4 + offset) % COLOR_PER_SCHEME];
     }
+
 }

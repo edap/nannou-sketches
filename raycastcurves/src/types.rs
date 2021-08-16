@@ -17,11 +17,19 @@ pub struct Material {
 
 impl Default for Material {
     fn default() -> Self {
+        let coin = random_range(0.0, 1.0);
+        let mut sur;
+        if coin > 0.5 {
+            sur = SurfaceType::ReflectiveAndRefractive {reflectivity: 1.0, ior: 1.4};
+        }else{
+            sur = SurfaceType::Diffuse;
+        }
+
         Material {
             coloration: rgba(0.0, 0.0, 1.0, 1.0),
             albedo: 1.0,
             //surface: SurfaceType::Diffuse
-            surface: SurfaceType::ReflectiveAndRefractive {reflectivity: 1.0, ior: 1.4}
+            surface: sur
             
         }
     }

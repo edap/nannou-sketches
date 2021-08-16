@@ -1,5 +1,6 @@
 use crate::ray_light::RayLight;
 use nannou::color::Mix;
+use nannou::rand::Rng;
 use ray2d::Ray2D;
 use crate::ray_light::Intersection;
 use crate::types::Curve;
@@ -83,69 +84,123 @@ impl Wraycaster {
 
     }
 
-    pub fn draw_polygon(&self, draw: &Draw, poly_weight: f32, weight: f32, draw_not_colliding_rays: bool) {
-        for pray in self.ray_lights.iter() {
-
-            match pray.intersections.len() {
-                1 => {
-                    let first_two_points = vec!(pray.starting_pos, pray.intersections[0].pos);
-                    let colors = vec!(pray.color,pray.intersections[0].color);
-                    let first_two_points_colored = 
-                        first_two_points.iter()
-                                        .zip(colors.iter())
-                                        .map(|(&pt, &col)|{
-                                        (pt,col)
+    pub fn draw_polygon(&self, draw: &Draw, poly_weight: f32, weight: f32, draw_not_colliding_rays: bool, mode: usize) {
+        let expe = true;
+        match mode {
+            0 => {
+                let mut all_intersections: Vec<Intersection> =  Vec::new();
+                for pray in self.ray_lights.iter() {
+                    if pray.intersections.len()> 0{
+                        //all_intersections.extend(pray.intersections);
+                        all_intersections.extend(pray.intersections.iter())
+                        //all_intersections.iter().chain(pray.intersections.iter()).collect::<Intersection>();
+                    }
+    
+                }
+    
+                if all_intersections.len() > 3{
+                    let pp = all_intersections.iter().map(|&inter|{
+                        (inter.pos, inter.color)
                     });
                     if poly_weight > 0.5 {
-                        draw.polygon().stroke_weight(poly_weight).caps_round().join_round().stroke(pray.color).points_colored(first_two_points_colored);
-
+                        draw.polygon().stroke_weight(poly_weight)
+                        .caps_round()
+                        .stroke(all_intersections[0].color)
+                        .join_round()
+                        .points_colored(pp);
+    
                     } else {
-                        draw.polygon().points_colored(first_two_points_colored);
+                        draw.polygon().points_colored(pp);
                     }
-                    
-                } 
-                2..=200 => {
-                    let first_point = vec!(pray.starting_pos);
-                    let first_color = vec!(pray.color);
-                    let intersection_points_pos : &Vec<Vec2> = &pray.intersections.iter().map(|inter| inter.pos).collect();
-                    let intersection_points_col : &Vec<Hsla>= &pray.intersections.iter().map(|inter| inter.color).collect();
+    
+                }
 
+            }
+            1 => {
+                for pray in self.ray_lights.iter() {
+                    match pray.intersections.len() {
+                        1 => {
+                            let first_two_points = vec!(pray.starting_pos, pray.intersections[0].pos);
+                            let colors = vec!(pray.color,pray.intersections[0].color);
+                            let first_two_points_colored = 
+                                first_two_points.iter()
+                                                .zip(colors.iter())
+                                                .map(|(&pt, &col)|{
+                                                (pt,col)
+                            });
+                            if poly_weight > 0.5 {
+                                draw.polygon().stroke_weight(poly_weight).caps_round().join_round().stroke(pray.color).points_colored(first_two_points_colored);
+        
+                            } else {
+                                draw.polygon().points_colored(first_two_points_colored);
+                            }
+                            
+                        } 
+                        2..=200 => {
+                            let first_point = vec!(pray.starting_pos);
+                            let first_color = vec!(pray.color);
+                            let intersection_points_pos : &Vec<Vec2> = &pray.intersections.iter().map(|inter| inter.pos).collect();
+                            let intersection_points_col : &Vec<Hsla>= &pray.intersections.iter().map(|inter| inter.color).collect();
 
-                    let points : Vec<&Vec2> = first_point.iter().chain(intersection_points_pos.iter()).collect();
-                    let colors : Vec<&Hsla> = first_color.iter().chain(intersection_points_col.iter()).collect();
-                    let points_colored = points.into_iter()
-                        .zip(colors.into_iter())
-                        .map(|(&pt, &col)|{
-                            (pt, col)
+                            let points : Vec<&Vec2> = first_point.iter().chain(intersection_points_pos.iter()).collect();
+                            let colors : Vec<&Hsla> = first_color.iter().chain(intersection_points_col.iter()).collect();
+                            let points_colored = points.into_iter()
+                                .zip(colors.into_iter())
+                                .map(|(&pt, &col)|{
+                                    (pt, col)
+                                });
+        
+                            if poly_weight > 0.5 {
+                                draw.polygon().stroke_weight(poly_weight).caps_round().join_round().stroke(pray.color).points_colored(points_colored);
+        
+                            } else {
+                                draw.polygon().points_colored(points_colored);
+                            }
+                        } 
+                        // 0 if draw_not_colliding_rays=> {
+                        //     let end_point = pray.ray.orig + pray.ray.dir.normalize() * 2000.0;
+                        //     draw.line()
+                        //     .start(pray.starting_pos)
+                        //     .end(end_point)
+                        //     .stroke_weight(poly_weight)
+                        //     .caps_round()
+                        //     .color(pray.color);
+                        // }
+                        _ => {}
+                    }
+                }
+            }
+            2 => {
+                
+                for pray in self.ray_lights.iter() {
+                    if pray.intersections.len() > 3{
+                        let pp = pray.intersections.iter().map(|&inter|{
+                            (inter.pos, inter.color)
                         });
-
-                    if poly_weight > 0.5 {
-                        draw.polygon().stroke_weight(poly_weight).caps_round().join_round().stroke(pray.color).points_colored(points_colored);
-
-                    } else {
-                        draw.polygon().points_colored(points_colored);
+                        if poly_weight > 0.5 {
+                            draw.polygon().stroke_weight(poly_weight)
+                            .caps_round()
+                            .stroke(pray.intersections[0].color)
+                            .join_round()
+                            .points_colored(pp);
+        
+                        } else {
+                            draw.polygon().points_colored(pp);
+                        }
+        
                     }
 
-                } 
-                // 0 if draw_not_colliding_rays=> {
-                //     let end_point = pray.ray.orig + pray.ray.dir.normalize() * 2000.0;
-                //     draw.line()
-                //     .start(pray.starting_pos)
-                //     .end(end_point)
-                //     .stroke_weight(poly_weight)
-                //     .caps_round()
-                //     .color(pray.color);
-                // }
-                _ => {}
+                }
+    
 
 
             }
+            _ => {}
         }
     }
 
     pub fn draw_arrows(&self, draw: &Draw, weight: f32) {
         for pray in self.ray_lights.iter() {
-
             if pray.intersections.len() > 1 {
                 draw.arrow()
                 .start(pray.starting_pos)
@@ -166,6 +221,35 @@ impl Wraycaster {
                 }
             }
         }
+
+
+
+
+
+
+
+        // for pray in self.ray_lights.iter() {
+
+        //     if pray.intersections.len() > 1 {
+        //         draw.arrow()
+        //         .start(pray.starting_pos)
+        //         .end(pray.intersections[0].pos)
+        //         .stroke_weight(weight)
+        //         .color(pray.color);
+
+        //     }
+
+        //     if pray.intersections.len() > 2 {
+        //         for n in 0..pray.intersections.len() -1 {
+        //             draw.arrow()
+        //             .start(pray.intersections[n].pos)
+        //             .end(pray.intersections[n+1].pos)
+        //             .stroke_weight(weight)
+        //             .color(pray.intersections[n].color);
+
+        //         }
+        //     }
+        // }
     }
 
     pub fn draw_rays(&self, draw: &Draw, weight: f32, draw_not_colliding_rays: bool, light_color_pct: f32) {
