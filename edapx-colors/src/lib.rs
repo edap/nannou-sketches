@@ -21,15 +21,7 @@ impl Palette {
             // // greenAndRosePal
             // rgba(1.0, 0.592, 0.706, 1.0),   //rose
             // rgba(0.898, 0.341, 0.878, 1.0), //lilla
-            // rgba(0.902, 0.494, 0.063, 1.0), // orange
-            // rgba(0.0, 0.498, 0.353, 1.0),   //green
-            // rgba(0.098, 0.0, 0.749, 1.0),   //blu
-            // // nes variation
-            // // rgba(0.055, 0.8, 0.812, 1.0),   //azul
-            // // rgba(0.965, 0.914, 0.396, 1.0), //yellow
-            // // rgba(0.902, 0.659, 0.141, 1.0), //ocra
-            // // rgba(0.953, 0.447, 0.035, 1.0), //arancione
-            // // rgba(1.0, 0.267, 0.016, 1.0),   // red
+            // rgba(0.902, 0.494, 0.063, 1.0), // orangeexpected unit type `()`
 
             // // primoPal
             // rgba(0.055, 0.8, 0.812, 1.0),   // azul
@@ -113,9 +105,10 @@ impl Palette {
         }
     }
 
-    pub fn set_alpha(& mut self, alpha: f32){
-        println!("alpha :{:?}", alpha);
-        &self.colors.iter_mut().map(|c| {c.alpha = alpha});
+    pub fn set_alpha(&mut self, a: f32){
+        for c in self.colors.iter_mut(){
+            c.alpha = a;
+        }
     }
 
     pub fn get_scheme(&self, id: usize) -> &[Rgba] {

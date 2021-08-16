@@ -355,7 +355,7 @@ pub fn cast_ray(
             // let mut alpha : f32 = 1.0 - ( *depth as f32 / max_depth as f32);
             // alpha = alpha.min(0.0).max(1.0);
             let mut hsla: Hsla = material.coloration.into();
-            hsla.alpha = light_amount as f32;
+            hsla.alpha = light_amount as f32 * hsla.alpha;
 
             //secondary rays.
 
