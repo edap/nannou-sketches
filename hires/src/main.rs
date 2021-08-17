@@ -10,16 +10,7 @@ fn main() {
 }
 
 struct Model {
-    // The texture that we will draw to.
-    // texture: wgpu::Texture,
-    // // Create a `Draw` instance for drawing to our texture.
-    // draw: nannou::Draw,
-    // // The type used to render the `Draw` vertices to our texture.
-    // renderer: nannou::draw::Renderer,
-    // // The type used to capture the texture.
-    // texture_capturer: wgpu::TextureCapturer,
-    // // The type used to resize our texture to the window texture.
-    // texture_reshaper: wgpu::TextureReshaper,
+    main_window_id: WindowId,
     capturer: Capturer,
 }
 
@@ -29,23 +20,26 @@ fn model(app: &App) -> Model {
 
     // Create the window.
     let [win_w, win_h] = [texture_size[0] / 4, texture_size[1] / 4];
-    let w_id = app
+    let main_window_id = app
         .new_window()
         .size(win_w, win_h)
         .title("nannou")
         .view(view)
+        .key_pressed(key_pressed)
         .build()
         .unwrap();
-    let window = app.window(w_id).unwrap();
+    let window = app.window(main_window_id).unwrap();
 
     // Retrieve the wgpu device.
     let device = window.swap_chain_device();
 
+    // path where images are saved
     let path = capture_directory(app);
-    let capturer = Capturer::new(texture_size, &window, &device, path);
+    let capturer = Capturer::new(texture_size, &window, &device, path, false);
 
     Model {
         capturer,
+        main_window_id
     }
 }
 
@@ -101,64 +95,13 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     // Render our drawing to the texture.
     let window = app.main_window();
     let device = window.swap_chain_device();
-
-
-    // DONE
-    // let ce_desc = wgpu::CommandEncoderDescriptor {
-    //     label: Some("texture renderer"),
-    // };
-    // let mut encoder = device.create_command_encoder(&ce_desc);
-
-    // DONE
-    // model.capturer
-    //     .renderer
-    //     .render_to_texture(device, &mut encoder, draw, &model.capturer.texture);
-
-
     model.capturer.update(&window, &device, elapsed_frames);
-
-    // Take a snapshot of the texture. The capturer will do the following:
-    //
-    // 1. Resolve the texture to a non-multisampled texture if necessary.
-    // 2. Convert the format to non-linear 8-bit sRGBA ready for image storage.
-    // 3. Copy the result to a buffer ready to be mapped for reading.
-
-
-    // DONE
-    // let snapshot = model.capturer
-    //     .texture_capturer
-    //     .capture(device, &mut encoder, &model.capturer.texture);
-
-    // Submit the commands for our drawing and texture capture to the GPU.
-
-
-    // DONE
-    //window.swap_chain_queue().submit(Some(encoder.finish()));
-
-    // Submit a function for writing our snapshot to a PNG.
-    //
-    // NOTE: It is essential that the commands for capturing the snapshot are `submit`ted before we
-    // attempt to read the snapshot - otherwise we will read a blank texture!
-    // let path = capture_directory(app)
-    //     .join(elapsed_frames.to_string())
-    //     .with_extension("png");
-    // snapshot
-    //     .read(move |result| {
-    //         let image = result.expect("failed to map texture memory").to_owned();
-    //         image
-    //             .save(&path)
-    //             .expect("failed to save texture to png image");
-    //     })
-    //     .unwrap();
 }
 
 // Draw the state of your `Model` into the given `Frame` here.
 fn view(_app: &App, model: &Model, frame: Frame) {
-    // Sample the texture and write it to the frame.
-    let mut encoder = frame.command_encoder();
-    model.capturer
-        .texture_reshaper
-        .encode_render_pass(frame.texture_view(), &mut *encoder);
+    model.capturer.view(frame);
+
 }
 
 // Wait for capture to finish.
@@ -166,11 +109,32 @@ fn exit(app: &App, model: Model) {
     println!("Waiting for PNG writing to complete...");
     let window = app.main_window();
     let device = window.swap_chain_device();
-    model.capturer
-        .texture_capturer
-        .await_active_snapshots(&device)
-        .unwrap();
+    model.capturer.exit(&device);
     println!("Done!");
+}
+
+fn key_pressed(app: &App, model: &mut Model, key: Key) {
+    match key {
+        Key::S => match app.window(model.main_window_id) {
+            Some(_window) => {
+                model.capturer.take_screenshot();
+            }
+            None => {}
+        },
+        Key::R => match app.window(model.main_window_id) {
+            Some(_window) => {
+                model.capturer.start_recording();
+            }
+            None => {}
+        },
+        Key::E => match app.window(model.main_window_id) {
+            Some(_window) => {
+                model.capturer.stop_recording();
+            }
+            None => {}
+        },
+        _other_key => {}
+    }
 }
 
 // The directory where we'll save the frames.

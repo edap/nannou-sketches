@@ -1,5 +1,3 @@
-use std::fmt::Binary;
-
 use nannou::prelude::*;
 use nannou::wgpu::Device;
 
@@ -20,10 +18,11 @@ pub struct Capturer {
 
     // save every frame
     pub is_recording: bool,
+    pub is_taking_screenshot: bool,
 }
 
 impl Capturer {
-    pub fn new(texture_size: [u32; 2], window: &Window, device: &Device, path: std::path::PathBuf) -> Self{
+    pub fn new(texture_size: [u32; 2], window: &Window, device: &Device, path: std::path::PathBuf, record_from_the_beginning: bool) -> Self{
     // Create our custom texture.
     let sample_count = window.msaa_samples();
     let texture = wgpu::TextureBuilder::new()
@@ -60,7 +59,8 @@ impl Capturer {
             dst_format,
         );
 
-        let is_recording = true;
+        let is_recording = record_from_the_beginning;
+        let is_taking_screenshot = false;
 
         // Make sure the directory where we will save images to exists.
         std::fs::create_dir_all(&path).unwrap();
@@ -73,6 +73,7 @@ impl Capturer {
             texture_reshaper,
             path,
             is_recording,
+            is_taking_screenshot,
         }
     }
 
@@ -90,46 +91,59 @@ impl Capturer {
         // 1. Resolve the texture to a non-multisampled texture if necessary.
         // 2. Convert the format to non-linear 8-bit sRGBA ready for image storage.
         // 3. Copy the result to a buffer ready to be mapped for reading.
-        let snapshot = &self.texture_capturer.capture(device, &mut encoder, &self.texture);
+        let snapshot = self.texture_capturer.capture(device, &mut encoder, &self.texture);
 
         // Submit the commands for our drawing and texture capture to the GPU.
         window.swap_chain_queue().submit(Some(encoder.finish()));
 
 
-        // Submit a function for writing our snapshot to a PNG.
-        
-        // NOTE: It is essential that the commands for capturing the snapshot are `submit`ted before we
-        // attempt to read the snapshot - otherwise we will read a blank texture!
-        let path = &self.path
-            .join(elapsed_frames.to_string())
-            .with_extension("png");
-        // snapshot
-        //     .read(move |result| {
-        //         let image = result.expect("failed to map texture memory").to_owned();
-        //         image
-        //             .save(&path)
-        //             .expect("failed to save texture to png image");
-        //     })
-        //     .unwrap();
+        if self.is_recording || self.is_taking_screenshot{
+            // Submit a function for writing our snapshot to a PNG.
+            
+            // NOTE: It is essential that the commands for capturing the snapshot are `submit`ted before we
+            // attempt to read the snapshot - otherwise we will read a blank texture!
+            let path = self.path
+                .join(elapsed_frames.to_string())
+                .with_extension("png");
+
+            snapshot
+                .read(move |result| {
+                    let image = result.expect("failed to map texture memory").to_owned();
+                    image
+                        .save(&path)
+                        .expect("failed to save texture to png image");
+                })
+                .unwrap();
+            if self.is_taking_screenshot {
+                self.is_taking_screenshot = false;
+            }
+        }            
     }
 
-    pub fn startRecording(&mut self){
-        //&self.is_recording = true;
+    pub fn start_recording(&mut self){
+        self.is_recording = true;
     }
 
-    pub fn view(){
-
+    pub fn stop_recording(&mut self){
+        self.is_recording = false;
     }
 
-    fn record(){
-
+    // Draw the state of your `Capturer` into the given `Frame` here.
+    pub fn view(&self, frame: Frame){
+        // Sample the texture and write it to the frame.
+        let mut encoder = frame.command_encoder();
+        self
+            .texture_reshaper
+            .encode_render_pass(frame.texture_view(), &mut *encoder);
     }
 
-    pub fn take_screenshot(){
-
+    pub fn take_screenshot(&mut self){
+        self.is_taking_screenshot = true;
     }
 
-    pub fn exit(){
-
+    pub fn exit(&self, device: &Device){
+        self.texture_capturer
+        .await_active_snapshots(&device)
+        .unwrap();
     }
 }
