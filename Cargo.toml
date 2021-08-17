@@ -21,7 +21,8 @@ members = [
 	"raycastcurves",
 	"screeneffect",
 	"svg-easy",
-	"template-quad"
+	"template-quad",
+	"hires"
 ]
 
 [profile.release]

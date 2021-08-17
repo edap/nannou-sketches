@@ -1098,6 +1098,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hires"
+version = "0.1.0"
+dependencies = [
+ "nannou",
+]
+
+[[package]]
 name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
