@@ -19,6 +19,8 @@ use crate::wall_helper::change_color_walls;
 use crate::wall_helper::make_walls;
 mod raycaster;
 pub use crate::wraycaster::Wraycaster;
+pub mod capturer;
+pub use crate::capturer::Capturer;
 
 const EPSILON: f32 = 0.05;
 const ARROW_LENGTH: f32 = 40.0;
@@ -73,9 +75,14 @@ struct Model {
     draw_polygon_mode: usize,
     polygon_contour_weight: f32,
     clear_interval: usize,
+    //capturer: Capturer,
 }
 
 fn model(app: &App) -> Model {
+    let texture_size = [3_840, 2_160];
+    // Create the window.
+    let [win_w, win_h] = [texture_size[0] / 4, texture_size[1] / 4];
+
     let tile_count_w = 8;
     let main_window = app
         .new_window()
@@ -83,7 +90,8 @@ fn model(app: &App) -> Model {
         //.size(1000, 1000)
         //.size(1600, 900)
         //.size(1777, 1000)
-        .size(1920, 1080)
+        //.size(1920, 1080)
+        .size(win_w, win_h)
         // .size( 3840,2160)
         // .size(2560, 1440) // 16:9
         .view(view)
@@ -94,7 +102,7 @@ fn model(app: &App) -> Model {
     let mut walls: Vec<Curve> = Vec::new();
     let mut rays: Vec<Wraycaster> = Vec::new();
     //l = app.window_rect();
-    let win = app.window(main_window).unwrap().rect();
+    let win_rect = app.window(main_window).unwrap().rect();
 
     // Create the UI.
     let ui_window = app
@@ -137,7 +145,7 @@ fn model(app: &App) -> Model {
     let raycaster_density = 6;
     make_walls(
         &mut walls,
-        &win,
+        &win_rect,
         tile_count_w,
         wall_split,
         wall_padding,
@@ -148,7 +156,7 @@ fn model(app: &App) -> Model {
     );
     make_raycasters(
         &mut rays,
-        &win,
+        &win_rect,
         tile_count_w,
         n_caster,
         max_depth,
@@ -226,7 +234,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     let anim = model.animation;
     let anim_speed = model.animation_speed;
     let walls = &model.walls;
-    let win = app.window(model.main_window).unwrap().rect();
+    let win_rect = app.window(model.main_window).unwrap().rect();
     let animation_mode = model.animation_mode;
 
     if model.animation {
@@ -234,13 +242,13 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         model
             .rays
             .par_iter_mut()
-            .for_each(|r| r.animate(&win, anim_speed, animation_mode, time))
+            .for_each(|r| r.animate(&win_rect, anim_speed, animation_mode, time))
     }
 
     model
         .rays
         .par_iter_mut()
-        .for_each(|ray| ray.collide(rot, anim, anim_speed, time, walls, win));
+        .for_each(|ray| ray.collide(rot, anim, anim_speed, time, walls, win_rect));
 }
 
 fn view(app: &App, model: &Model, frame: Frame) {
@@ -368,10 +376,10 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             .label("Regenerate Walls")
             .set(model.ids.button, ui)
         {
-            let win = _app.window(model.main_window).unwrap().rect();
+            let win_rect = _app.window(model.main_window).unwrap().rect();
             make_walls(
                 &mut model.walls,
-                &win,
+                &win_rect,
                 model.tile_count_w,
                 model.wall_split,
                 model.wall_padding,
@@ -383,7 +391,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
 
             make_raycasters(
                 &mut model.rays,
-                &win,
+                &win_rect,
                 model.tile_count_w,
                 model.n_caster,
                 model.max_bounces,
@@ -593,4 +601,11 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
 
 fn ui_view(app: &App, model: &Model, frame: Frame) {
     model.ui.draw_to_frame_if_changed(app, &frame).unwrap();
+}
+
+// The directory where we'll save the frames.
+fn capture_directory(app: &App) -> std::path::PathBuf {
+    app.project_path()
+        .expect("could not locate project_path")
+        .join(app.exe_name().unwrap())
 }
