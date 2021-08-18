@@ -4,8 +4,8 @@ use nannou::ui::prelude::*;
 use rayon::prelude::*;
 
 mod gui;
-mod types;
 mod ray_light;
+mod types;
 pub mod wraycaster;
 use crate::types::Curve;
 mod mondrian;
@@ -15,8 +15,8 @@ pub use crate::bouncing::BouncingRay2D;
 mod ray_helper;
 use crate::ray_helper::make_raycasters;
 mod wall_helper;
-use crate::wall_helper::make_walls;
 use crate::wall_helper::change_color_walls;
+use crate::wall_helper::make_walls;
 mod raycaster;
 pub use crate::wraycaster::Wraycaster;
 
@@ -40,7 +40,7 @@ struct Model {
     n_caster: u32,
     raycaster_density: usize,
     rays: Vec<Wraycaster>,
-    rays_position_mode : usize,
+    rays_position_mode: usize,
     ui: Ui,
     ids: gui::Ids,
     ray_width: f32,
@@ -83,7 +83,7 @@ fn model(app: &App) -> Model {
         //.size(1000, 1000)
         //.size(1600, 900)
         //.size(1777, 1000)
-        .size(1920,1080)
+        .size(1920, 1080)
         // .size( 3840,2160)
         // .size(2560, 1440) // 16:9
         .view(view)
@@ -146,7 +146,17 @@ fn model(app: &App) -> Model {
         palette.get_first(scheme_id, color_off),
         palette.get_second(scheme_id, color_off),
     );
-    make_raycasters(&mut rays, &win, tile_count_w, n_caster, max_depth, raycaster_density, &walls, rays_position_mode, rays_prob);
+    make_raycasters(
+        &mut rays,
+        &win,
+        tile_count_w,
+        n_caster,
+        max_depth,
+        raycaster_density,
+        &walls,
+        rays_position_mode,
+        rays_prob,
+    );
     // walls: & Vec<Curve>,
     // rays_position_mode: usize,
     // rays_probability: f32,
@@ -243,16 +253,13 @@ fn view(app: &App, model: &Model, frame: Frame) {
         draw.background().color(color);
     }
 
-
     //frame.clear(BLACK);
     //let draw = app.draw();
-    if model.clean_bg &&  !model.transparent_bg{
+    if model.clean_bg && !model.transparent_bg {
         let mut color = model.palette.get_fifth(model.scheme_id, model.color_off);
         color.alpha = 1.0;
         draw.background().color(color);
     }
-
-
 
     if model.show_walls {
         for curve in model.walls.iter() {
@@ -266,18 +273,26 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
     for r in &model.rays {
         if model.draw_polygon {
-            r.draw_polygon( &draw,
-                 model.polygon_contour_weight,
-                  model.ray_width,
-                   model.draw_not_colliding_rays, model.draw_polygon_mode);
+            r.draw_polygon(
+                &draw,
+                model.polygon_contour_weight,
+                model.ray_width,
+                model.draw_not_colliding_rays,
+                model.draw_polygon_mode,
+            );
         }
 
         if model.draw_arrows {
-            r.draw_arrows( &draw,model.ray_width);
+            r.draw_arrows(&draw, model.ray_width);
         }
 
         if model.draw_rays {
-            r.draw_rays(&draw, model.ray_width, model.draw_not_colliding_rays, model.light_color_pct);
+            r.draw_rays(
+                &draw,
+                model.ray_width,
+                model.draw_not_colliding_rays,
+                model.light_color_pct,
+            );
         }
     }
 
@@ -343,8 +358,8 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         }
 
         for v in gui::toggle(model.show_walls as bool)
-        .label("Show wall")
-        .set(model.ids.show_walls, ui)
+            .label("Show wall")
+            .set(model.ids.show_walls, ui)
         {
             model.show_walls = v;
         }
@@ -362,14 +377,22 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
                 model.wall_padding,
                 model.hole_pct,
                 model.hole_n,
-          model.palette.get_first(model.scheme_id, model.color_off),
-          model.palette.get_second(model.scheme_id, model.color_off),
-          
+                model.palette.get_first(model.scheme_id, model.color_off),
+                model.palette.get_second(model.scheme_id, model.color_off),
             );
 
-            make_raycasters(&mut model.rays, &win, model.tile_count_w, model.n_caster, model.max_bounces, model.raycaster_density, &model.walls, model.rays_position_mode, model.rays_prob)
+            make_raycasters(
+                &mut model.rays,
+                &win,
+                model.tile_count_w,
+                model.n_caster,
+                model.max_bounces,
+                model.raycaster_density,
+                &model.walls,
+                model.rays_position_mode,
+                model.rays_prob,
+            )
         }
-
 
         // RAYCASTER
         for value in gui::slider(model.n_caster as f32, 1.0, 50.0)
@@ -392,12 +415,11 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         }
 
         for value in gui::slider(model.rays_position_mode as f32, 0.0, 1.0)
-        .label("raycaster pos mode ")
-        .set(model.ids.rays_position_mode, ui)
+            .label("raycaster pos mode ")
+            .set(model.ids.rays_position_mode, ui)
         {
             model.rays_position_mode = value as usize;
         }
-
 
         for value in gui::slider(model.collision_radius as f32, 0.0, 185.0)
             .label("collision radius")
@@ -439,7 +461,6 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.rotation = val;
         }
 
-
         // COLORS
         for value in gui::slider(model.scheme_id as f32, 0.0, 5.0)
             .top_left_with_margins_on(model.ids.n_caster, 0.0, gui::PAD + gui::COL_W)
@@ -447,7 +468,11 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             .set(model.ids.scheme_id, ui)
         {
             model.scheme_id = value as usize;
-            change_color_walls(&mut model.walls, model.palette.get_first(model.scheme_id, model.color_off), model.palette.get_second(model.scheme_id, model.color_off));
+            change_color_walls(
+                &mut model.walls,
+                model.palette.get_first(model.scheme_id, model.color_off),
+                model.palette.get_second(model.scheme_id, model.color_off),
+            );
         }
 
         for value in gui::slider(model.blend_id as f32, 0.0, 3.0)
@@ -462,7 +487,11 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             .set(model.ids.color_off, ui)
         {
             model.color_off = value as usize;
-            change_color_walls(&mut model.walls, model.palette.get_first(model.scheme_id, model.color_off), model.palette.get_second(model.scheme_id, model.color_off));
+            change_color_walls(
+                &mut model.walls,
+                model.palette.get_first(model.scheme_id, model.color_off),
+                model.palette.get_second(model.scheme_id, model.color_off),
+            );
         }
         for value in gui::slider(model.light_color_pct as f32, 0.0, 1.0)
             .label("light color %")
@@ -472,12 +501,16 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         }
 
         for value in gui::slider(model.palette_alpha as f32, 0.0, 1.0)
-        .label("palette_alpha")
-        .set(model.ids.palette_alpha, ui)
+            .label("palette_alpha")
+            .set(model.ids.palette_alpha, ui)
         {
             model.palette_alpha = value;
             model.palette.set_alpha(value);
-            change_color_walls(&mut model.walls, model.palette.get_first(model.scheme_id, model.color_off), model.palette.get_second(model.scheme_id, model.color_off));
+            change_color_walls(
+                &mut model.walls,
+                model.palette.get_first(model.scheme_id, model.color_off),
+                model.palette.get_second(model.scheme_id, model.color_off),
+            );
         }
 
         for value in gui::slider(model.polygon_contour_weight, 0.5, 30.0)
@@ -488,14 +521,14 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         }
 
         for v in gui::toggle(model.clean_bg as bool)
-        .label("Draw Bg")
-        .set(model.ids.clean_bg, ui)
+            .label("Draw Bg")
+            .set(model.ids.clean_bg, ui)
         {
             model.clean_bg = v;
         }
         for v in gui::toggle(model.transparent_bg as bool)
-        .label("Transparent Bg")
-        .set(model.ids.transparent_bg, ui)
+            .label("Transparent Bg")
+            .set(model.ids.transparent_bg, ui)
         {
             model.transparent_bg = v;
         }
@@ -508,15 +541,15 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         }
 
         for value in gui::slider(model.draw_polygon_mode as f32, 0.0, 2.0)
-        .label("Draw poly mode")
-        .set(model.ids.draw_polygon_mode, ui)
-    {
-        model.draw_polygon_mode = value as usize;
-    }
+            .label("Draw poly mode")
+            .set(model.ids.draw_polygon_mode, ui)
+        {
+            model.draw_polygon_mode = value as usize;
+        }
 
         for v in gui::toggle(model.draw_rays as bool)
-        .label("Draw rays")
-        .set(model.ids.draw_rays, ui)
+            .label("Draw rays")
+            .set(model.ids.draw_rays, ui)
         {
             model.draw_rays = v;
         }
@@ -543,11 +576,11 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         }
 
         for value in gui::slider(model.animation_mode as f32, 0.0, 1.0)
-        .label("animation_mode")
-        .set(model.ids.animation_mode, ui)
-    {
-        model.animation_mode = value as usize;
-    }
+            .label("animation_mode")
+            .set(model.ids.animation_mode, ui)
+        {
+            model.animation_mode = value as usize;
+        }
 
         for value in gui::slider(model.animation_speed as f32, 80.0, 0.01)
             .label("animation speed")
@@ -555,8 +588,6 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         {
             model.animation_speed = value;
         }
-
-
     }
 }
 

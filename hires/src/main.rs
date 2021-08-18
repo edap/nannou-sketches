@@ -39,7 +39,7 @@ fn model(app: &App) -> Model {
 
     Model {
         capturer,
-        main_window_id
+        main_window_id,
     }
 }
 
@@ -101,7 +101,6 @@ fn update(app: &App, model: &mut Model, _update: Update) {
 // Draw the state of your `Model` into the given `Frame` here.
 fn view(_app: &App, model: &Model, frame: Frame) {
     model.capturer.view(frame);
-
 }
 
 // Wait for capture to finish.
