@@ -32,11 +32,11 @@ const ARROW_LENGTH: f32 = 40.0;
 // Add a bounding box for the curves.
 
 fn main() {
-    nannou::app(model).update(update).run();
+    nannou::app(model).update(update).exit(exit).run();
 }
 
 struct Model {
-    win_rect: geom::Rect,
+    canvas_rect: geom::Rect,
     walls: Vec<Curve>,
     tile_count_w: u32,
     n_caster: u32,
@@ -117,7 +117,9 @@ fn model(app: &App) -> Model {
     let mut walls: Vec<Curve> = Vec::new();
     let mut rays: Vec<Wraycaster> = Vec::new();
     //l = app.window_rect();
-    let win_rect = app.window(main_window_id).unwrap().rect();
+    //let canvas_rect = app.window(main_window_id).unwrap().rect();
+    let [w, h] = capturer.texture.size();
+    let canvas_rect = geom::Rect::from_w_h(w as f32, h as f32);
 
     // Create the UI.
     let ui_window = app
@@ -160,7 +162,7 @@ fn model(app: &App) -> Model {
     let raycaster_density = 6;
     make_walls(
         &mut walls,
-        &win_rect,
+        &canvas_rect,
         tile_count_w,
         wall_split,
         wall_padding,
@@ -171,7 +173,7 @@ fn model(app: &App) -> Model {
     );
     make_raycasters(
         &mut rays,
-        &win_rect,
+        &canvas_rect,
         tile_count_w,
         n_caster,
         max_depth,
@@ -199,7 +201,7 @@ fn model(app: &App) -> Model {
     let palette_alpha = 1.0;
 
     let mut the_model = Model {
-        win_rect,
+        canvas_rect,
         walls,
         n_caster,
         raycaster_density,
@@ -250,7 +252,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     let anim = model.animation;
     let anim_speed = model.animation_speed;
     let walls = &model.walls;
-    let win_rect = model.win_rect;
+    let canvas_rect = model.canvas_rect;
     let animation_mode = model.animation_mode;
 
     if model.animation {
@@ -258,27 +260,31 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         model
             .rays
             .par_iter_mut()
-            .for_each(|r| r.animate(&win_rect, anim_speed, animation_mode, time))
+            .for_each(|r| r.animate(&canvas_rect, anim_speed, animation_mode, time))
     }
 
     model
         .rays
         .par_iter_mut()
-        .for_each(|ray| ray.collide(rot, anim, anim_speed, time, walls, win_rect));
-}
+        .for_each(|ray| ray.collide(rot, anim, anim_speed, time, walls, canvas_rect));
 
-fn view(app: &App, model: &Model, frame: Frame) {
+    // VIEW
+    // First, reset the `draw` state.
+    let d = &model.capturer.draw;
+    d.reset();
     let blends = [BLEND_NORMAL, BLEND_ADD, BLEND_SUBTRACT, BLEND_LIGHTEST];
-    let draw = app.draw().color_blend(blends[model.blend_id].clone());
-    //frame.clear(model.palette.get_fifth(model.scheme_id, model.color_off));
+    let draw = d.color_blend(blends[model.blend_id].clone());
+
+    // Use the frame number to animate, ensuring we get a constant update time.
+    let elapsed_frames = app.main_window().elapsed_frames();
+    //let t = elapsed_frames as f32 / 60.0;
+
     if model.transparent_bg {
         let mut color = model.palette.get_fifth(model.scheme_id, model.color_off);
         color.alpha = 0.0;
         draw.background().color(color);
     }
 
-    //frame.clear(BLACK);
-    //let draw = app.draw();
     if model.clean_bg && !model.transparent_bg {
         let mut color = model.palette.get_fifth(model.scheme_id, model.color_off);
         color.alpha = 1.0;
@@ -319,8 +325,14 @@ fn view(app: &App, model: &Model, frame: Frame) {
             );
         }
     }
+    // Render our drawing to the texture.
+    let window = app.main_window();
+    let device = window.swap_chain_device();
+    model.capturer.update(&window, &device, elapsed_frames);
+}
 
-    draw.to_frame(app, &frame).unwrap();
+fn view(_app: &App, model: &Model, frame: Frame) {
+    model.capturer.view(frame);
 }
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
@@ -393,10 +405,10 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             .label("Regenerate Walls")
             .set(model.ids.button, ui)
         {
-            let win_rect = model.win_rect;
+            let canvas_rect = model.canvas_rect;
             make_walls(
                 &mut model.walls,
-                &win_rect,
+                &canvas_rect,
                 model.tile_count_w,
                 model.wall_split,
                 model.wall_padding,
@@ -408,7 +420,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
 
             make_raycasters(
                 &mut model.rays,
-                &win_rect,
+                &canvas_rect,
                 model.tile_count_w,
                 model.n_caster,
                 model.max_bounces,
@@ -625,4 +637,12 @@ fn capture_directory(app: &App) -> std::path::PathBuf {
     app.project_path()
         .expect("could not locate project_path")
         .join(app.exe_name().unwrap())
+}
+// Wait for capture to finish.
+fn exit(app: &App, model: Model) {
+    println!("Waiting for PNG writing to complete...");
+    let window = app.main_window();
+    let device = window.swap_chain_device();
+    model.capturer.exit(&device);
+    println!("Done!");
 }
