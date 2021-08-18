@@ -36,7 +36,7 @@ fn main() {
 }
 
 struct Model {
-    main_window_id: WindowId,
+    win_rect: geom::Rect,
     walls: Vec<Curve>,
     tile_count_w: u32,
     n_caster: u32,
@@ -75,7 +75,7 @@ struct Model {
     draw_polygon_mode: usize,
     polygon_contour_weight: f32,
     clear_interval: usize,
-    //capturer: Capturer,
+    capturer: Capturer,
 }
 
 fn model(app: &App) -> Model {
@@ -98,6 +98,21 @@ fn model(app: &App) -> Model {
         .key_pressed(key_pressed)
         .build()
         .unwrap();
+
+    // needed for the capturer
+    // // Retrieve the wgpu device.
+    //let device = app.window(main_window_id).unwrap().swap_chain_device();
+    let sample_count = app.window(main_window_id).unwrap().msaa_samples();
+    let path = capture_directory(app);
+    let capturer = Capturer::new(
+        texture_size,
+        sample_count,
+        app.window(main_window_id).unwrap().swap_chain_device(),
+        path,
+        false,
+    );
+
+    // end capturer
 
     let mut walls: Vec<Curve> = Vec::new();
     let mut rays: Vec<Wraycaster> = Vec::new();
@@ -184,7 +199,7 @@ fn model(app: &App) -> Model {
     let palette_alpha = 1.0;
 
     let mut the_model = Model {
-        main_window_id,
+        win_rect,
         walls,
         n_caster,
         raycaster_density,
@@ -223,6 +238,7 @@ fn model(app: &App) -> Model {
         polygon_contour_weight,
         draw_not_colliding_rays,
         clear_interval,
+        capturer,
     };
     ui_event(&app, &mut the_model, WindowEvent::Focused);
     the_model
@@ -234,7 +250,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     let anim = model.animation;
     let anim_speed = model.animation_speed;
     let walls = &model.walls;
-    let win_rect = app.window(model.main_window_id).unwrap().rect();
+    let win_rect = model.win_rect;
     let animation_mode = model.animation_mode;
 
     if model.animation {
@@ -309,12 +325,13 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
     match key {
-        Key::S => match app.window(model.main_window_id) {
-            Some(window) => {
-                window.capture_frame(app.time.to_string() + ".png");
-            }
-            None => {}
-        },
+        Key::S => model.capturer.take_screenshot(),
+        // Key::S => match app.window(model.main_window_id) {
+        //     Some(window) => {
+        //         window.capture_frame(app.time.to_string() + ".png");
+        //     }
+        //     None => {}
+        // },
         _other_key => {}
     }
 }
@@ -376,7 +393,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             .label("Regenerate Walls")
             .set(model.ids.button, ui)
         {
-            let win_rect = _app.window(model.main_window_id).unwrap().rect();
+            let win_rect = model.win_rect;
             make_walls(
                 &mut model.walls,
                 &win_rect,

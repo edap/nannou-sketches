@@ -26,13 +26,12 @@ pub struct Capturer {
 impl Capturer {
     pub fn new(
         texture_size: [u32; 2],
-        window: &Window,
+        sample_count: u32,
         device: &Device,
         path: std::path::PathBuf,
         record_from_the_beginning: bool,
     ) -> Self {
         // Create our custom texture.
-        let sample_count = window.msaa_samples();
         let texture = wgpu::TextureBuilder::new()
             .size(texture_size)
             // Our texture will be used as the RENDER_ATTACHMENT for our `Draw` render pass.
