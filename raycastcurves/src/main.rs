@@ -25,9 +25,8 @@ pub use crate::capturer::Capturer;
 const EPSILON: f32 = 0.05;
 const ARROW_LENGTH: f32 = 40.0;
 
-// TODO implement whitted cast_ray function. Change max_bounces to max depth. Assumes that all your
-// Curves in the scene are transparents.
-// Calculate the color of the collision points on the curves. Assume white light (at the beginning). Save the depth level for each collision(?)
+// TODO
+
 // Draw the polygon grouping the points by depth level.
 // Add a bounding box for the curves.
 
@@ -79,29 +78,24 @@ struct Model {
 }
 
 fn model(app: &App) -> Model {
+    // we render on a 4k texture
     let texture_size = [3_840, 2_160];
-    // Create the window.
+    //let texture_size = [2_160, 2_160];
+    // Create the window, that is 4 times smaller than the texture
     let [win_w, win_h] = [texture_size[0] / 4, texture_size[1] / 4];
+    // we also draw on a 4k canvas
+    let canvas_rect = geom::Rect::from_w_h(texture_size[0] as f32, texture_size[1] as f32);
 
     let tile_count_w = 8;
     let main_window_id = app
         .new_window()
-        //.size(1280, 720)
-        //.size(1000, 1000)
-        //.size(1600, 900)
-        //.size(1777, 1000)
-        //.size(1920, 1080)
         .size(win_w, win_h)
-        // .size( 3840,2160)
-        // .size(2560, 1440) // 16:9
         .view(view)
         .key_pressed(key_pressed)
         .build()
         .unwrap();
 
-    // needed for the capturer
-    // // Retrieve the wgpu device.
-    //let device = app.window(main_window_id).unwrap().swap_chain_device();
+    // set up the capturer
     let sample_count = app.window(main_window_id).unwrap().msaa_samples();
     let path = capture_directory(app);
     let capturer = Capturer::new(
@@ -111,15 +105,7 @@ fn model(app: &App) -> Model {
         path,
         false,
     );
-
     // end capturer
-
-    let mut walls: Vec<Curve> = Vec::new();
-    let mut rays: Vec<Wraycaster> = Vec::new();
-    //l = app.window_rect();
-    //let canvas_rect = app.window(main_window_id).unwrap().rect();
-    let [w, h] = capturer.texture.size();
-    let canvas_rect = geom::Rect::from_w_h(w as f32, h as f32);
 
     // Create the UI.
     let ui_window = app
@@ -139,6 +125,9 @@ fn model(app: &App) -> Model {
     theme.label_color = color::WHITE;
     theme.shape_color = color::CHARCOAL;
 
+    // initialize the fields of the model
+    let mut walls: Vec<Curve> = Vec::new();
+    let mut rays: Vec<Wraycaster> = Vec::new();
     let ray_width = 3.0;
     let wall_width = 2.0;
     let wall_split = 0.3;
@@ -247,7 +236,11 @@ fn model(app: &App) -> Model {
 }
 
 fn update(app: &App, model: &mut Model, _update: Update) {
-    let time = app.time;
+    // Use the frame number to animate, ensuring we get a constant update time.
+    let elapsed_frames = app.main_window().elapsed_frames();
+    let time = elapsed_frames as f32 / 60.0;
+    // let time = app.time;
+
     let rot = model.rotation;
     let anim = model.animation;
     let anim_speed = model.animation_speed;
@@ -268,16 +261,15 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         .par_iter_mut()
         .for_each(|ray| ray.collide(rot, anim, anim_speed, time, walls, canvas_rect));
 
+    // Because we draw in the texture, all the code that usually goes in the view method has to be moved into the update
+    // function.
+
     // VIEW
     // First, reset the `draw` state.
     let d = &model.capturer.draw;
     d.reset();
     let blends = [BLEND_NORMAL, BLEND_ADD, BLEND_SUBTRACT, BLEND_LIGHTEST];
     let draw = d.color_blend(blends[model.blend_id].clone());
-
-    // Use the frame number to animate, ensuring we get a constant update time.
-    let elapsed_frames = app.main_window().elapsed_frames();
-    //let t = elapsed_frames as f32 / 60.0;
 
     if model.transparent_bg {
         let mut color = model.palette.get_fifth(model.scheme_id, model.color_off);
@@ -335,9 +327,11 @@ fn view(_app: &App, model: &Model, frame: Frame) {
     model.capturer.view(frame);
 }
 
-fn key_pressed(app: &App, model: &mut Model, key: Key) {
+fn key_pressed(_app: &App, model: &mut Model, key: Key) {
     match key {
         Key::S => model.capturer.take_screenshot(),
+        Key::R => model.capturer.start_recording(),
+        Key::P => model.capturer.stop_recording(),
         // Key::S => match app.window(model.main_window_id) {
         //     Some(window) => {
         //         window.capture_frame(app.time.to_string() + ".png");

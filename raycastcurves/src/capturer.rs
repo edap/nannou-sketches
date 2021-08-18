@@ -14,12 +14,11 @@ pub struct Capturer {
     pub texture_capturer: wgpu::TextureCapturer,
     // The type used to resize our texture to the window texture.
     pub texture_reshaper: wgpu::TextureReshaper,
-
     // where the the image are saved
     pub path: std::path::PathBuf,
-
-    // save every frame
+    // If true record every frame
     pub is_recording: bool,
+    // If true record one frame
     pub is_taking_screenshot: bool,
 }
 
