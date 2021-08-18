@@ -36,7 +36,7 @@ fn main() {
 }
 
 struct Model {
-    main_window: WindowId,
+    main_window_id: WindowId,
     walls: Vec<Curve>,
     tile_count_w: u32,
     n_caster: u32,
@@ -84,7 +84,7 @@ fn model(app: &App) -> Model {
     let [win_w, win_h] = [texture_size[0] / 4, texture_size[1] / 4];
 
     let tile_count_w = 8;
-    let main_window = app
+    let main_window_id = app
         .new_window()
         //.size(1280, 720)
         //.size(1000, 1000)
@@ -102,7 +102,7 @@ fn model(app: &App) -> Model {
     let mut walls: Vec<Curve> = Vec::new();
     let mut rays: Vec<Wraycaster> = Vec::new();
     //l = app.window_rect();
-    let win_rect = app.window(main_window).unwrap().rect();
+    let win_rect = app.window(main_window_id).unwrap().rect();
 
     // Create the UI.
     let ui_window = app
@@ -184,7 +184,7 @@ fn model(app: &App) -> Model {
     let palette_alpha = 1.0;
 
     let mut the_model = Model {
-        main_window,
+        main_window_id,
         walls,
         n_caster,
         raycaster_density,
@@ -234,7 +234,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     let anim = model.animation;
     let anim_speed = model.animation_speed;
     let walls = &model.walls;
-    let win_rect = app.window(model.main_window).unwrap().rect();
+    let win_rect = app.window(model.main_window_id).unwrap().rect();
     let animation_mode = model.animation_mode;
 
     if model.animation {
@@ -309,7 +309,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
 
 fn key_pressed(app: &App, model: &mut Model, key: Key) {
     match key {
-        Key::S => match app.window(model.main_window) {
+        Key::S => match app.window(model.main_window_id) {
             Some(window) => {
                 window.capture_frame(app.time.to_string() + ".png");
             }
@@ -376,7 +376,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             .label("Regenerate Walls")
             .set(model.ids.button, ui)
         {
-            let win_rect = _app.window(model.main_window).unwrap().rect();
+            let win_rect = _app.window(model.main_window_id).unwrap().rect();
             make_walls(
                 &mut model.walls,
                 &win_rect,
