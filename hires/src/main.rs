@@ -28,14 +28,19 @@ fn model(app: &App) -> Model {
         .key_pressed(key_pressed)
         .build()
         .unwrap();
-    let window = app.window(main_window_id).unwrap();
 
-    // Retrieve the wgpu device.
-    let device = window.swap_chain_device();
+    // Retrieve the number of samples.
+    let sample_count = app.window(main_window_id).unwrap().msaa_samples();
 
     // path where images are saved
     let path = capture_directory(app);
-    let capturer = Capturer::new(texture_size, &window, &device, path, false);
+    let capturer = Capturer::new(
+        texture_size,
+        sample_count,
+        app.window(main_window_id).unwrap().swap_chain_device(),
+        path,
+        false,
+    );
 
     Model {
         capturer,
