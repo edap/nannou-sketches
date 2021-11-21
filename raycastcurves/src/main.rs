@@ -2,12 +2,14 @@ use edapx_colors::Palette;
 use nannou::prelude::*;
 use nannou::ui::prelude::*;
 use rayon::prelude::*;
+use types::Material;
 
 mod gui;
 mod ray_light;
 mod types;
 pub mod wraycaster;
 use crate::types::Curve;
+use crate::types::SurfaceType;
 mod mondrian;
 pub use crate::mondrian::Square;
 mod bouncing;
@@ -74,6 +76,7 @@ struct Model {
     polygon_contour_weight: f32,
     clear_interval: usize,
     capturer: Capturer,
+    default_material: Material,
 }
 
 fn model(app: &App) -> Model {
@@ -148,6 +151,7 @@ fn model(app: &App) -> Model {
     let clear_interval = 14;
     let max_depth = 4;
     let raycaster_density = 6;
+    let default_material = Material::default();
     make_walls(
         &mut walls,
         &canvas_rect,
@@ -158,6 +162,8 @@ fn model(app: &App) -> Model {
         hole_n,
         palette.get_first(scheme_id, color_off),
         palette.get_second(scheme_id, color_off),
+        &default_material
+
     );
     make_raycasters(
         &mut rays,
@@ -187,6 +193,7 @@ fn model(app: &App) -> Model {
     let clean_bg = true;
     let transparent_bg = false;
     let palette_alpha = 1.0;
+
 
     let mut the_model = Model {
         canvas_rect,
@@ -229,6 +236,7 @@ fn model(app: &App) -> Model {
         draw_not_colliding_rays,
         clear_interval,
         capturer,
+        default_material,
     };
     ui_event(&app, &mut the_model, WindowEvent::Focused);
     the_model
@@ -409,6 +417,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
                 model.hole_n,
                 model.palette.get_first(model.scheme_id, model.color_off),
                 model.palette.get_second(model.scheme_id, model.color_off),
+                &model.default_material
             );
 
             make_raycasters(
@@ -445,7 +454,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         }
 
         for value in gui::slider(model.rays_position_mode as f32, 0.0, 1.0)
-            .label("raycaster pos mode ")
+            .label("raycaster pos mode")
             .set(model.ids.rays_position_mode, ui)
         {
             model.rays_position_mode = value as usize;
@@ -489,6 +498,20 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             .set(model.ids.rotation, ui)
         {
             model.rotation = val;
+        }
+
+        for v in gui::toggle(model.draw_rays as bool)
+            .label("Draw rays")
+            .set(model.ids.draw_rays, ui)
+        {
+            model.draw_rays = v;
+        }
+
+        for v in gui::toggle(model.draw_not_colliding_rays as bool)
+            .label("Draw Not Colliding rays")
+            .set(model.ids.draw_not_colliding_rays, ui)
+        {
+            model.draw_not_colliding_rays = v;
         }
 
         // COLORS
@@ -577,13 +600,6 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.draw_polygon_mode = value as usize;
         }
 
-        for v in gui::toggle(model.draw_rays as bool)
-            .label("Draw rays")
-            .set(model.ids.draw_rays, ui)
-        {
-            model.draw_rays = v;
-        }
-
         for v in gui::toggle(model.draw_arrows as bool)
             .label("Draw Arrows")
             .set(model.ids.draw_arrows, ui)
@@ -591,12 +607,6 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.draw_arrows = v;
         }
 
-        for v in gui::toggle(model.draw_not_colliding_rays as bool)
-            .label("Draw Not Colliding rays")
-            .set(model.ids.draw_not_colliding_rays, ui)
-        {
-            model.draw_not_colliding_rays = v;
-        }
 
         for v in gui::toggle(model.animation as bool)
             .label("Animation")

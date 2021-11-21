@@ -1,11 +1,11 @@
 use nannou::prelude::*;
 
-#[derive(Debug,Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum SurfaceType {
     Diffuse,
     Reflective { reflectivity: f32 },
-    Refractive { ior: f32},
-    ReflectiveAndRefractive { reflectivity: f32, ior: f32},
+    Refractive { ior: f32 },
+    ReflectiveAndRefractive { reflectivity: f32, ior: f32 },
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -20,8 +20,11 @@ impl Default for Material {
         let coin = random_range(0.0, 1.0);
         let mut sur;
         if coin > 0.5 {
-            sur = SurfaceType::ReflectiveAndRefractive {reflectivity: 1.0, ior: 1.4};
-        }else{
+            sur = SurfaceType::ReflectiveAndRefractive {
+                reflectivity: 1.0,
+                ior: 1.4,
+            };
+        } else {
             sur = SurfaceType::Diffuse;
         }
 
@@ -29,8 +32,7 @@ impl Default for Material {
             coloration: rgba(0.0, 0.0, 1.0, 1.0),
             albedo: 1.0,
             //surface: SurfaceType::Diffuse
-            surface: sur
-            
+            surface: sur,
         }
     }
 }

@@ -14,6 +14,7 @@ pub fn make_walls(
     hole_n: usize,
     color_a: Rgba,
     color_b: Rgba,
+    material: &Material,
 ) {
     walls.clear();
     let margin: i32 = 100;
@@ -31,15 +32,18 @@ pub fn make_walls(
     }
     for square in &squares {
         let padding = step as f32 * perc_padding;
-        create_curve_from_square(&square, padding, hole_pct, hole_n, walls);
+        create_curve_from_square(&square, padding, hole_pct, hole_n, walls, &material);
     }
     change_color_walls(walls, color_a, color_b);
 }
 
-
-pub fn change_color_walls(walls: &mut Vec<Curve>, color_a: Rgba, color_b: Rgba){
+pub fn change_color_walls(walls: &mut Vec<Curve>, color_a: Rgba, color_b: Rgba) {
     walls.iter_mut().for_each(|curve| {
-        let color : Rgba = if random_range(0.0, 1.0) > 0.5 { color_a } else {color_b} ;
+        let color: Rgba = if random_range(0.0, 1.0) > 0.5 {
+            color_a
+        } else {
+            color_b
+        };
         curve.material.coloration = color;
     });
 }
@@ -50,6 +54,7 @@ pub fn create_curve_from_square(
     hole: f32,
     hole_n: usize,
     walls: &mut Vec<Curve>,
+    mat: &Material,
 ) {
     let center = vec2(
         square.x + square.width / 2.0,
@@ -65,8 +70,7 @@ pub fn create_curve_from_square(
     let pad = (wall_length as f32 * hole) as usize;
     let mut start_from = 0;
     let mut end_to = start_from + wall_length - pad;
-
-    let mat = Material::default();
+    let cloned_mat = mat.clone();
 
     if hole > 0.1 {
         for i in (0..=360).step_by(1) {
@@ -74,16 +78,16 @@ pub fn create_curve_from_square(
             //points.push(center + vec2(rad.sin() * radius, rad.cos() * radius));
             let x = (square.width / 2.0 - padding) * rad.cos();
             let y = (square.height / 2.0 - padding) * rad.sin();
-    
+
             if i >= start_from && i < end_to {
                 points.push(center + vec2(x, y))
             }
-    
+
             if i == end_to {
                 points.push(center + vec2(x, y));
                 walls.push(Curve {
                     points: points.clone(),
-                    material: mat,
+                    material: cloned_mat,
                     ray_anchor_point: Some(center),
                 });
                 points.clear();
@@ -98,14 +102,12 @@ pub fn create_curve_from_square(
             let x = (square.width / 2.0 - padding) * rad.cos();
             let y = (square.height / 2.0 - padding) * rad.sin();
             points.push(center + vec2(x, y))
-
         }
         walls.push(Curve {
             points: points.clone(),
-            material: mat,
+            material: cloned_mat,
             ray_anchor_point: Some(center),
         });
         points.clear();
-
     }
 }

@@ -19,6 +19,7 @@ members = [
 	"raycircle3",
 	"raycurves",
 	"raycastcurves",
+	"bezier",
 	"screeneffect",
 	"svg-easy",
 	"template-quad",
