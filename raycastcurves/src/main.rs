@@ -3,6 +3,7 @@ use nannou::prelude::*;
 use nannou::ui::prelude::*;
 use rayon::prelude::*;
 use types::Material;
+use wall_helper::change_surface_walls;
 
 mod gui;
 mod ray_light;
@@ -162,8 +163,7 @@ fn model(app: &App) -> Model {
         hole_n,
         palette.get_first(scheme_id, color_off),
         palette.get_second(scheme_id, color_off),
-        &default_material
-
+        &default_material,
     );
     make_raycasters(
         &mut rays,
@@ -193,7 +193,6 @@ fn model(app: &App) -> Model {
     let clean_bg = true;
     let transparent_bg = false;
     let palette_alpha = 1.0;
-
 
     let mut the_model = Model {
         canvas_rect,
@@ -401,6 +400,16 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         {
             model.show_walls = v;
         }
+        for _click in gui::button()
+            .label("Regenerate Walls")
+            .set(model.ids.button, ui)
+        {
+            let surface = SurfaceType::ReflectiveAndRefractive {
+                reflectivity: 1.0,
+                ior: 1.4,
+            };
+            change_surface_walls(&mut model.walls, surface)
+        }
 
         for _click in gui::button()
             .label("Regenerate Walls")
@@ -417,7 +426,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
                 model.hole_n,
                 model.palette.get_first(model.scheme_id, model.color_off),
                 model.palette.get_second(model.scheme_id, model.color_off),
-                &model.default_material
+                &model.default_material,
             );
 
             make_raycasters(
@@ -606,7 +615,6 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         {
             model.draw_arrows = v;
         }
-
 
         for v in gui::toggle(model.animation as bool)
             .label("Animation")

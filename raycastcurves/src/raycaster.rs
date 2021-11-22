@@ -9,11 +9,11 @@ const EPSILON: f32 = 0.05;
 #[derive(Debug)]
 pub struct Raycaster {
     pub bouncing_rays: Vec<BouncingRay2D>,
-    pub direction: Vector2,
+    pub direction: Vec2,
 }
 
 impl Raycaster {
-    pub fn new(position: Vector2, direction: Vector2) -> Self {
+    pub fn new(position: Vec2, direction: Vec2) -> Self {
         let mut bouncing_rays: Vec<BouncingRay2D> = Vec::new();
         for i in (0..360).step_by(6) {
             let radian = deg_to_rad(i as f32);
@@ -29,7 +29,7 @@ impl Raycaster {
         }
     }
 
-    pub fn move_to(&mut self, new_pos: Vector2) {
+    pub fn move_to(&mut self, new_pos: Vec2) {
         self.bouncing_rays.par_iter_mut().for_each(|b_ray| {
             b_ray.primary_ray.orig.x = new_pos.x;
             b_ray.primary_ray.orig.y = new_pos.y
@@ -54,10 +54,18 @@ impl Raycaster {
         }
     }
 
-    pub fn draw_inside(&self, draw: &Draw, poly_weight: f32, weight: f32, cola: Rgb, colb: Rgb, colc: Rgb, cold: Rgb, cole: Rgb) {
-        for b_ray in self.bouncing_rays.iter() {
-
-        }
+    pub fn draw_inside(
+        &self,
+        draw: &Draw,
+        poly_weight: f32,
+        weight: f32,
+        cola: Rgb,
+        colb: Rgb,
+        colc: Rgb,
+        cold: Rgb,
+        cole: Rgb,
+    ) {
+        for b_ray in self.bouncing_rays.iter() {}
     }
 
     pub fn draw(&self, draw: &Draw, poly_weight: f32, weight: f32, cola: Rgb, colb: Rgb) {
@@ -114,8 +122,7 @@ impl Raycaster {
                     //draw.polygon().points_textured(&model.texture, ppp);
                 }
             } else {
-                let end_point =
-                    b_ray.primary_ray.orig + b_ray.primary_ray.dir.normalize() * 2000.0;
+                let end_point = b_ray.primary_ray.orig + b_ray.primary_ray.dir.normalize() * 2000.0;
                 draw.line()
                     .start(b_ray.primary_ray.orig)
                     .end(end_point)
@@ -173,12 +180,11 @@ pub fn ray_collides(
     r.reflections.clear();
     r.refl_intensity.clear();
 
-
     //while !r.max_bounces_reached() {
     while r.bounces < 4 {
-        let collision: Vector2;
+        let collision: Vec2;
         let mut distance: f32 = Float::infinity();
-        let mut surface_normal: Vector2 = vec2(0.0, 0.0);
+        let mut surface_normal: Vec2 = vec2(0.0, 0.0);
         // find the closest intersection point between the ray and the walls
         for curve in walls.iter() {
             if let Some(collision) = r.ray.intersect_polyline(&curve.points) {
@@ -197,14 +203,12 @@ pub fn ray_collides(
 
             // check if the material reflect, in case add a reflcetion path
 
-
             let refl = r.ray.reflect(surface_normal);
             r.refl_intensity.push(r.ray.dir.dot(refl).abs());
             r.ray.orig = collision + refl.normalize() * EPSILON;
             r.ray.dir = refl;
 
             r.reflections.push(refl);
-            
         } else {
             break;
         };

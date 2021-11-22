@@ -2,6 +2,7 @@ use crate::mondrian::split_squares;
 pub use crate::mondrian::Square;
 use crate::types::Curve;
 use crate::types::Material;
+use crate::types::SurfaceType;
 use nannou::prelude::*;
 
 pub fn make_walls(
@@ -45,6 +46,12 @@ pub fn change_color_walls(walls: &mut Vec<Curve>, color_a: Rgba, color_b: Rgba) 
             color_b
         };
         curve.material.coloration = color;
+    });
+}
+
+pub fn change_surface_walls(walls: &mut Vec<Curve>, surface: SurfaceType) {
+    walls.iter_mut().for_each(|curve| {
+        curve.material.surface = surface;
     });
 }
 
