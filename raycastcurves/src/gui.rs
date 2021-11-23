@@ -5,7 +5,7 @@ pub const WIN_W: u32 = 600;
 pub const WIN_H: u32 = 900;
 pub const PAD: Scalar = 20.0;
 pub const N_COL: u32 = 4;
-pub const COL_W: Scalar = (WIN_W/N_COL) as Scalar - PAD * 2.0;
+pub const COL_W: Scalar = (WIN_W / N_COL) as Scalar - PAD * 2.0;
 const LABEL_FONT_SIZE: u32 = 12;
 const DEFAULT_WIDGET_H: Scalar = 30.0;
 const PAD_BOTTOM: Scalar = 3.0;
@@ -18,7 +18,10 @@ widget_ids! {
         hole_pct,
         hole_n,
         tile_count_w,
-        button,
+        button_refl,
+        button_diffuse,
+        button_refl_refr,
+        button_regenerate,
         n_caster,
         raycaster_density,
         ray_width,

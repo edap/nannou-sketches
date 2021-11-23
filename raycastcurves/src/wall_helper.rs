@@ -49,9 +49,9 @@ pub fn change_color_walls(walls: &mut Vec<Curve>, color_a: Rgba, color_b: Rgba) 
     });
 }
 
-pub fn change_surface_walls(walls: &mut Vec<Curve>, surface: SurfaceType) {
+pub fn change_surface_walls(walls: &mut Vec<Curve>, surface: &SurfaceType) {
     walls.iter_mut().for_each(|curve| {
-        curve.material.surface = surface;
+        curve.material.surface = surface.clone();
     });
 }
 

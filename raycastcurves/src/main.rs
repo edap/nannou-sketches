@@ -77,7 +77,7 @@ struct Model {
     polygon_contour_weight: f32,
     clear_interval: usize,
     capturer: Capturer,
-    default_material: Material,
+    material: Material,
 }
 
 fn model(app: &App) -> Model {
@@ -152,7 +152,7 @@ fn model(app: &App) -> Model {
     let clear_interval = 14;
     let max_depth = 4;
     let raycaster_density = 6;
-    let default_material = Material::default();
+    let material = Material::default();
     make_walls(
         &mut walls,
         &canvas_rect,
@@ -163,7 +163,7 @@ fn model(app: &App) -> Model {
         hole_n,
         palette.get_first(scheme_id, color_off),
         palette.get_second(scheme_id, color_off),
-        &default_material,
+        &material,
     );
     make_raycasters(
         &mut rays,
@@ -235,7 +235,7 @@ fn model(app: &App) -> Model {
         draw_not_colliding_rays,
         clear_interval,
         capturer,
-        default_material,
+        material,
     };
     ui_event(&app, &mut the_model, WindowEvent::Focused);
     the_model
@@ -401,19 +401,36 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.show_walls = v;
         }
         for _click in gui::button()
-            .label("Regenerate Walls")
-            .set(model.ids.button, ui)
+            .label("Walls Refl Refr")
+            .set(model.ids.button_refl_refr, ui)
         {
             let surface = SurfaceType::ReflectiveAndRefractive {
                 reflectivity: 1.0,
                 ior: 1.4,
             };
-            change_surface_walls(&mut model.walls, surface)
+            model.material.surface = surface;
+            change_surface_walls(&mut model.walls, &surface)
+        }
+        for _click in gui::button()
+            .label("Walls Refl")
+            .set(model.ids.button_refl, ui)
+        {
+            let surface = SurfaceType::Reflective { reflectivity: 1.0 };
+            model.material.surface = surface;
+            change_surface_walls(&mut model.walls, &surface)
+        }
+        for _click in gui::button()
+            .label("Walls Diffuse")
+            .set(model.ids.button_diffuse, ui)
+        {
+            let surface = SurfaceType::Diffuse;
+            model.material.surface = surface;
+            change_surface_walls(&mut model.walls, &surface)
         }
 
         for _click in gui::button()
             .label("Regenerate Walls")
-            .set(model.ids.button, ui)
+            .set(model.ids.button_regenerate, ui)
         {
             let canvas_rect = model.canvas_rect;
             make_walls(
@@ -426,7 +443,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
                 model.hole_n,
                 model.palette.get_first(model.scheme_id, model.color_off),
                 model.palette.get_second(model.scheme_id, model.color_off),
-                &model.default_material,
+                &model.material,
             );
 
             make_raycasters(
