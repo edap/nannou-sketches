@@ -250,26 +250,16 @@ impl Wraycaster {
         // }
     }
 
-    pub fn draw_rays(
-        &self,
-        draw: &Draw,
-        weight: f32,
-        draw_not_colliding_rays: bool,
-        light_color_pct: f32,
-    ) {
+    pub fn draw_rays(&self, draw: &Draw, weight: f32, draw_not_colliding_rays: bool) {
         for pray in self.ray_lights.iter() {
             match pray.intersections.len() {
                 1 => {
                     let first_two_points = vec![pray.starting_pos, pray.intersections[0].pos];
                     let colors = vec![pray.color, pray.intersections[0].color];
-                    let first_two_points_colored =
-                        first_two_points
-                            .iter()
-                            .zip(colors.iter())
-                            .map(|(&pt, &col)| {
-                                //(pt,col)
-                                (pt, col.mix(&pray.color, light_color_pct))
-                            });
+                    let first_two_points_colored = first_two_points
+                        .iter()
+                        .zip(colors.iter())
+                        .map(|(&pt, &col)| (pt, col));
                     draw.polyline()
                         .stroke_weight(weight)
                         .caps_round()
@@ -292,14 +282,10 @@ impl Wraycaster {
                         .iter()
                         .chain(intersection_points_col.iter())
                         .collect();
-                    let points_colored =
-                        points
-                            .into_iter()
-                            .zip(colors.into_iter())
-                            .map(|(&pt, &col)| {
-                                //(pt, col)
-                                (pt, col.mix(&pray.color, light_color_pct))
-                            });
+                    let points_colored = points
+                        .into_iter()
+                        .zip(colors.into_iter())
+                        .map(|(&pt, &col)| (pt, col));
                     draw.polyline()
                         .stroke_weight(weight)
                         .caps_round()

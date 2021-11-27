@@ -315,12 +315,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         }
 
         if model.draw_rays {
-            r.draw_rays(
-                &draw,
-                model.ray_width,
-                model.draw_not_colliding_rays,
-                model.light_color_pct,
-            );
+            r.draw_rays(&draw, model.ray_width, model.draw_not_colliding_rays);
         }
     }
     // Render our drawing to the texture.

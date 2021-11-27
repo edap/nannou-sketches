@@ -2,3 +2,4 @@ screenshots
 **/*.rs.bk
 **/target
 *.png
+**/*.png
