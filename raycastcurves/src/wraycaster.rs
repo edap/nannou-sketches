@@ -307,7 +307,7 @@ impl Wraycaster {
                         .points_colored(points_colored);
                 }
                 0 if draw_not_colliding_rays => {
-                    let end_point = pray.ray.orig + pray.ray.dir.normalize() * 2000.0;
+                    let end_point = pray.ray.orig + pray.ray.dir.normalize() * f32::MAX;
                     draw.line()
                         .start(pray.starting_pos)
                         .end(end_point)
@@ -377,7 +377,12 @@ pub fn cast_ray(
             // collision point
             collision = ray.orig + ray.dir.normalize() * distance;
 
-            let mut hsla = get_color(&surface_normal, &material, light_amount);
+            let hsla = get_color(
+                &surface_normal,
+                &ray.dir.normalize(),
+                &material,
+                light_amount,
+            );
 
             //secondary rays.
 
@@ -470,11 +475,18 @@ pub fn cast_ray(
         }
     }
 
-    fn get_color(surface_direction: &Vec2, material: &Material, light_amount: f64) -> Hsla {
+    fn get_color(
+        surface_direction: &Vec2,
+        ray_direction: &Vec2,
+        material: &Material,
+        light_amount: f64,
+    ) -> Hsla {
         // let mut alpha : f32 = 1.0 - ( *depth as f32 / max_depth as f32);
         // alpha = alpha.min(0.0).max(1.0);
         let mut hsla: Hsla = material.coloration.into();
-        hsla.alpha = light_amount as f32 * hsla.alpha;
+        let diffuse_component = surface_direction.dot(*ray_direction).clamp(0.0, 1.0);
+        hsla.lightness = hsla.lightness * diffuse_component;
+        //hsla.alpha = light_amount as f32 * hsla.alpha;
         return hsla;
     }
 }

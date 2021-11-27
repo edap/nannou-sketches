@@ -133,7 +133,7 @@ fn model(app: &App) -> Model {
     let mut rays: Vec<Wraycaster> = Vec::new();
     let ray_width = 3.0;
     let wall_width = 2.0;
-    let wall_split = 0.3;
+    let wall_split = 1.0;
     let wall_padding = 0.07;
     let hole_pct = 0.25;
     let hole_n = 2;
