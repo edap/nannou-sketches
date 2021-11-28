@@ -318,6 +318,11 @@ impl Wraycaster {
         self.ray_lights.par_iter_mut().for_each(|pray| {
             pray.reset();
             //println!("DDD {:?}", pray.count_depth);
+            // principle of light conservation. The amount of light does not decrease.
+            // but at the same time it does not increase. If a ray generates 2 secondary rays like
+            // in a refractive and reflective surface, the amount of light is split among the 2
+            // secondary rays.
+            // This parameter is used as alpha channel of the color.
             let light_amount = 1.0;
             cast_ray(
                 &mut pray.ray,
@@ -363,12 +368,8 @@ pub fn cast_ray(
             // collision point
             collision = ray.orig + ray.dir.normalize() * distance;
 
-            let hsla = get_color(
-                &surface_normal,
-                &ray.dir.normalize(),
-                &material,
-                light_amount,
-            );
+            let mut hsla = get_color(&surface_normal, &ray.dir.normalize(), &material);
+            hsla.alpha = light_amount as f32;
 
             //secondary rays.
 
@@ -461,18 +462,14 @@ pub fn cast_ray(
         }
     }
 
-    fn get_color(
-        surface_direction: &Vec2,
-        ray_direction: &Vec2,
-        material: &Material,
-        light_amount: f64,
-    ) -> Hsla {
+    // at the moment this method is doing nothing
+    fn get_color(surface_direction: &Vec2, ray_direction: &Vec2, material: &Material) -> Hsla {
         // let mut alpha : f32 = 1.0 - ( *depth as f32 / max_depth as f32);
         // alpha = alpha.min(0.0).max(1.0);
         let mut hsla: Hsla = material.coloration.into();
         let diffuse_component = surface_direction.dot(*ray_direction).clamp(0.0, 1.0);
-        hsla.lightness = hsla.lightness * diffuse_component;
-        //hsla.alpha = light_amount as f32 * hsla.alpha;
+        //hsla.lightness = hsla.lightness * diffuse_component;
+
         return hsla;
     }
 }
