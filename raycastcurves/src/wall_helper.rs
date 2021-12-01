@@ -1,5 +1,7 @@
 use crate::mondrian::split_squares;
 pub use crate::mondrian::Square;
+use crate::types::BoundingVolume;
+use crate::types::BoundingVolume::Sphere;
 use crate::types::Curve;
 use crate::types::Material;
 use crate::types::SurfaceType;
@@ -78,6 +80,7 @@ pub fn create_curve_from_square(
     let mut start_from = 0;
     let mut end_to = start_from + wall_length - pad;
     let cloned_mat = mat.clone();
+    let bounding_volume = get_sphere_from_square(square);
 
     if hole > 0.1 {
         for i in (0..=360).step_by(1) {
@@ -96,6 +99,7 @@ pub fn create_curve_from_square(
                     points: points.clone(),
                     material: cloned_mat,
                     ray_anchor_point: Some(center),
+                    bounding_volume: Some(bounding_volume),
                 });
                 points.clear();
                 start_from = i + pad;
@@ -114,7 +118,25 @@ pub fn create_curve_from_square(
             points: points.clone(),
             material: cloned_mat,
             ray_anchor_point: Some(center),
+            bounding_volume: Some(bounding_volume),
         });
         points.clear();
+    }
+}
+
+fn get_sphere_from_square(square: &Square) -> crate::wall_helper::BoundingVolume {
+    let mut radius: f32;
+    if square.width > square.height {
+        radius = square.width;
+    } else {
+        radius = square.height;
+    }
+    let center = vec2(
+        square.x + square.width / 2.0,
+        square.y + square.height / 2.0,
+    );
+    Sphere {
+        position: center,
+        radius,
     }
 }

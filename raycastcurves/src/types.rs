@@ -9,6 +9,12 @@ pub enum SurfaceType {
 }
 
 #[derive(Debug, Copy, Clone)]
+pub enum BoundingVolume {
+    Sphere { position: Vec2, radius: f32 },
+    BoundingBox { position: Vec2, dimension: Vec2 },
+}
+
+#[derive(Debug, Copy, Clone)]
 pub struct Material {
     pub coloration: Rgba,
     pub albedo: f32,
@@ -42,4 +48,5 @@ pub struct Curve {
     pub points: Vec<Vec2>,
     pub material: Material,
     pub ray_anchor_point: Option<Vec2>,
+    pub bounding_volume: Option<BoundingVolume>,
 }

@@ -470,7 +470,6 @@ pub fn cast_ray(
         // TODO, is there a function to get the inverse of a vector?
         let inverted_ray_dir = vec2(ray_direction.x * -1.0, ray_direction.y * -1.0);
         let diffuse_component = surface_direction.dot(inverted_ray_dir).clamp(0.0, 1.0);
-        //println!("{:?}", diffuse_component);
         hsla.lightness = hsla.lightness * diffuse_component;
 
         return hsla;
