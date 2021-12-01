@@ -1,6 +1,12 @@
 #[allow(dead_code)]
 use nannou::prelude::*;
 
+#[derive(Debug, Copy, Clone)]
+pub enum BoundingVolume {
+    Circle { position: Vec2, radius: f32 },
+    BoundingBox { position: Vec2, dimension: Vec2 },
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct Ray2D {
     pub orig: Vec2,
@@ -133,7 +139,7 @@ impl Ray2D {
         }
     }
 
-    pub fn intersect_circle(&self, center: Vec2, radius: f32) -> Option<f32> {
+    pub fn intersect_circle(&self, center: &Vec2, radius: &f32) -> Option<f32> {
         // let h = center - self.orig;
         // let lf = self.dir.dot(h);
         // let mut s = radius.powi(2) - h.dot(h) + lf.powi(2);
@@ -152,7 +158,7 @@ impl Ray2D {
         //     Some(first_collision)
         // }
 
-        let l = center - self.orig;
+        let l = *center - self.orig;
         let adj = l.dot(self.dir);
         let d2 = l.dot(l) - (adj * adj);
         let radius2 = radius * radius;
@@ -165,9 +171,18 @@ impl Ray2D {
         if t0 < 0.0 && t1 < 0.0 {
             return None;
         }
-        let inside = self.orig.distance(center) <= radius;
+        let inside = self.orig.distance(*center) <= *radius;
         let distance = if t0 < t1 && !inside { t0 } else { t1 };
         Some(distance)
+    }
+
+    pub fn intersect_bounding_volume(&self, volume: &BoundingVolume) -> Option<f32> {
+        match volume {
+            BoundingVolume::Circle {position, radius} => self.intersect_circle(position, radius),
+            // TODO, add bounding box here
+            _ => None,
+        }
+
     }
 }
 

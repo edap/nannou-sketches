@@ -1,4 +1,5 @@
 use nannou::prelude::*;
+use ray2d::BoundingVolume;
 
 #[derive(Debug, Copy, Clone)]
 pub enum SurfaceType {
@@ -6,12 +7,6 @@ pub enum SurfaceType {
     Reflective { reflectivity: f32 },
     Refractive { ior: f32 },
     ReflectiveAndRefractive { reflectivity: f32, ior: f32 },
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum BoundingVolume {
-    Sphere { position: Vec2, radius: f32 },
-    BoundingBox { position: Vec2, dimension: Vec2 },
 }
 
 #[derive(Debug, Copy, Clone)]

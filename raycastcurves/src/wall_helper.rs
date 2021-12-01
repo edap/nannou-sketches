@@ -1,7 +1,6 @@
 use crate::mondrian::split_squares;
 pub use crate::mondrian::Square;
-use crate::types::BoundingVolume;
-use crate::types::BoundingVolume::Sphere;
+use ray2d::BoundingVolume;
 use crate::types::Curve;
 use crate::types::Material;
 use crate::types::SurfaceType;
@@ -124,7 +123,7 @@ pub fn create_curve_from_square(
     }
 }
 
-fn get_sphere_from_square(square: &Square) -> crate::wall_helper::BoundingVolume {
+fn get_sphere_from_square(square: &Square) -> BoundingVolume {
     let mut radius: f32;
     if square.width > square.height {
         radius = square.width;
@@ -135,7 +134,7 @@ fn get_sphere_from_square(square: &Square) -> crate::wall_helper::BoundingVolume
         square.x + square.width / 2.0,
         square.y + square.height / 2.0,
     );
-    Sphere {
+    BoundingVolume::Circle {
         position: center,
         radius,
     }
