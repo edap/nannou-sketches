@@ -467,8 +467,11 @@ pub fn cast_ray(
         // let mut alpha : f32 = 1.0 - ( *depth as f32 / max_depth as f32);
         // alpha = alpha.min(0.0).max(1.0);
         let mut hsla: Hsla = material.coloration.into();
-        let diffuse_component = surface_direction.dot(*ray_direction).clamp(0.0, 1.0);
-        //hsla.lightness = hsla.lightness * diffuse_component;
+        // TODO, is there a function to get the inverse of a vector?
+        let inverted_ray_dir = vec2(ray_direction.x * -1.0, ray_direction.y * -1.0);
+        let diffuse_component = surface_direction.dot(inverted_ray_dir).clamp(0.0, 1.0);
+        //println!("{:?}", diffuse_component);
+        hsla.lightness = hsla.lightness * diffuse_component;
 
         return hsla;
     }
