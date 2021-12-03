@@ -353,12 +353,35 @@ pub fn cast_ray(
         let mut material: Material = Material::default();
         // find the closest intersection point between the ray and the walls
         for curve in walls.iter() {
-            if let Some(collision) = ray.intersect_polyline(&curve.points) {
-                // save the closest possible collision
-                if collision.0 < distance {
-                    distance = collision.0;
-                    surface_normal = collision.1;
-                    material = curve.material;
+            // if a bounding volume is present, use it to pre-test the intersection
+            // otherwise test everything
+            match &curve.bounding_volume {
+                Some(volume) => {
+                    let pretest = ray.intersect_bounding_volume(volume);
+                    match pretest {
+                        Some(_) => {
+                            if let Some(collision) = ray.intersect_polyline(&curve.points) {
+                                // save the closest possible collision
+                                if collision.0 < distance {
+                                    distance = collision.0;
+                                    surface_normal = collision.1;
+                                    material = curve.material;
+                                }
+                            }
+                        }
+
+                        None => {}
+                    }
+                }
+                None => {
+                    if let Some(collision) = ray.intersect_polyline(&curve.points) {
+                        // save the closest possible collision
+                        if collision.0 < distance {
+                            distance = collision.0;
+                            surface_normal = collision.1;
+                            material = curve.material;
+                        }
+                    }
                 }
             }
         }

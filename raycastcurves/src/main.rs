@@ -24,6 +24,7 @@ mod raycaster;
 pub use crate::wraycaster::Wraycaster;
 pub mod capturer;
 pub use crate::capturer::Capturer;
+use ray2d::BoundingVolume;
 
 const EPSILON: f32 = 0.05;
 
@@ -296,6 +297,19 @@ fn update(app: &App, model: &mut Model, _update: Update) {
                 .weight(model.wall_width)
                 .color(curve.material.coloration)
                 .points(curve.points.clone());
+            if let Some(c) = curve.bounding_volume {
+                match c {
+                    BoundingVolume::Circle { position, radius } => {
+                        draw.ellipse()
+                            .no_fill()
+                            .x_y(position.x, position.y)
+                            .w_h(radius * 2.0, radius * 2.0)
+                            .color(curve.material.coloration)
+                            .stroke_weight(model.wall_width);
+                    }
+                    _ => {}
+                }
+            }
         }
     }
 
