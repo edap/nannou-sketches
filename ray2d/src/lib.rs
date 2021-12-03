@@ -94,7 +94,7 @@ impl Ray2D {
         self.dir = vec2(a_radians.cos(), a_radians.sin())
     }
 
-    pub fn intersect_segment(&self, x1: f32, y1: f32, x2: f32, y2: f32) -> Option<f32> {
+    pub fn intersect_segment(&self, x1: &f32, y1: &f32, x2: &f32, y2: &f32) -> Option<f32> {
         let x3 = self.orig.x;
         let y3 = self.orig.y;
         let x4 = self.orig.x + self.dir.x;
@@ -120,10 +120,10 @@ impl Ray2D {
         // find the closest intersection point between the ray and the walls
         for index in 0..points.len() - 1 {
             if let Some(collision_distance) = self.intersect_segment(
-                points[index].x,
-                points[index].y,
-                points[index + 1].x,
-                points[index + 1].y,
+                &points[index].x,
+                &points[index].y,
+                &points[index + 1].x,
+                &points[index + 1].y,
             ) {
                 if collision_distance < distance {
                     let segment_dir = (points[index] - points[index + 1]).normalize();
@@ -178,11 +178,10 @@ impl Ray2D {
 
     pub fn intersect_bounding_volume(&self, volume: &BoundingVolume) -> Option<f32> {
         match volume {
-            BoundingVolume::Circle {position, radius} => self.intersect_circle(position, radius),
+            BoundingVolume::Circle { position, radius } => self.intersect_circle(position, radius),
             // TODO, add bounding box here
             _ => None,
         }
-
     }
 }
 
