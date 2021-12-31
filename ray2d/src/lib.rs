@@ -4,7 +4,7 @@ use nannou::prelude::*;
 #[derive(Debug, Copy, Clone)]
 pub enum BoundingVolume {
     Circle { position: Vec2, radius: f32 },
-    BoundingBox { position: Vec2, dimension: Vec2 },
+    Aabb { min: Vec2, max: Vec2 },
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -12,6 +12,8 @@ pub struct Ray2D {
     pub orig: Vec2,
     pub dir: Vec2,
 }
+
+// TODO, all this methods should accept both f32 and f64
 
 impl Ray2D {
     pub fn new() -> Self {
@@ -33,7 +35,6 @@ impl Ray2D {
 
         let mut cosi = clamp(-1.0, 1.0, self.dir.dot(surface_normal));
         let (mut etai, mut etat) = (1.0, ior);
-        // it should already come in normalized, but who
         let mut n = surface_normal.normalize();
         if cosi < 0.0 {
             cosi = -cosi;
@@ -44,7 +45,6 @@ impl Ray2D {
         let eta = etai / etat;
         let k = 1.0 - eta * eta * (1.0 - cosi * cosi);
         if k < f32::zero() {
-            //vec2(0.0, 0.0)
             self.dir.normalize() * 0.0
         } else {
             self.dir.normalize() * eta + n.normalize() * (eta * cosi - k.sqrt())
@@ -90,8 +90,8 @@ impl Ray2D {
         self.dir = self.dir.normalize();
     }
 
-    pub fn set_dir_from_angle(&mut self, a_radians: f32) {
-        self.dir = vec2(a_radians.cos(), a_radians.sin())
+    pub fn set_dir_from_angle(&mut self, angle_in_radians: f32) {
+        self.dir = vec2(angle_in_radians.cos(), angle_in_radians.sin())
     }
 
     pub fn intersect_segment(&self, x1: &f32, y1: &f32, x2: &f32, y2: &f32) -> Option<f32> {
@@ -168,7 +168,7 @@ impl Ray2D {
         let thc = (radius2 - d2).sqrt();
         let t0 = adj - thc;
         let t1 = adj + thc;
-        if t0 < 0.0 && t1 < 0.0 {
+        if t0 < f32::zero() && t1 < f32::zero() {
             return None;
         }
         let inside = self.orig.distance(*center) <= *radius;
@@ -176,10 +176,40 @@ impl Ray2D {
         Some(distance)
     }
 
+    // https://github.com/rustgd/collision-rs/blob/master/src/volume/aabb/aabb2.rs
+    pub fn intersect_aabb(&self, min: &Vec2, max: &Vec2) -> Option<f32> {
+        let mut tmax: f32 = Float::infinity();
+        let mut tmin: f32 = Float::neg_infinity();
+        if self.dir.x != f32::zero() {
+            let tx1 = (min.x - self.orig.x) / self.dir.x;
+            let tx2 = (max.x - self.orig.x) / self.dir.x;
+            tmin = tmin.max(tx1.min(tx2));
+            tmax = tmax.min(tx1.max(tx2));
+        } else if self.orig.x <= min.x || self.orig.x >= max.x {
+            return None;
+        }
+
+        if self.dir.y != 0.0 {
+            let ty1 = (min.y - self.orig.y) / self.dir.y;
+            let ty2 = (max.y - self.orig.y) / self.dir.y;
+            tmin = tmin.max(ty1.min(ty2));
+            tmax = tmax.min(ty1.max(ty2));
+        } else if self.orig.y <= min.y || self.orig.y >= max.y {
+            return None;
+        }
+
+        if (tmin < f32::zero() && tmax < f32::zero()) || tmax < tmin {
+            None
+        } else {
+            let t = if tmin >= f32::zero() { tmin } else { tmax };
+            Some(t)
+        }
+    }
+
     pub fn intersect_bounding_volume(&self, volume: &BoundingVolume) -> Option<f32> {
         match volume {
             BoundingVolume::Circle { position, radius } => self.intersect_circle(position, radius),
-            // TODO, add bounding box here
+            BoundingVolume::Aabb { min, max } => self.intersect_aabb(min, max),
             _ => None,
         }
     }

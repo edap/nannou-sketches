@@ -1,8 +1,8 @@
 pub use crate::bouncing::BouncingRay2D;
+use crate::types::Curve;
 pub use crate::wraycaster::Wraycaster;
 use nannou::image::math;
 use nannou::prelude::*;
-use crate::types::Curve;
 
 pub fn make_rays(
     rays: &mut Vec<BouncingRay2D>,
@@ -41,38 +41,27 @@ pub fn make_raycasters(
     n_caster: u32, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
     max_reflection: usize,
     density: usize,
-    walls: & Vec<Curve>,
+    walls: &Vec<Curve>,
     rays_position_mode: usize,
     rays_probability: f32,
 ) {
-
-    match  rays_position_mode {
-        0 => {
-            left_and_right_alternate(
-                rays,
-                win,
-                tile_count_w,
-                n_caster,
-                max_reflection,
-                density,
-            )
-
-        }
-        1 => {
-            inside_the_walls(rays, &walls, rays_probability, density, max_reflection)
-
-        }
-        _ => {
-
-        }
-        
+    match rays_position_mode {
+        0 => left_and_right_alternate(rays, win, tile_count_w, n_caster, max_reflection, density),
+        1 => inside_the_walls(rays, &walls, rays_probability, density, max_reflection),
+        _ => {}
     }
 }
 
-fn inside_the_walls(raycasters: &mut Vec<Wraycaster>, walls: & Vec<Curve>, rays_probability: f32, density: usize, max_depth: usize){
+fn inside_the_walls(
+    raycasters: &mut Vec<Wraycaster>,
+    walls: &Vec<Curve>,
+    rays_probability: f32,
+    density: usize,
+    max_depth: usize,
+) {
     raycasters.clear();
-    for wall in walls.iter(){
-        match  wall.ray_anchor_point {
+    for wall in walls.iter() {
+        match wall.ray_anchor_point {
             Some(pt) => {
                 let coin = random_range(0.0, 1.0);
                 if coin <= rays_probability {
@@ -80,13 +69,10 @@ fn inside_the_walls(raycasters: &mut Vec<Wraycaster>, walls: & Vec<Curve>, rays_
                     let raycaster = Wraycaster::new(pt, dir, max_depth, density);
                     raycasters.push(raycaster);
                 }
-
             }
             _ => {}
         }
-
     }
-
 }
 
 fn left_and_right_alternate(
@@ -106,9 +92,8 @@ fn left_and_right_alternate(
         let dir;
 
         if _y % 2 == 0 {
-            dir =  vec2(0.0.cos(), 0.0.sin());
-            x = win.left() +1.0;
-
+            dir = vec2(0.0.cos(), 0.0.sin());
+            x = win.left() + 1.0;
         } else {
             dir = vec2(-1.0.cos(), -1.0.sin());
             x = win.right() - 1.0;

@@ -409,14 +409,14 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             // find the closest intersection point between the ray and the walls
             for index in (0..model.walls.len()).step_by(2) {
                 if let Some(collision_distance) = r.ray.intersect_segment(
-                    model.walls[index].x,
-                    model.walls[index].y,
-                    model.walls[index + 1].x,
-                    model.walls[index + 1].y,
+                    &model.walls[index].x,
+                    &model.walls[index].y,
+                    &model.walls[index + 1].x,
+                    &model.walls[index + 1].y,
                 ) {
                     if collision_distance < distance {
                         distance = collision_distance;
-                        collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
+                        collision = r.ray.orig + r.ray.dir.normalize() * collision_distance;
                         let segment_dir = (model.walls[index] - model.walls[index + 1]).normalize();
                         surface_normal = vec2(segment_dir.y, -segment_dir.x);
                     }
@@ -427,7 +427,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 r.bounces += 1;
                 let refl = r.ray.reflect(surface_normal);
                 r.refl_intensity.push(r.ray.dir.dot(refl).abs());
-                r.ray.orig = collision + refl.with_magnitude(EPSILON); // avoid self intersection bouncing a bit more far away
+                r.ray.orig = collision + refl.normalize() * EPSILON; // avoid self intersection bouncing a bit more far away
                 r.ray.dir = refl;
                 r.collisions.push(collision);
                 //r.refractions.push(r.ray.refract(surface_normal, 1.0));
@@ -472,7 +472,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .color(model.palette.get_first(model.scheme_id, model.color_off))
                 .start(r.ray.orig)
                 .stroke_weight(model.ray_width)
-                .end(r.ray.orig + r.ray.dir.with_magnitude(40.0));
+                .end(r.ray.orig + r.ray.dir.normalize() * 40.0);
         }
 
         if r.collisions.len() > 3 && model.collision_radius > 0.0 {
@@ -536,7 +536,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             if model.draw_arrows {
                 draw.arrow()
                     .start(c)
-                    .end(c + r.with_magnitude(40.0))
+                    .end(c + r.normalize() * 40.0)
                     .stroke_weight(model.ray_width)
                     .color(model.palette.get_first(model.scheme_id, model.color_off));
             }
@@ -586,7 +586,7 @@ fn make_walls(
                 1 => {
                     let padding = step as f32 * perc_padding;
                     let mut r = BouncingRay2D::new();
-                    r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                    r.primary_ray.dir = vec2(random_f32().cos(), random_f32().sin());
                     r.primary_ray.orig = vec2(
                         square.x + square.width * 0.8,
                         square.y + square.height * 0.3,
@@ -601,7 +601,7 @@ fn make_walls(
                     if random_range(0.0, 1.0) > rays_prob {
                         let mut r = BouncingRay2D::new();
                         //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                        r.primary_ray.dir = Vector2::from_angle(PI);
+                        r.primary_ray.dir = vec2(PI.cos(), PI.sin());
                         r.primary_ray.orig = vec2(
                             square.x + square.width * 0.5,
                             square.y + square.height * 0.5,
@@ -635,7 +635,7 @@ fn make_walls(
                         }
                         if _x % 2 == 0 && _y % 2 == 0 {
                             let mut r = BouncingRay2D::new();
-                            r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                            r.primary_ray.dir = vec2(random_f32().cos(), random_f32().sin());
                             r.primary_ray.orig = start_p;
                             r.ray.orig = start_p;
                             rays.push(r);
@@ -655,7 +655,7 @@ fn make_walls(
                         }
                         if (_x == 2 && _y == 2) || (_x == 14 && _y == 14) {
                             let mut r = BouncingRay2D::new();
-                            r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                            r.primary_ray.dir = vec2(random_f32().cos(), random_f32().sin());
                             r.primary_ray.orig = start_p;
                             r.ray.orig = start_p;
                             rays.push(r);
@@ -670,7 +670,7 @@ fn make_walls(
                             end_p = vec2(xpos + step as f32 - padding, ypos + padding);
                             let mut r = BouncingRay2D::new();
                             //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                            r.primary_ray.dir = Vector2::from_angle(1.0);
+                            r.primary_ray.dir = vec2(1.0.cos(), 1.0.sin());
                             // r.primary_ray.orig = start_p;
                             // r.ray.orig = start_p;
                             let o = vec2(xpos + step as f32 / 2.0, ypos + step as f32 - padding);

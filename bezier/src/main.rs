@@ -61,15 +61,15 @@ fn model(app: &App) -> Model {
     let init_radius = 150.0;
     let mut x = Vec::new();
     let mut y = Vec::new();
-    let mut start = Vec::new();
-    let mut end = Vec::new();
+    // let mut start = Vec::new();
+    // let mut end = Vec::new();
     for i in 0..form_resolution {
         x.push((angle * i as f32).cos() * init_radius);
         y.push((angle * i as f32).sin() * init_radius);
     }
     Model {
-        start_curve: start,
-        end_curve: end,
+        // start_curve: start,
+        // end_curve: end,
         form_resolution,
         step_size: 2.0,
         init_radius,

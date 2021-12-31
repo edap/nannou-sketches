@@ -1,6 +1,7 @@
 #My sketches
 
 [workspace]
+resolver = "2"
 members = [
 	"svg",
 	"ray2d",

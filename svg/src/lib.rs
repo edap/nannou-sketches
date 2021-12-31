@@ -5,7 +5,7 @@ use nannou::color::{rgba, Rgba};
 use nannou::lyon::math::Point;
 use nannou::lyon::path::PathEvent;
 use nannou::lyon::tessellation::{LineCap, LineJoin};
-use nannou::math::{Matrix3, Matrix4};
+//use nannou::math::{Matrix3, Matrix4};
 use usvg;
 
 use nannou::prelude::*;
@@ -148,9 +148,9 @@ impl<'l> Iterator for PathConvIter<'l> {
                 self.segment_iter = Some(self.sub_path_iter.next()?.0.iter());
             }
 
-            let mut matrix = Matrix4::<f64>::from_scale(1.0);
-            let flip = Matrix4::<f64>::from_nonuniform_scale(1.0, -1.0, 1.0);
-            matrix = matrix * flip;
+            //let mut matrix = Matrix4::<f64>::from_scale(1.0);
+            //let flip = Matrix4::<f64>::from_nonuniform_scale(1.0, -1.0, 1.0);
+            //matrix = matrix * flip;
             //dbg!(matrix.transform_point(cgmath::Point3::new(10.0,50.0,2.0)));
 
             let next = self.segment_iter.as_mut().and_then(|it| it.next());
