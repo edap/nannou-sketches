@@ -1,5 +1,6 @@
 use nannou::prelude::*;
-use nannou::ui::prelude::*;
+use nannou_conrod as ui;
+use nannou_conrod::prelude::*;
 
 pub const WIN_W: u32 = 600;
 pub const WIN_H: u32 = 900;

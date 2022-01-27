@@ -35,7 +35,7 @@ impl Capturer {
             .size(texture_size)
             // Our texture will be used as the RENDER_ATTACHMENT for our `Draw` render pass.
             // It will also be SAMPLED by the `TextureCapturer` and `TextureResizer`.
-            .usage(wgpu::TextureUsage::RENDER_ATTACHMENT | wgpu::TextureUsage::SAMPLED)
+            .usage(wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING)
             // Use nannou's default multisampling sample count.
             .sample_count(sample_count)
             // Use a spacious 16-bit linear sRGBA format suitable for high quality drawing.
@@ -100,8 +100,9 @@ impl Capturer {
             .texture_capturer
             .capture(device, &mut encoder, &self.texture);
 
+
         // Submit the commands for our drawing and texture capture to the GPU.
-        window.swap_chain_queue().submit(Some(encoder.finish()));
+        window.queue().submit(Some(encoder.finish()));
 
         if self.is_recording || self.is_taking_screenshot {
             // Submit a function for writing our snapshot to a PNG.

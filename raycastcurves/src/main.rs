@@ -105,7 +105,7 @@ fn model(app: &App) -> Model {
     let capturer = Capturer::new(
         texture_size,
         sample_count,
-        app.window(main_window_id).unwrap().swap_chain_device(),
+        app.window(main_window_id).unwrap().device(),
         path,
         false,
     );
@@ -335,7 +335,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     }
     // Render our drawing to the texture.
     let window = app.main_window();
-    let device = window.swap_chain_device();
+    let device = window.device();
     model.capturer.update(&window, &device, elapsed_frames);
 }
 
@@ -680,7 +680,7 @@ fn capture_directory(app: &App) -> std::path::PathBuf {
 fn exit(app: &App, model: Model) {
     println!("Waiting for PNG writing to complete...");
     let window = app.main_window();
-    let device = window.swap_chain_device();
+    let device = window.device();
     model.capturer.exit(&device);
     println!("Done!");
 }
