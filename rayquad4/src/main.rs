@@ -1,6 +1,7 @@
 use edapx_colors::Palette;
 use nannou::prelude::*;
-use nannou::ui::prelude::*;
+use nannou_conrod as ui;
+use nannou_conrod::prelude::*;
 
 mod bouncing;
 mod mondrian;
@@ -86,6 +87,7 @@ fn model(app: &App) -> Model {
         //.size(1600, 900)
         //.size(900, 900)
         .view(view)
+        .raw_event(raw_window_event)
         .key_pressed(key_pressed)
         .build()
         .unwrap();
@@ -773,4 +775,8 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
         Key::G => model.draw_gui = !model.draw_gui,
         _other_key => {}
     }
+}
+
+fn raw_window_event(app: &App, model: &mut Model, event: &ui::RawWindowEvent) {
+    model.ui.handle_raw_event(app, event);
 }

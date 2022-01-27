@@ -194,3 +194,6 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
         _other_key => {}
     }
 }
+fn raw_window_event(app: &App, model: &mut Model, event: &ui::RawWindowEvent) {
+    model.ui.handle_raw_event(app, event);
+}

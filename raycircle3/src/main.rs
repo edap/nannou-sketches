@@ -490,3 +490,7 @@ fn gcd(a: usize, b: usize) -> usize {
 fn lcm(a: usize, b: usize) -> usize {
     a * b / gcd(a, b)
 }
+
+fn raw_window_event(app: &App, model: &mut Model, event: &ui::RawWindowEvent) {
+    model.ui.handle_raw_event(app, event);
+}

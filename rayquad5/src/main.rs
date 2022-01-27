@@ -1,6 +1,7 @@
 use edapx_colors::Palette;
 use nannou::prelude::*;
-use nannou::ui::prelude::*;
+use nannou_conrod as ui;
+use nannou_conrod::prelude::*;
 
 mod bouncing;
 mod mondrian;
@@ -79,15 +80,16 @@ widget_ids! {
 
 fn model(app: &App) -> Model {
     let tile_count_w = 8;
-    app.new_window()
+    let win_id = app.new_window()
         //.size(1280, 720)
         .size(1600, 900)
         //.size(1777, 1000)
         //.size(1920,1080)
         // .size( 3840,2160)
         // .size(2560, 1440) // 16:9
-        .view(view)
+        .raw_event(raw_window_event)
         .key_pressed(key_pressed)
+        .view(view)
         .build()
         .unwrap();
 
@@ -98,10 +100,12 @@ fn model(app: &App) -> Model {
     let draw_gui = true;
 
     // Create the UI.
-    let mut ui = app.new_ui().build().unwrap();
+    //let mut ui = app.new_ui().build().unwrap();
+    let mut ui = ui::builder(app).window(win_id).build().unwrap();
 
     // Generate some ids for our widgets.
     let ids = Ids::new(ui.widget_id_generator());
+    
 
     let ray_width = 3.0;
     let wall_width = 2.0;
@@ -798,3 +802,8 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
         _other_key => {}
     }
 }
+
+fn raw_window_event(app: &App, model: &mut Model, event: &ui::RawWindowEvent) {
+    model.ui.handle_raw_event(app, event);
+}
+

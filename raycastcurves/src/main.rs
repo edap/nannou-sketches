@@ -1,6 +1,7 @@
 use edapx_colors::Palette;
 use nannou::prelude::*;
-use nannou::ui::prelude::*;
+use nannou_conrod as ui;
+use nannou_conrod::prelude::*;
 use rayon::prelude::*;
 use types::Material;
 use wall_helper::change_surface_walls;
@@ -95,6 +96,7 @@ fn model(app: &App) -> Model {
         .new_window()
         .size(win_w, win_h)
         .view(view)
+        .raw_event(raw_window_event)
         .key_pressed(key_pressed)
         .build()
         .unwrap();
@@ -118,11 +120,14 @@ fn model(app: &App) -> Model {
         .size(gui::WIN_W, gui::WIN_H)
         .view(ui_view)
         .event(ui_event)
+        .raw_event(raw_window_event)
         .key_pressed(key_pressed)
         .build()
         .unwrap();
 
-    let mut ui = app.new_ui().window(ui_window).build().unwrap();
+    //let mut ui = app.new_ui().window(ui_window).build().unwrap();
+    let mut ui = ui::builder(app).window(ui_window).build().unwrap();
+
     let ids = gui::Ids::new(ui.widget_id_generator());
     ui.clear_with(color::DARK_CHARCOAL);
     let mut theme = ui.theme_mut();
@@ -683,4 +688,8 @@ fn exit(app: &App, model: Model) {
     let device = window.device();
     model.capturer.exit(&device);
     println!("Done!");
+}
+
+fn raw_window_event(app: &App, model: &mut Model, event: &ui::RawWindowEvent) {
+    model.ui.handle_raw_event(app, event);
 }

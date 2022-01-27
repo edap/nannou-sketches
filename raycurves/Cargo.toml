@@ -7,7 +7,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-nannou = { git = "https://github.com/nannou-org/nannou", branch = "master" }
+nannou = { version ="0.18.0"  }
+nannou_conrod = { version ="0.18.0" }
 edapx-colors = { path = "../edapx-colors" }
 ray2d = { path = "../ray2d" }
 rayon = "1.5.0"
