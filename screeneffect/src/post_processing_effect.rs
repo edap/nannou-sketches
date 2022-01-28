@@ -47,7 +47,7 @@ pub struct PostProcessingEffect {
     bind_group: wgpu::BindGroup,
     render_pipeline: wgpu::RenderPipeline,
     sampler: wgpu::Sampler,
-    uniform_buffer: Option<wgpu::Buffer>,
+    uniform_buffer: wgpu::Buffer,
     vertex_buffer: wgpu::Buffer,
 }
 
@@ -113,14 +113,11 @@ impl PostProcessingEffect {
             time: 0.0,
         };
         let uniforms_bytes = uniforms_as_bytes(&uniforms);
-        let usage = wgpu::BufferUsages::UNIFORM;
-        let buffer = device.create_buffer_init(&BufferInitDescriptor {
+        let uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: None,
             contents: &uniforms_bytes,
-            usage,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
-
-        let uniform_buffer = Some(buffer);
 
 
         // Create the bind group.
@@ -129,7 +126,7 @@ impl PostProcessingEffect {
             &bind_group_layout,
             &src_texture,
             &sampler,
-            uniform_buffer.as_ref(),
+            &uniform_buffer,
         );
 
         // Create the vertex buffer.
@@ -264,15 +261,12 @@ fn bind_group(
     layout: &wgpu::BindGroupLayout,
     texture: &wgpu::TextureViewHandle,
     sampler: &wgpu::Sampler,
-    uniform_buffer: Option<&wgpu::Buffer>,
+    uniform_buffer: &wgpu::Buffer,
 ) -> wgpu::BindGroup {
     let mut builder = wgpu::BindGroupBuilder::new()
         .texture_view(texture)
         .sampler(sampler);
-    // Davide: keep the buffer here, maybe useful.
-    // TODO, buffer should not be an option
-    if let Some(buffer) = uniform_buffer {
-        builder = builder.buffer::<Uniforms>(buffer, 0..1);
-    }
+
+    builder = builder.buffer::<Uniforms>(uniform_buffer, 0..1);
     builder.build(device, layout)
 }
