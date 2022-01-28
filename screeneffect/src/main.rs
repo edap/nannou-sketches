@@ -24,24 +24,21 @@ fn model(app: &App) -> Model {
         .new_window()
         .size(win_w, win_h)
         .title("nannou")
-        .key_pressed(key_pressed)
         .view(view)
         .build()
         .unwrap();
     let window = app.window(w_id).unwrap();
 
     // Retrieve the wgpu device.
-    let device = window.device();
+    //let device = window.device();
 
     // set up the capturer
     let sample_count = app.window(w_id).unwrap().msaa_samples();
-    let path = capture_directory(app);
+    println!("{}",sample_count);
     let effect = PostProcessingEffect::new(
         texture_size,
         sample_count,
         app.window(w_id).unwrap().device(),
-        path,
-        false,
     );
     // end capturer
 
@@ -53,8 +50,8 @@ fn model(app: &App) -> Model {
 }
 
 fn update(app: &App, model: &mut Model, _update: Update) {
-    // Because we draw in the texture, all the code that usually goes in the view method has to be moved into the update
-    // function.
+    // Because we draw in the texture, all the code that usually goes in the view method 
+    // has to be moved into the update function.
 
     // VIEW
     // First, reset the `draw` state.
@@ -64,9 +61,6 @@ fn update(app: &App, model: &mut Model, _update: Update) {
 
     // Draw like we normally would in the `view`.
     draw.background().color(BLACK);
-
-
-    // we are not animating using time. But we should
     // Use the frame number to animate, ensuring we get a constant update time.
     let elapsed_frames = app.main_window().elapsed_frames();
     let time = elapsed_frames as f32 / 60.0;
@@ -79,7 +73,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     // Render our drawing to the texture.
     let window = app.main_window();
     let device = window.device();
-    model.effect.update(&window, &device, elapsed_frames);
+    model.effect.update(&window, &device);
 
 }
 
@@ -87,34 +81,4 @@ fn update(app: &App, model: &mut Model, _update: Update) {
 fn view(_app: &App, model: &Model, frame: Frame) {
     // Sample the texture and write it to the frame.
     model.effect.view(frame);
-}
-
-fn key_pressed(_app: &App, model: &mut Model, key: Key) {
-    match key {
-        Key::S => model.effect.take_screenshot(),
-        Key::R => model.effect.start_recording(),
-        Key::P => model.effect.stop_recording(),
-        // Key::S => match app.window(model.main_window_id) {
-        //     Some(window) => {
-        //         window.capture_frame(app.time.to_string() + ".png");
-        //     }
-        //     None => {}
-        // },
-        _other_key => {}
-    }
-}
-
-// The directory where we'll save the frames.
-fn capture_directory(app: &App) -> std::path::PathBuf {
-    app.project_path()
-        .expect("could not locate project_path")
-        .join(app.exe_name().unwrap())
-}
-
-fn exit(app: &App, model: Model) {
-    println!("Waiting for PNG writing to complete...");
-    let window = app.main_window();
-    let device = window.device();
-    model.effect.exit(&device);
-    println!("Done!");
 }

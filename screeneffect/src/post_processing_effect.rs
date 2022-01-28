@@ -2,6 +2,256 @@
 
 use nannou::prelude::*;
 use nannou::wgpu::Device;
+use nannou::wgpu::util::DeviceExt;
+//use nannou::wgpu::*;
+
+
+/// Reshapes a texture from its original size, sample_count and format to the destination size,
+/// sample_count and format.
+///
+/// The `src_texture` must have the `TextureUsages::SAMPLED` enabled.
+///
+/// The `dst_texture` must have the `TextureUsages::RENDER_ATTACHMENT` enabled.
+#[derive(Debug)]
+pub struct Effect {
+    _vs_mod: wgpu::ShaderModule,
+    _fs_mod: wgpu::ShaderModule,
+    bind_group_layout: wgpu::BindGroupLayout,
+    bind_group: wgpu::BindGroup,
+    render_pipeline: wgpu::RenderPipeline,
+    sampler: wgpu::Sampler,
+    uniform_buffer: Option<wgpu::Buffer>,
+    vertex_buffer: wgpu::Buffer,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
+struct Vertex {
+    pub position: [f32; 2],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+struct Uniforms {
+    sample_count: u32,
+}
+
+impl Effect {
+    /// Construct a new `Effect`.
+    pub fn new(
+        device: &wgpu::Device,
+        src_texture: &wgpu::TextureViewHandle,
+        src_sample_count: u32,
+        src_sample_type: wgpu::TextureSampleType,
+        dst_sample_count: u32,
+        dst_format: wgpu::TextureFormat,
+    ) -> Self {
+        // Load shader modules.
+        let vs_desc = wgpu::include_wgsl!("shaders/vs.wgsl");
+        //let fs_desc = wgpu::include_wgsl!("shaders/fs.wgsl");
+        //let fs_desc = wgpu::include_wgsl!("shaders/fs_msaa.wgsl");
+        //let fs_desc = wgpu::include_wgsl!("shaders/fs_msaa4.wgsl");
+
+        let fs_desc = match src_sample_count {
+            1 => wgpu::include_wgsl!("shaders/fs.wgsl"),
+            4 => wgpu::include_wgsl!("shaders/fs_msaa4.wgsl"),
+            _ => wgpu::include_wgsl!("shaders/fs_msaa.wgsl"),
+        };
+        
+
+        let vs_mod = device.create_shader_module(&vs_desc);
+        let fs_mod = device.create_shader_module(&fs_desc);
+
+        // Create the sampler for sampling from the source texture.
+        let sampler_desc = wgpu::SamplerBuilder::new().into_descriptor();
+        let sampler_filtering = wgpu::sampler_filtering(&sampler_desc);
+        let sampler = device.create_sampler(&sampler_desc);
+
+        // Create the render pipeline.
+        let bind_group_layout =
+            bind_group_layout(device, src_sample_count, src_sample_type, sampler_filtering);
+        let pipeline_layout = pipeline_layout(device, &bind_group_layout);
+        let render_pipeline = render_pipeline(
+            device,
+            &pipeline_layout,
+            &vs_mod,
+            &fs_mod,
+            dst_sample_count,
+            dst_format,
+        );
+
+        // Create the uniform buffer to pass the sample count if we don't have an unrolled resolve
+        // fragment shader for it.
+        let uniform_buffer = match unrolled_sample_count(src_sample_count) {
+            true => None,
+            false => {
+                let uniforms = Uniforms {
+                    sample_count: src_sample_count,
+                };
+                let uniforms_bytes = uniforms_as_bytes(&uniforms);
+                let usage = wgpu::BufferUsages::UNIFORM;
+                let buffer = device.create_buffer_init(&BufferInitDescriptor {
+                    label: None,
+                    contents: &uniforms_bytes,
+                    usage,
+                });
+                Some(buffer)
+            }
+        };
+
+        // Create the bind group.
+        let bind_group = bind_group(
+            device,
+            &bind_group_layout,
+            src_texture,
+            &sampler,
+            uniform_buffer.as_ref(),
+        );
+
+        // Create the vertex buffer.
+        let vertices_bytes = vertices_as_bytes(&VERTICES[..]);
+        let vertex_usage = wgpu::BufferUsages::VERTEX;
+        let vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: None,
+            contents: vertices_bytes,
+            usage: vertex_usage,
+        });
+
+        Effect {
+            _vs_mod: vs_mod,
+            _fs_mod: fs_mod,
+            bind_group_layout,
+            bind_group,
+            render_pipeline,
+            sampler,
+            uniform_buffer,
+            vertex_buffer,
+        }
+    }
+
+    /// Given an encoder, submits a render pass command for writing the source texture to the
+    /// destination texture.
+    pub fn encode_render_pass(
+        &self,
+        dst_texture: &wgpu::TextureViewHandle,
+        encoder: &mut wgpu::CommandEncoder,
+    ) {
+        let mut render_pass = wgpu::RenderPassBuilder::new()
+            .color_attachment(dst_texture, |color| color)
+            .begin(encoder);
+        render_pass.set_pipeline(&self.render_pipeline);
+        render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+        render_pass.set_bind_group(0, &self.bind_group, &[]);
+        let vertex_range = 0..VERTICES.len() as u32;
+        let instance_range = 0..1;
+        render_pass.draw(vertex_range, instance_range);
+    }
+}
+
+const VERTICES: [Vertex; 4] = [
+    Vertex {
+        position: [-1.0, 1.0],
+    },
+    Vertex {
+        position: [-1.0, -1.0],
+    },
+    Vertex {
+        position: [1.0, 1.0],
+    },
+    Vertex {
+        position: [1.0, -1.0],
+    },
+];
+
+// We provide pre-prepared fragment shaders with unrolled resolves for common sample counts.
+fn unrolled_sample_count(sample_count: u32) -> bool {
+    match sample_count {
+        1 | 2 | 4 | 8 | 16 => true,
+        _ => false,
+    }
+}
+
+fn bind_group_layout(
+    device: &wgpu::Device,
+    src_sample_count: u32,
+    src_sample_type: wgpu::TextureSampleType,
+    sampler_filtering: bool,
+) -> wgpu::BindGroupLayout {
+    let mut builder = wgpu::BindGroupLayoutBuilder::new()
+        .texture(
+            wgpu::ShaderStages::FRAGMENT,
+            src_sample_count > 1,
+            wgpu::TextureViewDimension::D2,
+            src_sample_type,
+        )
+        .sampler(wgpu::ShaderStages::FRAGMENT, sampler_filtering);
+    if !unrolled_sample_count(src_sample_count) {
+        builder = builder.uniform_buffer(wgpu::ShaderStages::FRAGMENT, false);
+    }
+    builder.build(device)
+}
+fn bind_group(
+    device: &wgpu::Device,
+    layout: &wgpu::BindGroupLayout,
+    texture: &wgpu::TextureViewHandle,
+    sampler: &wgpu::Sampler,
+    uniform_buffer: Option<&wgpu::Buffer>,
+) -> wgpu::BindGroup {
+    let mut builder = wgpu::BindGroupBuilder::new()
+        .texture_view(texture)
+        .sampler(sampler);
+    if let Some(buffer) = uniform_buffer {
+        builder = builder.buffer::<Uniforms>(buffer, 0..1);
+    }
+    builder.build(device, layout)
+}
+
+fn pipeline_layout(
+    device: &wgpu::Device,
+    bind_group_layout: &wgpu::BindGroupLayout,
+) -> wgpu::PipelineLayout {
+    let desc = wgpu::PipelineLayoutDescriptor {
+        label: Some("nannou_Effect"),
+        bind_group_layouts: &[&bind_group_layout],
+        push_constant_ranges: &[],
+    };
+    device.create_pipeline_layout(&desc)
+}
+
+fn render_pipeline(
+    device: &wgpu::Device,
+    layout: &wgpu::PipelineLayout,
+    vs_mod: &wgpu::ShaderModule,
+    fs_mod: &wgpu::ShaderModule,
+    dst_sample_count: u32,
+    dst_format: wgpu::TextureFormat,
+) -> wgpu::RenderPipeline {
+    wgpu::RenderPipelineBuilder::from_layout(layout, vs_mod)
+        .fragment_shader(fs_mod)
+        .color_format(dst_format)
+        .color_blend(wgpu::BlendComponent::REPLACE)
+        .alpha_blend(wgpu::BlendComponent::REPLACE)
+        .add_vertex_buffer::<Vertex>(&wgpu::vertex_attr_array![0 => Float32x2])
+        .primitive_topology(wgpu::PrimitiveTopology::TriangleStrip)
+        .sample_count(dst_sample_count)
+        .build(device)
+}
+
+fn uniforms_as_bytes(uniforms: &Uniforms) -> &[u8] {
+    unsafe { wgpu::bytes::from(uniforms) }
+}
+
+fn vertices_as_bytes(data: &[Vertex]) -> &[u8] {
+    unsafe { wgpu::bytes::from_slice(data) }
+}
+
+
+
+
+
+
+/////////////////////////////
+
 
 pub struct PostProcessingEffect {
     // The texture that we will draw to.
@@ -13,13 +263,8 @@ pub struct PostProcessingEffect {
     // The type used to capture the texture.
     pub texture_capturer: wgpu::TextureCapturer,
     // The type used to resize our texture to the window texture.
-    pub texture_reshaper: wgpu::TextureReshaper,
-    // where the the image are saved
-    pub path: std::path::PathBuf,
-    // If true record every frame
-    pub is_recording: bool,
-    // If true record one frame
-    pub is_taking_screenshot: bool,
+    pub effect: Effect,
+
 }
 
 impl PostProcessingEffect {
@@ -27,9 +272,8 @@ impl PostProcessingEffect {
         texture_size: [u32; 2],
         sample_count: u32,
         device: &Device,
-        path: std::path::PathBuf,
-        record_from_the_beginning: bool,
     ) -> Self {
+        //let sample_count = 2;
         // Create our custom texture.
         let texture = wgpu::TextureBuilder::new()
             .size(texture_size)
@@ -56,7 +300,7 @@ impl PostProcessingEffect {
         let texture_view = texture.view().build();
         let texture_sample_type = texture.sample_type();
         let dst_format = Frame::TEXTURE_FORMAT;
-        let texture_reshaper = wgpu::TextureReshaper::new(
+        let effect = Effect::new(
             device,
             &texture_view,
             sample_count,
@@ -65,25 +309,17 @@ impl PostProcessingEffect {
             dst_format,
         );
 
-        let is_recording = record_from_the_beginning;
-        let is_taking_screenshot = false;
-
-        // Make sure the directory where we will save images to exists.
-        std::fs::create_dir_all(&path).unwrap();
 
         PostProcessingEffect {
             texture,
             draw,
             renderer,
             texture_capturer,
-            texture_reshaper,
-            path,
-            is_recording,
-            is_taking_screenshot,
+            effect,
         }
     }
 
-    pub fn update(&mut self, window: &Window, device: &Device, elapsed_frames: u64) {
+    pub fn update(&mut self, window: &Window, device: &Device) {
         let ce_desc = wgpu::CommandEncoderDescriptor {
             label: Some("texture renderer"),
         };
@@ -96,61 +332,24 @@ impl PostProcessingEffect {
         // 1. Resolve the texture to a non-multisampled texture if necessary.
         // 2. Convert the format to non-linear 8-bit sRGBA ready for image storage.
         // 3. Copy the result to a buffer ready to be mapped for reading.
-        let snapshot = self
+        // TODO, can this be safely removed?
+        let _snapshot = self
             .texture_capturer
             .capture(device, &mut encoder, &self.texture);
 
 
         // Submit the commands for our drawing and texture capture to the GPU.
         window.queue().submit(Some(encoder.finish()));
-
-        if self.is_recording || self.is_taking_screenshot {
-            // Submit a function for writing our snapshot to a PNG.
-
-            // NOTE: It is essential that the commands for capturing the snapshot are `submit`ted before we
-            // attempt to read the snapshot - otherwise we will read a blank texture!
-            let path = self
-                .path
-                .join(elapsed_frames.to_string())
-                .with_extension("png");
-
-            snapshot
-                .read(move |result| {
-                    let image = result.expect("failed to map texture memory").to_owned();
-                    image
-                        .save(&path)
-                        .expect("failed to save texture to png image");
-                })
-                .unwrap();
-            if self.is_taking_screenshot {
-                self.is_taking_screenshot = false;
-            }
-        }
     }
 
-    pub fn start_recording(&mut self) {
-        self.is_recording = true;
-    }
 
-    pub fn stop_recording(&mut self) {
-        self.is_recording = false;
-    }
 
     // Draw the state of your `Capturer` into the given `Frame` here.
     pub fn view(&self, frame: Frame) {
         // Sample the texture and write it to the frame.
         let mut encoder = frame.command_encoder();
-        self.texture_reshaper
+        self.effect
             .encode_render_pass(frame.texture_view(), &mut *encoder);
     }
 
-    pub fn take_screenshot(&mut self) {
-        self.is_taking_screenshot = true;
-    }
-
-    pub fn exit(&self, device: &Device) {
-        self.texture_capturer
-            .await_active_snapshots(&device)
-            .unwrap();
-    }
 }
