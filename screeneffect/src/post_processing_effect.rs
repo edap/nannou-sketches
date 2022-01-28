@@ -63,7 +63,6 @@ impl Effect {
         // Create the render pipeline.
         let bind_group_layout =
             bind_group_layout(device, src_sample_count, src_sample_type, sampler_filtering);
-            //bind_group_layout(device, src_sample_count, src_sample_type, false);
         let pipeline_layout = pipeline_layout(device, &bind_group_layout);
         let render_pipeline = render_pipeline(
             device,
@@ -144,6 +143,7 @@ impl Effect {
     }
 }
 
+// those vertices can be created in the vertex shader
 const VERTICES: [Vertex; 4] = [
     Vertex {
         position: [-1.0, 1.0],
@@ -233,13 +233,7 @@ fn vertices_as_bytes(data: &[Vertex]) -> &[u8] {
     unsafe { wgpu::bytes::from_slice(data) }
 }
 
-
-
-
-
-
 /////////////////////////////
-
 
 pub struct PostProcessingEffect {
     // The texture that we will draw to.
