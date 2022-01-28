@@ -76,6 +76,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     // Render our drawing to the texture.
     let window = app.main_window();
     let device = window.device();
+    model.effect.update_buffer(&window, app.time);
     model.effect.update(&window, &device);
 
 }

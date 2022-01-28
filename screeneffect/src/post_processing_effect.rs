@@ -185,6 +185,15 @@ impl PostProcessingEffect {
         window.queue().submit(Some(encoder.finish()));
     }
 
+    pub fn update_buffer(&mut self, window: &Window, val: f32){
+        let u = Uniforms{time:val};
+        window.queue().write_buffer(
+            &self.uniform_buffer,
+            0,
+            uniforms_as_bytes(&u)
+        );
+    }
+
     // Draw into the given `Frame`.
     pub fn view(&self, frame: Frame) {
         // Sample the texture and write it to the frame.
