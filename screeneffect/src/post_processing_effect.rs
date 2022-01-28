@@ -77,22 +77,24 @@ impl Effect {
 
         // Create the uniform buffer to pass the sample count if we don't have an unrolled resolve
         // fragment shader for it.
-        let uniform_buffer = match unrolled_sample_count(src_sample_count) {
-            true => None,
-            false => {
-                let uniforms = Uniforms {
-                    sample_count: src_sample_count,
-                };
-                let uniforms_bytes = uniforms_as_bytes(&uniforms);
-                let usage = wgpu::BufferUsages::UNIFORM;
-                let buffer = device.create_buffer_init(&BufferInitDescriptor {
-                    label: None,
-                    contents: &uniforms_bytes,
-                    usage,
-                });
-                Some(buffer)
-            }
-        };
+        // let uniform_buffer = match unrolled_sample_count(src_sample_count) {
+        //     true => None,
+        //     false => {
+        //         let uniforms = Uniforms {
+        //             sample_count: src_sample_count,
+        //         };
+        //         let uniforms_bytes = uniforms_as_bytes(&uniforms);
+        //         let usage = wgpu::BufferUsages::UNIFORM;
+        //         let buffer = device.create_buffer_init(&BufferInitDescriptor {
+        //             label: None,
+        //             contents: &uniforms_bytes,
+        //             usage,
+        //         });
+        //         Some(buffer)
+        //     }
+        // };
+
+        let uniform_buffer = None;
 
         // Create the bind group.
         let bind_group = bind_group(
@@ -158,13 +160,7 @@ const VERTICES: [Vertex; 4] = [
     },
 ];
 
-// We provide pre-prepared fragment shaders with unrolled resolves for common sample counts.
-fn unrolled_sample_count(sample_count: u32) -> bool {
-    match sample_count {
-        1 | 2 | 4 | 8 | 16 => true,
-        _ => false,
-    }
-}
+
 
 fn bind_group_layout(
     device: &wgpu::Device,
@@ -180,9 +176,6 @@ fn bind_group_layout(
             src_sample_type,
         )
         .sampler(wgpu::ShaderStages::FRAGMENT, sampler_filtering);
-    if !unrolled_sample_count(src_sample_count) {
-        builder = builder.uniform_buffer(wgpu::ShaderStages::FRAGMENT, false);
-    }
     builder.build(device)
 }
 fn bind_group(
@@ -195,6 +188,7 @@ fn bind_group(
     let mut builder = wgpu::BindGroupBuilder::new()
         .texture_view(texture)
         .sampler(sampler);
+    // Davide: keep the buffer here, maybe useful.
     if let Some(buffer) = uniform_buffer {
         builder = builder.buffer::<Uniforms>(buffer, 0..1);
     }
@@ -263,10 +257,10 @@ pub struct PostProcessingEffect {
 impl PostProcessingEffect {
     pub fn new(
         texture_size: [u32; 2],
-        _sample_count: u32,
+        sample_count: u32,
         device: &Device,
     ) -> Self {
-        let sample_count = 1;
+        //let sample_count = 1;
         // Create our custom texture.
         let texture = wgpu::TextureBuilder::new()
             .size(texture_size)
