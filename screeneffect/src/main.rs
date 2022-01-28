@@ -29,10 +29,7 @@ fn model(app: &App) -> Model {
         .unwrap();
     let window = app.window(w_id).unwrap();
 
-    // Retrieve the wgpu device.
-    //let device = window.device();
 
-    // set up the capturer
     let sample_count = app.window(w_id).unwrap().msaa_samples();
     println!("{}",sample_count);
     let effect = PostProcessingEffect::new(
@@ -40,7 +37,6 @@ fn model(app: &App) -> Model {
         sample_count,
         app.window(w_id).unwrap().device(),
     );
-    // end capturer
 
 
 

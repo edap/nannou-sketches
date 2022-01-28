@@ -5,12 +5,6 @@ use nannou::wgpu::Device;
 use nannou::wgpu::util::DeviceExt;
 
 
-/// Reshapes a texture from its original size, sample_count and format to the destination size,
-/// sample_count and format.
-///
-/// The `src_texture` must have the `TextureUsages::SAMPLED` enabled.
-///
-/// The `dst_texture` must have the `TextureUsages::RENDER_ATTACHMENT` enabled.
 #[derive(Debug)]
 pub struct Effect {
     _vs_mod: wgpu::ShaderModule,
@@ -269,10 +263,10 @@ pub struct PostProcessingEffect {
 impl PostProcessingEffect {
     pub fn new(
         texture_size: [u32; 2],
-        sample_count: u32,
+        _sample_count: u32,
         device: &Device,
     ) -> Self {
-        //let sample_count = 2;
+        let sample_count = 1;
         // Create our custom texture.
         let texture = wgpu::TextureBuilder::new()
             .size(texture_size)
@@ -323,15 +317,13 @@ impl PostProcessingEffect {
         self.renderer
             .render_to_texture(device, &mut encoder, &self.draw, &self.texture);
 
-
-
-        // Submit the commands for our drawing and texture capture to the GPU.
+        // Submit the commands for our drawing .
         window.queue().submit(Some(encoder.finish()));
     }
 
 
 
-    // Draw the state of your `Capturer` into the given `Frame` here.
+    // Draw into the given `Frame`.
     pub fn view(&self, frame: Frame) {
         // Sample the texture and write it to the frame.
         let mut encoder = frame.command_encoder();
