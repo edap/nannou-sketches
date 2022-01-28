@@ -4,19 +4,6 @@ use nannou::prelude::*;
 use nannou::wgpu::Device;
 use nannou::wgpu::util::DeviceExt;
 
-
-#[derive(Debug)]
-pub struct Effect {
-    _vs_mod: wgpu::ShaderModule,
-    _fs_mod: wgpu::ShaderModule,
-    bind_group_layout: wgpu::BindGroupLayout,
-    bind_group: wgpu::BindGroup,
-    render_pipeline: wgpu::RenderPipeline,
-    sampler: wgpu::Sampler,
-    uniform_buffer: Option<wgpu::Buffer>,
-    vertex_buffer: wgpu::Buffer,
-}
-
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
 struct Vertex {
@@ -26,10 +13,10 @@ struct Vertex {
 #[repr(C)]
 #[derive(Copy, Clone)]
 struct Uniforms {
-    sample_count: u32,
+    time: f32,
 }
 
-// those vertices can be created in the vertex shader
+// those vertices can be emitted in the vertex shader
 const VERTICES: [Vertex; 4] = [
     Vertex {
         position: [-1.0, 1.0],
@@ -45,27 +32,61 @@ const VERTICES: [Vertex; 4] = [
     },
 ];
 
-impl Effect {
-    /// Construct a new `Effect`.
+pub struct PostProcessingEffect {
+    // The texture that we will draw to.
+    pub texture: wgpu::Texture,
+    // Create a `Draw` instance for drawing to our texture.
+    pub draw: nannou::Draw,
+    // The type used to render the `Draw` vertices to our texture.
+    pub renderer: nannou::draw::Renderer,
+    // The vertex shader.
+    _vs_mod: wgpu::ShaderModule,
+    // The fragment shader.
+    _fs_mod: wgpu::ShaderModule,
+    _bind_group_layout: wgpu::BindGroupLayout,
+    bind_group: wgpu::BindGroup,
+    render_pipeline: wgpu::RenderPipeline,
+    sampler: wgpu::Sampler,
+    uniform_buffer: Option<wgpu::Buffer>,
+    vertex_buffer: wgpu::Buffer,
+}
+
+impl PostProcessingEffect {
     pub fn new(
-        device: &wgpu::Device,
-        src_texture: &wgpu::TextureViewHandle,
+        texture_size: [u32; 2],
         src_sample_count: u32,
-        src_sample_type: wgpu::TextureSampleType,
-        dst_format: wgpu::TextureFormat,
+        device: &Device,
+        vs_desc: wgpu::ShaderModuleDescriptor,
+        fs_desc: wgpu::ShaderModuleDescriptor,
     ) -> Self {
-        // Load shader modules.
-        let vs_desc = wgpu::include_wgsl!("shaders/vs.wgsl");
-        let fs_desc = match src_sample_count {
-            1 => wgpu::include_wgsl!("shaders/fs.wgsl"),
-            4 => wgpu::include_wgsl!("shaders/fs_msaa4.wgsl"),
-            _ => wgpu::include_wgsl!("shaders/fs_msaa.wgsl"),
-        };
+        //let sample_count = 1;
+        // Create our custom texture.
+        let texture = wgpu::TextureBuilder::new()
+            .size(texture_size)
+            // Our texture will be used as the RENDER_ATTACHMENT for our `Draw` render pass.
+            .usage(wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING)
+            // Use nannou's default multisampling sample count.
+            .sample_count(src_sample_count)
+            // Use a spacious 16-bit linear sRGBA format suitable for high quality drawing.
+            .format(wgpu::TextureFormat::Rgba16Float)
+            // Build it!
+            .build(device);
+
+        // Create our `Draw` instance and a renderer for it.
+        let draw = nannou::Draw::new();
+        let descriptor = texture.descriptor();
+        let renderer =
+            nannou::draw::RendererBuilder::new().build_from_texture_descriptor(device, descriptor);
+
+        // Create the texture where the post-production effect will be applied.
+        let src_texture = texture.view().build();
+        let src_sample_type = texture.sample_type();
+        let dst_format = Frame::TEXTURE_FORMAT;
         
+        // Verify if it has to be like this. But it sounds that the source texture (where I draw)
+        // and the texture where nannoud draw the frame at the end, need to have the same sample_count
+        // https://github.com/bevyengine/bevy/issues/3254
         let dst_sample_count = src_sample_count;
-        println!("SAMPLING");
-        println!("{}", src_sample_count);
-        println!("{}", dst_sample_count);
 
         let vs_mod = device.create_shader_module(&vs_desc);
         let fs_mod = device.create_shader_module(&fs_desc);
@@ -88,32 +109,25 @@ impl Effect {
             dst_format,
         );
 
-        // Create the uniform buffer to pass the sample count if we don't have an unrolled resolve
-        // fragment shader for it.
-        // let uniform_buffer = match unrolled_sample_count(src_sample_count) {
-        //     true => None,
-        //     false => {
-        //         let uniforms = Uniforms {
-        //             sample_count: src_sample_count,
-        //         };
-        //         let uniforms_bytes = uniforms_as_bytes(&uniforms);
-        //         let usage = wgpu::BufferUsages::UNIFORM;
-        //         let buffer = device.create_buffer_init(&BufferInitDescriptor {
-        //             label: None,
-        //             contents: &uniforms_bytes,
-        //             usage,
-        //         });
-        //         Some(buffer)
-        //     }
-        // };
+        let uniforms = Uniforms {
+            time: 0.0,
+        };
+        let uniforms_bytes = uniforms_as_bytes(&uniforms);
+        let usage = wgpu::BufferUsages::UNIFORM;
+        let buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: None,
+            contents: &uniforms_bytes,
+            usage,
+        });
 
-        let uniform_buffer = None;
+        let uniform_buffer = Some(buffer);
+
 
         // Create the bind group.
         let bind_group = bind_group(
             device,
             &bind_group_layout,
-            src_texture,
+            &src_texture,
             &sampler,
             uniform_buffer.as_ref(),
         );
@@ -127,10 +141,13 @@ impl Effect {
             usage: vertex_usage,
         });
 
-        Effect {
+        PostProcessingEffect {
+            texture,
+            draw,
+            renderer,
             _vs_mod: vs_mod,
             _fs_mod: fs_mod,
-            bind_group_layout,
+            _bind_group_layout: bind_group_layout,
             bind_group,
             render_pipeline,
             sampler,
@@ -139,7 +156,7 @@ impl Effect {
         }
     }
 
-    /// receive an encoder and submit a render pass command for writing the src texture to the dst texture.
+    // receive an encoder and submit a render pass command for writing the src texture to the dst texture.
     pub fn encode_render_pass(
         &self,
         dst_texture: &wgpu::TextureViewHandle,
@@ -155,70 +172,6 @@ impl Effect {
         let instance_range = 0..1;
         render_pass.draw(vertex_range, instance_range);
     }
-}
-
-
-
-
-/////////////////////////////
-
-pub struct PostProcessingEffect {
-    // The texture that we will draw to.
-    pub texture: wgpu::Texture,
-    // Create a `Draw` instance for drawing to our texture.
-    pub draw: nannou::Draw,
-    // The type used to render the `Draw` vertices to our texture.
-    pub renderer: nannou::draw::Renderer,
-    // The type used to resize our texture to the window texture.
-    pub effect: Effect,
-
-}
-
-impl PostProcessingEffect {
-    pub fn new(
-        texture_size: [u32; 2],
-        sample_count: u32,
-        device: &Device,
-    ) -> Self {
-        //let sample_count = 1;
-        // Create our custom texture.
-        let texture = wgpu::TextureBuilder::new()
-            .size(texture_size)
-            // Our texture will be used as the RENDER_ATTACHMENT for our `Draw` render pass.
-            .usage(wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING)
-            // Use nannou's default multisampling sample count.
-            .sample_count(sample_count)
-            // Use a spacious 16-bit linear sRGBA format suitable for high quality drawing.
-            .format(wgpu::TextureFormat::Rgba16Float)
-            // Build it!
-            .build(device);
-
-        // Create our `Draw` instance and a renderer for it.
-        let draw = nannou::Draw::new();
-        let descriptor = texture.descriptor();
-        let renderer =
-            nannou::draw::RendererBuilder::new().build_from_texture_descriptor(device, descriptor);
-
-        // Create the texture where the post-production effect will be applied.
-        let src_texture = texture.view().build();
-        let texture_sample_type = texture.sample_type();
-        let dst_format = Frame::TEXTURE_FORMAT;
-        let effect = Effect::new(
-            device,
-            &src_texture,
-            sample_count,
-            texture_sample_type,
-            dst_format,
-        );
-
-
-        PostProcessingEffect {
-            texture,
-            draw,
-            renderer,
-            effect,
-        }
-    }
 
     pub fn update(&mut self, window: &Window, device: &Device) {
         let ce_desc = wgpu::CommandEncoderDescriptor {
@@ -232,16 +185,12 @@ impl PostProcessingEffect {
         window.queue().submit(Some(encoder.finish()));
     }
 
-
-
     // Draw into the given `Frame`.
     pub fn view(&self, frame: Frame) {
         // Sample the texture and write it to the frame.
         let mut encoder = frame.command_encoder();
-        self.effect
-            .encode_render_pass(frame.texture_view(), &mut *encoder);
+        self.encode_render_pass(frame.texture_view(), &mut *encoder);
     }
-
 }
 
 fn pipeline_layout(
@@ -283,7 +232,6 @@ fn vertices_as_bytes(data: &[Vertex]) -> &[u8] {
     unsafe { wgpu::bytes::from_slice(data) }
 }
 
-
 fn bind_group_layout(
     device: &wgpu::Device,
     src_sample_count: u32,
@@ -298,6 +246,8 @@ fn bind_group_layout(
             src_sample_type,
         )
         .sampler(wgpu::ShaderStages::FRAGMENT, sampler_filtering);
+
+    builder = builder.uniform_buffer(wgpu::ShaderStages::FRAGMENT, false);
     builder.build(device)
 }
 fn bind_group(
@@ -311,6 +261,7 @@ fn bind_group(
         .texture_view(texture)
         .sampler(sampler);
     // Davide: keep the buffer here, maybe useful.
+    // TODO, buffer should not be an option
     if let Some(buffer) = uniform_buffer {
         builder = builder.buffer::<Uniforms>(buffer, 0..1);
     }

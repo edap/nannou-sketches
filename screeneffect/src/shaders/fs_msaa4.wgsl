@@ -2,10 +2,18 @@ struct FragmentOutput {
     [[location(0)]] out_color: vec4<f32>;
 };
 
+[[block]]
+struct Data {
+    time: f32;
+};
+
 [[group(0), binding(0)]]
 var tex: texture_multisampled_2d<f32>;
 [[group(0), binding(1)]]
 var tex_sampler: sampler;
+[[group(0), binding(2)]]
+var<uniform> uniforms: Data;
+
 
 [[stage(fragment)]]
 fn main(
@@ -25,12 +33,12 @@ fn main(
     color = color + textureLoad(tex, itex_coords, 3);
     color = color * 0.25;
 
+    // test
     if (color.x > 0.5) {
-        color.y = 1.0 * ( tex_coords.x % (.05) );
+        color.y = 1.0 * (tex_coords.x % (.05));
     } else {
         color.x = 0.1;
-        //color.y = 0.2;
-        color.z = 1.0 * ( tex_coords.y % (.1) );
+        color.z = 1.0 * (tex_coords.y % (.1));
     }
 
     return FragmentOutput(color);

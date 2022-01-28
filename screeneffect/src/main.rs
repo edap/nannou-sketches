@@ -31,14 +31,22 @@ fn model(app: &App) -> Model {
 
 
     let sample_count = app.window(w_id).unwrap().msaa_samples();
-    println!("{}",sample_count);
+
+    // load the sahders
+    let vs_desc = wgpu::include_wgsl!("shaders/vs.wgsl");
+    // at the moment only sample_count 4 works.
+    let fs_desc = match sample_count {
+        1 => wgpu::include_wgsl!("shaders/fs.wgsl"),
+        4 => wgpu::include_wgsl!("shaders/fs_msaa4.wgsl"),
+        _ => wgpu::include_wgsl!("shaders/fs_msaa.wgsl"),
+    };
     let effect = PostProcessingEffect::new(
         texture_size,
         sample_count,
-        //1,
         app.window(w_id).unwrap().device(),
+        vs_desc,
+        fs_desc,
     );
-
 
     Model {
         effect,
@@ -53,7 +61,6 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     // First, reset the `draw` state.
     let draw = &model.effect.draw;
     draw.reset();
-
 
     // Draw like we normally would in the `view`.
     draw.background().color(BLACK);
