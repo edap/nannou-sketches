@@ -40,7 +40,6 @@ fn model(app: &App) -> Model {
     );
 
 
-
     Model {
         effect,
     }
