@@ -25,10 +25,12 @@ fn main(
     color = color + textureLoad(tex, itex_coords, 3);
     color = color * 0.25;
 
-    // Davide
-    if(color.x > 0.5){
-        color.y = 0.9;
-
+    if (color.x > 0.5) {
+        color.y = 1.0 * ( tex_coords.x % (.05) );
+    } else {
+        color.x = 0.1;
+        //color.y = 0.2;
+        color.z = 1.0 * ( tex_coords.y % (.1) );
     }
 
     return FragmentOutput(color);

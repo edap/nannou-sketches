@@ -35,6 +35,7 @@ fn model(app: &App) -> Model {
     let effect = PostProcessingEffect::new(
         texture_size,
         sample_count,
+        //1,
         app.window(w_id).unwrap().device(),
     );
 

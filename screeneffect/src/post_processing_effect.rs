@@ -41,9 +41,6 @@ impl Effect {
     ) -> Self {
         // Load shader modules.
         let vs_desc = wgpu::include_wgsl!("shaders/vs.wgsl");
-        //let fs_desc = wgpu::include_wgsl!("shaders/fs.wgsl");
-        //let fs_desc = wgpu::include_wgsl!("shaders/fs_msaa.wgsl");
-        //let fs_desc = wgpu::include_wgsl!("shaders/fs_msaa4.wgsl");
 
         let fs_desc = match src_sample_count {
             1 => wgpu::include_wgsl!("shaders/fs.wgsl"),
@@ -51,8 +48,9 @@ impl Effect {
             _ => wgpu::include_wgsl!("shaders/fs_msaa.wgsl"),
         };
         
-        println!("SSSSAAAA");
+        println!("SAMPLING");
         println!("{}", src_sample_count);
+        println!("{}", dst_sample_count);
 
         let vs_mod = device.create_shader_module(&vs_desc);
         let fs_mod = device.create_shader_module(&fs_desc);
@@ -65,6 +63,7 @@ impl Effect {
         // Create the render pipeline.
         let bind_group_layout =
             bind_group_layout(device, src_sample_count, src_sample_type, sampler_filtering);
+            //bind_group_layout(device, src_sample_count, src_sample_type, false);
         let pipeline_layout = pipeline_layout(device, &bind_group_layout);
         let render_pipeline = render_pipeline(
             device,
