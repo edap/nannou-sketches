@@ -3,7 +3,6 @@
 use nannou::prelude::*;
 use nannou::wgpu::Device;
 use nannou::wgpu::util::DeviceExt;
-//use nannou::wgpu::*;
 
 
 /// Reshapes a texture from its original size, sample_count and format to the destination size,
@@ -58,6 +57,8 @@ impl Effect {
             _ => wgpu::include_wgsl!("shaders/fs_msaa.wgsl"),
         };
         
+        println!("SSSSAAAA");
+        println!("{}", src_sample_count);
 
         let vs_mod = device.create_shader_module(&vs_desc);
         let fs_mod = device.create_shader_module(&fs_desc);
@@ -260,8 +261,6 @@ pub struct PostProcessingEffect {
     pub draw: nannou::Draw,
     // The type used to render the `Draw` vertices to our texture.
     pub renderer: nannou::draw::Renderer,
-    // The type used to capture the texture.
-    pub texture_capturer: wgpu::TextureCapturer,
     // The type used to resize our texture to the window texture.
     pub effect: Effect,
 
@@ -293,8 +292,6 @@ impl PostProcessingEffect {
         let renderer =
             nannou::draw::RendererBuilder::new().build_from_texture_descriptor(device, descriptor);
 
-        // Create the texture capturer.
-        let texture_capturer = wgpu::TextureCapturer::default();
 
         // Create the texture reshaper.
         let texture_view = texture.view().build();
@@ -314,7 +311,6 @@ impl PostProcessingEffect {
             texture,
             draw,
             renderer,
-            texture_capturer,
             effect,
         }
     }
@@ -327,15 +323,6 @@ impl PostProcessingEffect {
         self.renderer
             .render_to_texture(device, &mut encoder, &self.draw, &self.texture);
 
-        // Take a snapshot of the texture. The capturer will do the following:
-        //
-        // 1. Resolve the texture to a non-multisampled texture if necessary.
-        // 2. Convert the format to non-linear 8-bit sRGBA ready for image storage.
-        // 3. Copy the result to a buffer ready to be mapped for reading.
-        // TODO, can this be safely removed?
-        let _snapshot = self
-            .texture_capturer
-            .capture(device, &mut encoder, &self.texture);
 
 
         // Submit the commands for our drawing and texture capture to the GPU.
