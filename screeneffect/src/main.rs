@@ -3,19 +3,18 @@
 
 use nannou::prelude::*;
 pub mod post_processing_effect;
-pub use crate::post_processing_effect::PostProcessingEffect ;
+pub use crate::post_processing_effect::PostProcessingEffect;
 
 fn main() {
     nannou::app(model).update(update).run();
 }
 
 struct Model {
-    // The texture that we will draw to.
-    effect: PostProcessingEffect
+    // The off-screen effect.
+    effect: PostProcessingEffect,
 }
 
 fn model(app: &App) -> Model {
-    // Lets write to a 4K UHD texture.
     let texture_size = [800, 800];
 
     // Create the window.
@@ -27,19 +26,14 @@ fn model(app: &App) -> Model {
         .view(view)
         .build()
         .unwrap();
-    let window = app.window(w_id).unwrap();
-
 
     let sample_count = app.window(w_id).unwrap().msaa_samples();
 
     // load the sahders
     let vs_desc = wgpu::include_wgsl!("shaders/vs.wgsl");
-    // at the moment only sample_count 4 works.
-    let fs_desc = match sample_count {
-        1 => wgpu::include_wgsl!("shaders/fs.wgsl"),
-        4 => wgpu::include_wgsl!("shaders/fs_msaa4.wgsl"),
-        _ => wgpu::include_wgsl!("shaders/fs_msaa.wgsl"),
-    };
+    // at the moment PostProcessingEffect works only with the default sample_count value, that is 4.
+    let fs_desc = wgpu::include_wgsl!("shaders/fs_msaa4_noise.wgsl");
+
     let effect = PostProcessingEffect::new(
         texture_size,
         sample_count,
@@ -48,29 +42,23 @@ fn model(app: &App) -> Model {
         fs_desc,
     );
 
-    Model {
-        effect,
-    }
+    Model { effect }
 }
 
 fn update(app: &App, model: &mut Model, _update: Update) {
-    // Because we draw in the texture, all the code that usually goes in the view method 
+    // Because we draw in the texture, all the code that usually goes in the view method
     // has to be moved into the update function.
 
-    // VIEW
     // First, reset the `draw` state.
     let draw = &model.effect.draw;
     draw.reset();
 
     // Draw like we normally would in the `view`.
     draw.background().color(BLACK);
-    // Use the frame number to animate, ensuring we get a constant update time.
-    let elapsed_frames = app.main_window().elapsed_frames();
-    let time = elapsed_frames as f32 / 60.0;
-    // let time = app.time;
+    let time = app.time;
     draw.ellipse()
-        .x_y(time.sin() * 200.0, time.cos()* 200.0)
-        .w_h(200.0, 200.0)
+        .x_y(time.sin() * 200.0, time.cos() * 200.0)
+        .w_h(400.0, 400.0)
         .color(RED);
 
     // Render our drawing to the texture.
@@ -78,11 +66,11 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     let device = window.device();
     model.effect.update_buffer(&window, app.time);
     model.effect.update(&window, &device);
-
 }
 
-// Draw the state of your `Model` into the given `Frame` here.
+// Draw your texture into the given `Frame` here.
 fn view(_app: &App, model: &Model, frame: Frame) {
     // Sample the texture and write it to the frame.
+    frame.texture_view();
     model.effect.view(frame);
 }

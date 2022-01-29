@@ -1,8 +1,8 @@
 // copied from https://github.com/nannou-org/nannou/blob/master/examples/draw/draw_capture_hi_res.rs
 
 use nannou::prelude::*;
-use nannou::wgpu::Device;
 use nannou::wgpu::util::DeviceExt;
+use nannou::wgpu::Device;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, PartialOrd)]
@@ -16,7 +16,7 @@ struct Uniforms {
     time: f32,
 }
 
-// those vertices can be emitted in the vertex shader
+// TODO: those vertices can be emitted in the vertex shader.
 const VERTICES: [Vertex; 4] = [
     Vertex {
         position: [-1.0, 1.0],
@@ -39,18 +39,13 @@ pub struct PostProcessingEffect {
     pub draw: nannou::Draw,
     // The type used to render the `Draw` vertices to our texture.
     pub renderer: nannou::draw::Renderer,
-    // The vertex shader.
-    _vs_mod: wgpu::ShaderModule,
-    // The fragment shader.
-    _fs_mod: wgpu::ShaderModule,
-    _bind_group_layout: wgpu::BindGroupLayout,
     bind_group: wgpu::BindGroup,
     render_pipeline: wgpu::RenderPipeline,
-    sampler: wgpu::Sampler,
     uniform_buffer: wgpu::Buffer,
     vertex_buffer: wgpu::Buffer,
 }
 
+// TODO, vertex shader as argument for a screenspace effect is unecessary.
 impl PostProcessingEffect {
     pub fn new(
         texture_size: [u32; 2],
@@ -59,7 +54,6 @@ impl PostProcessingEffect {
         vs_desc: wgpu::ShaderModuleDescriptor,
         fs_desc: wgpu::ShaderModuleDescriptor,
     ) -> Self {
-        //let sample_count = 1;
         // Create our custom texture.
         let texture = wgpu::TextureBuilder::new()
             .size(texture_size)
@@ -78,11 +72,11 @@ impl PostProcessingEffect {
         let renderer =
             nannou::draw::RendererBuilder::new().build_from_texture_descriptor(device, descriptor);
 
-        // Create the texture where the post-production effect will be applied.
+        // Create the texture view
         let src_texture = texture.view().build();
         let src_sample_type = texture.sample_type();
         let dst_format = Frame::TEXTURE_FORMAT;
-        
+
         // Verify if it has to be like this. But it sounds that the source texture (where I draw)
         // and the texture where nannoud draw the frame at the end, need to have the same sample_count
         // https://github.com/bevyengine/bevy/issues/3254
@@ -91,7 +85,7 @@ impl PostProcessingEffect {
         let vs_mod = device.create_shader_module(&vs_desc);
         let fs_mod = device.create_shader_module(&fs_desc);
 
-        // Create the sampler for sampling from the source texture.
+        // Create the sampler for sampling the source texture.
         let sampler_desc = wgpu::SamplerBuilder::new().into_descriptor();
         let sampler_filtering = wgpu::sampler_filtering(&sampler_desc);
         let sampler = device.create_sampler(&sampler_desc);
@@ -109,16 +103,14 @@ impl PostProcessingEffect {
             dst_format,
         );
 
-        let uniforms = Uniforms {
-            time: 0.0,
-        };
+        // create the buffer containing the uniforms (just time ATM)
+        let uniforms = Uniforms { time: 0.0 };
         let uniforms_bytes = uniforms_as_bytes(&uniforms);
         let uniform_buffer = device.create_buffer_init(&BufferInitDescriptor {
             label: None,
             contents: &uniforms_bytes,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
-
 
         // Create the bind group.
         let bind_group = bind_group(
@@ -129,7 +121,7 @@ impl PostProcessingEffect {
             &uniform_buffer,
         );
 
-        // Create the vertex buffer.
+        // Create the vertex buffer. TODO, remove this and emit vertices in the vertex shader
         let vertices_bytes = vertices_as_bytes(&VERTICES[..]);
         let vertex_usage = wgpu::BufferUsages::VERTEX;
         let vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
@@ -142,12 +134,8 @@ impl PostProcessingEffect {
             texture,
             draw,
             renderer,
-            _vs_mod: vs_mod,
-            _fs_mod: fs_mod,
-            _bind_group_layout: bind_group_layout,
             bind_group,
             render_pipeline,
-            sampler,
             uniform_buffer,
             vertex_buffer,
         }
@@ -182,13 +170,11 @@ impl PostProcessingEffect {
         window.queue().submit(Some(encoder.finish()));
     }
 
-    pub fn update_buffer(&mut self, window: &Window, val: f32){
-        let u = Uniforms{time:val};
-        window.queue().write_buffer(
-            &self.uniform_buffer,
-            0,
-            uniforms_as_bytes(&u)
-        );
+    pub fn update_buffer(&mut self, window: &Window, val: f32) {
+        let u = Uniforms { time: val };
+        window
+            .queue()
+            .write_buffer(&self.uniform_buffer, 0, uniforms_as_bytes(&u));
     }
 
     // Draw into the given `Frame`.
