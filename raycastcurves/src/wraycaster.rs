@@ -312,7 +312,7 @@ impl Wraycaster {
         animation: bool,
         animation_speed: f32,
         time: f32,
-        walls: &Vec<Curve>,
+        scene: &Vec<Curve>,
         win: geom::Rect,
     ) {
         self.ray_lights.par_iter_mut().for_each(|pray| {
@@ -329,7 +329,7 @@ impl Wraycaster {
                 &mut pray.count_depth,
                 pray.max_depth,
                 &mut pray.intersections,
-                walls,
+                scene,
                 light_amount,
             )
         })
@@ -343,7 +343,7 @@ pub fn cast_ray(
     depth: &mut usize,
     max_depth: usize,
     intersections: &mut Vec<Intersection>,
-    walls: &Vec<Curve>,
+    scene: &Vec<Curve>,
     light_amount: f64,
 ) {
     if *depth < max_depth {
@@ -351,8 +351,8 @@ pub fn cast_ray(
         let mut distance: f32 = Float::infinity();
         let mut surface_normal: Vec2 = vec2(0.0, 0.0);
         let mut material: Material = Material::default();
-        // find the closest intersection point between the ray and the walls
-        for curve in walls.iter() {
+        // find the closest intersection point between the ray and the scene
+        for curve in scene.iter() {
             // if a bounding volume is present, use it to pre-test the intersection
             // otherwise test everything
             match &curve.bounding_volume {
@@ -408,7 +408,7 @@ pub fn cast_ray(
                     // r.refl_intensity.push(r.ray.dir.dot(refl).abs());
                     ray.orig = collision + refl.normalize() * EPSILON;
                     ray.dir = refl;
-                    cast_ray(ray, depth, max_depth, intersections, walls, light_amount);
+                    cast_ray(ray, depth, max_depth, intersections, scene, light_amount);
                 }
                 SurfaceType::Refractive { ior } => {
                     let intersection = Intersection::new(collision, hsla, *depth);
@@ -417,7 +417,7 @@ pub fn cast_ray(
                     let refr = ray.refract(surface_normal, ior);
                     ray.orig = collision + refr.normalize() * EPSILON;
                     ray.dir = refr;
-                    cast_ray(ray, depth, max_depth, intersections, walls, light_amount);
+                    cast_ray(ray, depth, max_depth, intersections, scene, light_amount);
                 }
                 SurfaceType::ReflectiveAndRefractive { reflectivity, ior } => {
                     let fresnel = ray.fresnel(surface_normal, ior);
@@ -434,7 +434,7 @@ pub fn cast_ray(
                         depth,
                         max_depth,
                         intersections,
-                        walls,
+                        scene,
                         light_amount * (1.0 - fresnel),
                     );
                     // refl
@@ -445,7 +445,7 @@ pub fn cast_ray(
                         depth,
                         max_depth,
                         intersections,
-                        walls,
+                        scene,
                         light_amount * fresnel,
                     );
 
@@ -460,7 +460,7 @@ pub fn cast_ray(
                     //         ray.orig = collision + refr.normalize() * EPSILON;
                     //     }
                     //     ray.dir = refr;
-                    //     cast_ray(ray, depth, max_depth, intersections, walls, light_amount * (1.0 - fresnel));
+                    //     cast_ray(ray, depth, max_depth, intersections, scene, light_amount * (1.0 - fresnel));
                     // }
 
                     // //reflection
@@ -470,7 +470,7 @@ pub fn cast_ray(
                     //     ray.orig = collision - refl.normalize() * EPSILON;
                     // }
                     // ray.dir = refl;
-                    // cast_ray(ray, depth, max_depth, intersections, walls, light_amount * fresnel);
+                    // cast_ray(ray, depth, max_depth, intersections, scene, light_amount * fresnel);
 
                     let intersection = Intersection::new(collision, hsla, *depth);
                     intersections.push(intersection);

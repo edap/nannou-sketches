@@ -40,7 +40,7 @@ fn main() {
 
 struct Model {
     canvas_rect: geom::Rect,
-    walls: Vec<Curve>,
+    scene: Vec<Curve>,
     tile_count_w: u32,
     n_caster: u32,
     raycaster_density: usize,
@@ -135,7 +135,7 @@ fn model(app: &App) -> Model {
     theme.shape_color = color::CHARCOAL;
 
     // initialize the fields of the model
-    let mut walls: Vec<Curve> = Vec::new();
+    let mut scene: Vec<Curve> = Vec::new();
     let mut rays: Vec<Wraycaster> = Vec::new();
     let ray_width = 3.0;
     let wall_width = 2.0;
@@ -160,7 +160,7 @@ fn model(app: &App) -> Model {
     let raycaster_density = 6;
     let material = Material::default();
     make_walls(
-        &mut walls,
+        &mut scene,
         &canvas_rect,
         tile_count_w,
         wall_split,
@@ -178,7 +178,7 @@ fn model(app: &App) -> Model {
         n_caster,
         max_depth,
         raycaster_density,
-        &walls,
+        &scene,
         rays_position_mode,
         rays_prob,
     );
@@ -202,7 +202,7 @@ fn model(app: &App) -> Model {
 
     let mut the_model = Model {
         canvas_rect,
-        walls,
+        scene,
         n_caster,
         raycaster_density,
         tile_count_w,
@@ -256,7 +256,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     let rot = model.rotation;
     let anim = model.animation;
     let anim_speed = model.animation_speed;
-    let walls = &model.walls;
+    let scene = &model.scene;
     let canvas_rect = model.canvas_rect;
     let animation_mode = model.animation_mode;
 
@@ -271,7 +271,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     model
         .rays
         .par_iter_mut()
-        .for_each(|ray| ray.collide(rot, anim, anim_speed, time, walls, canvas_rect));
+        .for_each(|ray| ray.collide(rot, anim, anim_speed, time, scene, canvas_rect));
 
     // Because we draw in the texture, all the code that usually goes in the view method has to be moved into the update
     // function.
@@ -296,26 +296,26 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     }
 
     if model.show_walls {
-        for curve in model.walls.iter() {
+        for curve in model.scene.iter() {
             //println!("{:?}", curve.points.len());
             draw.polyline()
                 .weight(model.wall_width)
                 .color(curve.material.coloration)
                 .points(curve.points.clone());
             // Debug bounding volume
-            // if let Some(c) = curve.bounding_volume {
-            //     match c {
-            //         BoundingVolume::Circle { position, radius } => {
-            //             draw.ellipse()
-            //                 .no_fill()
-            //                 .x_y(position.x, position.y)
-            //                 .w_h(radius * 2.0, radius * 2.0)
-            //                 .color(curve.material.coloration)
-            //                 .stroke_weight(model.wall_width);
-            //         }
-            //         _ => {}
-            //     }
-            // }
+            if let Some(c) = curve.bounding_volume {
+                match c {
+                    BoundingVolume::Circle { position, radius } => {
+                        draw.ellipse()
+                            .no_fill()
+                            .x_y(position.x, position.y)
+                            .w_h(radius * 2.0, radius * 2.0)
+                            .color(curve.material.coloration)
+                            .stroke_weight(model.wall_width);
+                    }
+                    _ => {}
+                }
+            }
         }
     }
 
@@ -424,7 +424,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
                 ior: 1.4,
             };
             model.material.surface = surface;
-            change_surface_walls(&mut model.walls, &surface)
+            change_surface_walls(&mut model.scene, &surface)
         }
         for _click in gui::button()
             .label("Walls Refl")
@@ -432,7 +432,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         {
             let surface = SurfaceType::Reflective { reflectivity: 1.0 };
             model.material.surface = surface;
-            change_surface_walls(&mut model.walls, &surface)
+            change_surface_walls(&mut model.scene, &surface)
         }
         for _click in gui::button()
             .label("Walls Diffuse")
@@ -440,7 +440,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         {
             let surface = SurfaceType::Diffuse;
             model.material.surface = surface;
-            change_surface_walls(&mut model.walls, &surface)
+            change_surface_walls(&mut model.scene, &surface)
         }
 
         for _click in gui::button()
@@ -449,7 +449,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         {
             let canvas_rect = model.canvas_rect;
             make_walls(
-                &mut model.walls,
+                &mut model.scene,
                 &canvas_rect,
                 model.tile_count_w,
                 model.wall_split,
@@ -468,7 +468,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
                 model.n_caster,
                 model.max_bounces,
                 model.raycaster_density,
-                &model.walls,
+                &model.scene,
                 model.rays_position_mode,
                 model.rays_prob,
             )
@@ -563,7 +563,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         {
             model.scheme_id = value as usize;
             change_color_walls(
-                &mut model.walls,
+                &mut model.scene,
                 model.palette.get_first(model.scheme_id, model.color_off),
                 model.palette.get_second(model.scheme_id, model.color_off),
             );
@@ -582,7 +582,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
         {
             model.color_off = value as usize;
             change_color_walls(
-                &mut model.walls,
+                &mut model.scene,
                 model.palette.get_first(model.scheme_id, model.color_off),
                 model.palette.get_second(model.scheme_id, model.color_off),
             );
@@ -601,7 +601,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.palette_alpha = value;
             model.palette.set_alpha(value);
             change_color_walls(
-                &mut model.walls,
+                &mut model.scene,
                 model.palette.get_first(model.scheme_id, model.color_off),
                 model.palette.get_second(model.scheme_id, model.color_off),
             );
