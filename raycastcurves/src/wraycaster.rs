@@ -1,8 +1,8 @@
 use crate::ray_light::Intersection;
 use crate::ray_light::RayLight;
-use crate::types::Curve;
-use crate::types::Material;
-use crate::types::SurfaceType;
+use crate::scene::Curve;
+use crate::scene::Material;
+use crate::scene::SurfaceType;
 use nannou::color::Mix;
 #[allow(dead_code)]
 use nannou::prelude::*;

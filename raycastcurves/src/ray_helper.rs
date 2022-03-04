@@ -1,5 +1,5 @@
 pub use crate::bouncing::BouncingRay2D;
-use crate::types::Curve;
+use crate::scene::Curve;
 pub use crate::wraycaster::Wraycaster;
 use nannou::image::math;
 use nannou::prelude::*;

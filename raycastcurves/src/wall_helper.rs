@@ -1,8 +1,8 @@
 use crate::mondrian::split_squares;
 pub use crate::mondrian::Square;
-use crate::types::Curve;
-use crate::types::Material;
-use crate::types::SurfaceType;
+use crate::scene::Curve;
+use crate::scene::Material;
+use crate::scene::SurfaceType;
 use nannou::prelude::*;
 use ray2d::BoundingVolume;
 

@@ -1,5 +1,5 @@
 use crate::bouncing::BouncingRay2D;
-use crate::types::Curve;
+use crate::scene::Curve;
 #[allow(dead_code)]
 use nannou::prelude::*;
 use rayon::prelude::*;

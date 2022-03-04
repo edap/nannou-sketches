@@ -38,7 +38,6 @@ impl Default for Material {
     }
 }
 
-// TODO, add a bouding box
 pub struct Curve {
     pub points: Vec<Vec2>,
     pub material: Material,
