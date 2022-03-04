@@ -373,6 +373,8 @@ pub fn cast_ray(
                         None => {}
                     }
                 }
+                // There is no acceleration structure available to pre-test the intersection
+                // proceed to test.
                 None => {
                     if let Some(collision) = ray.intersect_polyline(&curve.points) {
                         // save the closest possible collision

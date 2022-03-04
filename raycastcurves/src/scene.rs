@@ -37,10 +37,23 @@ impl Default for Material {
         }
     }
 }
-
+#[derive(Debug)]
 pub struct Curve {
     pub points: Vec<Vec2>,
     pub material: Material,
     pub ray_anchor_point: Option<Vec2>,
     pub bounding_volume: Option<BoundingVolume>,
+}
+#[derive(Debug)]
+pub struct Circle {
+    pub radius: f32,
+    pub position: Vec2,
+    pub ray_anchor_point: Option<Vec2>,
+    pub bounding_volume: Option<BoundingVolume>,
+}
+
+#[derive(Debug)]
+pub enum Element {
+    Curve(Curve),
+    Circle(Circle),
 }

@@ -79,7 +79,7 @@ pub fn create_curve_from_square(
     let mut start_from = 0;
     let mut end_to = start_from + wall_length - pad;
     let cloned_mat = mat.clone();
-    let bounding_volume = get_sphere_from_square(square, &padding);
+    let bounding_volume = get_circle_from_square(square, &padding);
 
     if hole > 0.1 {
         for i in (0..=360).step_by(1) {
@@ -123,8 +123,8 @@ pub fn create_curve_from_square(
     }
 }
 
-fn get_sphere_from_square(square: &Square, padding: &f32) -> BoundingVolume {
-    let mut radius: f32;
+fn get_circle_from_square(square: &Square, padding: &f32) -> BoundingVolume {
+    let radius: f32;
     if square.width > square.height {
         radius = square.width / 2.0 - padding;
     } else {
