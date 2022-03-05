@@ -186,6 +186,13 @@ pub fn ray_collides(
         let mut distance: f32 = Float::infinity();
         let mut surface_normal: Vec2 = vec2(0.0, 0.0);
         // find the closest intersection point between the ray and the walls
+
+        // TODO:
+        // curve should become an element. This part of the code should not know
+        // if an element is a circle, a polyline or a segment.
+        // is scene.rb create the trait intersectable
+        // and implement it for the element
+        // each intersections sould return distance and surface normal
         for curve in walls.iter() {
             if let Some(collision) = r.ray.intersect_polyline(&curve.points) {
                 // save the closest possible collision

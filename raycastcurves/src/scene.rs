@@ -1,5 +1,5 @@
 use nannou::prelude::*;
-use ray2d::BoundingVolume;
+use ray2d::{BoundingVolume, Ray2D};
 
 #[derive(Debug, Copy, Clone)]
 pub enum SurfaceType {
@@ -56,4 +56,53 @@ pub struct Circle {
 pub enum Element {
     Curve(Curve),
     Circle(Circle),
+}
+
+pub trait Intersectable {
+    fn intersect(&self, ray : &Ray2D) -> Option<(f32, Vec2)>;
+}
+
+impl Intersectable for Curve {
+    fn intersect(&self, ray : &Ray2D) -> Option<(f32, Vec2)>{
+            // if a bounding volume is present, use it to pre-test the intersection
+            // otherwise test everything
+            match &self.bounding_volume {
+                Some(volume) => {
+                    let pretest = ray.intersect_bounding_volume(volume);
+                    match pretest {
+                        Some(_) => {
+                            ray.intersect_polyline(&self.points)
+
+                            // if let Some(collision) = ray.intersect_polyline(&self.points) {
+                            //     // save the closest possible collision
+                            //     return Some(collision);
+                            //     // if collision.0 < distance {
+                            //     //     distance = collision.0;
+                            //     //     surface_normal = collision.1;
+                            //     //     material = curve.material;
+                            //     // }
+                            // }
+                        }
+
+                        None => {None}
+                    }
+                }
+                // There is no acceleration structure available to pre-test the intersection
+                // proceed to test.
+                None => {
+                    ray.intersect_polyline(&self.points)
+                    // if let Some(collision) = ray.intersect_polyline(&self.points) {
+                    //     // save the closest possible collision
+                    //     return Some(collision);
+                    //     // if collision.0 < distance {
+                    //     //     distance = collision.0;
+                    //     //     surface_normal = collision.1;
+                    //     //     material = self.material;
+                    //     // }
+                    // }
+                }
+            }
+        
+    }
+    
 }
