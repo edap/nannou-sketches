@@ -49,6 +49,7 @@ pub struct Curve {
 pub struct Circle {
     pub radius: f32,
     pub position: Vec2,
+    pub material: Material,
     pub ray_anchor_point: Option<Vec2>,
     pub bounding_volume: Option<BoundingVolume>,
 }
@@ -57,6 +58,15 @@ pub struct Circle {
 pub enum Element {
     Curve(Curve),
     Circle(Circle),
+}
+
+impl Element {
+    pub fn material(&self) -> &Material{
+        match *self {
+            Element::Curve(ref cu) => &cu.material,
+            Element::Circle(ref ci) => &ci.material,
+        }
+    }
 }
 
 pub trait Intersectable {
@@ -91,7 +101,7 @@ impl Intersectable for Curve {
                             // }
                         }
 
-                        None => {None}
+                        None => None
                     }
                 }
                 // There is no acceleration structure available to pre-test the intersection

@@ -217,7 +217,6 @@ impl Ray2D {
                 }
             },
             BoundingVolume::Aabb { min, max } => self.intersect_aabb(min, max),
-            _ => None,
         }
     }
 }
