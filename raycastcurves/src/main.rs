@@ -297,22 +297,21 @@ fn update(app: &App, model: &mut Model, _update: Update) {
 
     if model.show_walls {
         for element in model.scene.iter() {
-
-            // Debug bounding volume
             element.draw(&draw, &model.wall_width);
-            if let Some(c) = element.bounding_volume() {
-                match c {
-                    BoundingVolume::Circle { position, radius } => {
-                        draw.ellipse()
-                            .no_fill()
-                            .x_y(position.x, position.y)
-                            .w_h(radius * 2.0, radius * 2.0)
-                            .color(element.material().coloration)
-                            .stroke_weight(model.wall_width);
-                    }
-                    _ => {}
-                }
-            }
+            // Debug bounding volume
+            // if let Some(c) = element.bounding_volume() {
+            //     match c {
+            //         BoundingVolume::Circle { position, radius } => {
+            //             draw.ellipse()
+            //                 .no_fill()
+            //                 .x_y(position.x, position.y)
+            //                 .w_h(radius * 2.0, radius * 2.0)
+            //                 .color(element.material().coloration)
+            //                 .stroke_weight(model.wall_width);
+            //         }
+            //         _ => {}
+            //     }
+            // }
         }
     }
 

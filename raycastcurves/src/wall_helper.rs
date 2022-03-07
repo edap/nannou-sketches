@@ -97,7 +97,7 @@ pub fn create_curve_from_square(
             if i == end_to {
                 points.push(center + vec2(x, y));
 
-                walls.push(scene::Element::Curve(Curve{
+                walls.push(Element::Curve(Curve{
                     points: points.clone(),
                     material: cloned_mat,
                     ray_anchor_point: Some(center),
@@ -116,7 +116,7 @@ pub fn create_curve_from_square(
             let y = (square.height / 2.0 - padding) * rad.sin();
             points.push(center + vec2(x, y))
         }
-        walls.push(scene::Element::Curve(Curve{
+        walls.push(Element::Curve(Curve{
             points: points.clone(),
             material: cloned_mat,
             ray_anchor_point: Some(center),
@@ -126,6 +126,7 @@ pub fn create_curve_from_square(
     }
 }
 
+// TODO, use an aabb instead of a circle for this case
 fn get_circle_from_square(square: &Square, padding: &f32) -> BoundingVolume {
     let radius: f32;
     if square.width > square.height {

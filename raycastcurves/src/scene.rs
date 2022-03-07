@@ -1,6 +1,5 @@
 use nannou::prelude::*;
 use ray2d::{BoundingVolume, Ray2D};
-use rayon::iter::Interleave;
 
 #[derive(Debug, Copy, Clone)]
 pub enum SurfaceType {
@@ -60,9 +59,6 @@ pub enum Element {
     Circle(Circle),
 }
 
-// TODO:
-// implement draw methods
-
 impl Element {
     pub fn material(&self) -> &Material{
         match *self {
@@ -107,10 +103,7 @@ impl Element {
                 .stroke_weight(*wall_width);
             }
         }
-
     }
-
-
 }
 
 pub trait Intersectable {
@@ -142,16 +135,6 @@ impl Intersectable for Curve {
                     match pretest {
                         Some(_) => {
                             ray.intersect_polyline(&self.points)
-
-                            // if let Some(collision) = ray.intersect_polyline(&self.points) {
-                            //     // save the closest possible collision
-                            //     return Some(collision);
-                            //     // if collision.0 < distance {
-                            //     //     distance = collision.0;
-                            //     //     surface_normal = collision.1;
-                            //     //     material = curve.material;
-                            //     // }
-                            // }
                         }
 
                         None => None
@@ -161,15 +144,6 @@ impl Intersectable for Curve {
                 // proceed to test.
                 None => {
                     ray.intersect_polyline(&self.points)
-                    // if let Some(collision) = ray.intersect_polyline(&self.points) {
-                    //     // save the closest possible collision
-                    //     return Some(collision);
-                    //     // if collision.0 < distance {
-                    //     //     distance = collision.0;
-                    //     //     surface_normal = collision.1;
-                    //     //     material = self.material;
-                    //     // }
-                    // }
                 }
             }
         
