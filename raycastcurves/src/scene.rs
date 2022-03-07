@@ -1,5 +1,6 @@
 use nannou::prelude::*;
 use ray2d::{BoundingVolume, Ray2D};
+use rayon::iter::Interleave;
 
 #[derive(Debug, Copy, Clone)]
 pub enum SurfaceType {
@@ -62,6 +63,12 @@ pub trait Intersectable {
     fn intersect(&self, ray : &Ray2D) -> Option<(f32, Vec2)>;
 }
 
+impl Intersectable for Circle {
+    fn intersect(&self, ray : &Ray2D) -> Option<(f32, Vec2)>{
+        ray.intersect_circle(&self.position, &self.radius)
+    }
+}
+
 impl Intersectable for Curve {
     fn intersect(&self, ray : &Ray2D) -> Option<(f32, Vec2)>{
             // if a bounding volume is present, use it to pre-test the intersection
@@ -103,6 +110,5 @@ impl Intersectable for Curve {
                 }
             }
         
-    }
-    
+    }   
 }

@@ -139,7 +139,7 @@ impl Ray2D {
         }
     }
 
-    pub fn intersect_circle(&self, center: &Vec2, radius: &f32) -> Option<f32> {
+    pub fn intersect_circle(&self, center: &Vec2, radius: &f32) -> Option<(f32, Vec2)> {
         // let h = center - self.orig;
         // let lf = self.dir.dot(h);
         // let mut s = radius.powi(2) - h.dot(h) + lf.powi(2);
@@ -173,7 +173,9 @@ impl Ray2D {
         }
         let inside = self.orig.distance(*center) <= *radius;
         let distance = if t0 < t1 && !inside { t0 } else { t1 };
-        Some(distance)
+        // TODO, test this surface_normal
+        let surface_normal = ((self.orig * distance)  - *center).normalize();
+        Some((distance, surface_normal))
     }
 
     // https://github.com/rustgd/collision-rs/blob/master/src/volume/aabb/aabb2.rs
@@ -208,7 +210,12 @@ impl Ray2D {
 
     pub fn intersect_bounding_volume(&self, volume: &BoundingVolume) -> Option<f32> {
         match volume {
-            BoundingVolume::Circle { position, radius } => self.intersect_circle(position, radius),
+            BoundingVolume::Circle { position, radius } => {
+                match self.intersect_circle(position, radius){
+                    Some((dist, _surface_normal)) => Some(dist), 
+                    _ => None
+                }
+            },
             BoundingVolume::Aabb { min, max } => self.intersect_aabb(min, max),
             _ => None,
         }
