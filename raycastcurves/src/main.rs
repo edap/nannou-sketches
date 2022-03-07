@@ -10,7 +10,7 @@ mod gui;
 mod ray_light;
 mod scene;
 pub mod wraycaster;
-use crate::scene::Curve;
+use crate::scene::Element;
 use crate::scene::SurfaceType;
 mod mondrian;
 pub use crate::mondrian::Square;
@@ -40,7 +40,7 @@ fn main() {
 
 struct Model {
     canvas_rect: geom::Rect,
-    scene: Vec<Curve>,
+    scene: Vec<Element>,
     tile_count_w: u32,
     n_caster: u32,
     raycaster_density: usize,
@@ -135,7 +135,7 @@ fn model(app: &App) -> Model {
     theme.shape_color = color::CHARCOAL;
 
     // initialize the fields of the model
-    let mut scene: Vec<Curve> = Vec::new();
+    let mut scene: Vec<Element> = Vec::new();
     let mut rays: Vec<Wraycaster> = Vec::new();
     let ray_width = 3.0;
     let wall_width = 2.0;
@@ -296,21 +296,18 @@ fn update(app: &App, model: &mut Model, _update: Update) {
     }
 
     if model.show_walls {
-        for curve in model.scene.iter() {
-            //println!("{:?}", curve.points.len());
-            draw.polyline()
-                .weight(model.wall_width)
-                .color(curve.material.coloration)
-                .points(curve.points.clone());
+        for element in model.scene.iter() {
+
             // Debug bounding volume
-            if let Some(c) = curve.bounding_volume {
+            element.draw(&draw, &model.wall_width);
+            if let Some(c) = element.bounding_volume() {
                 match c {
                     BoundingVolume::Circle { position, radius } => {
                         draw.ellipse()
                             .no_fill()
                             .x_y(position.x, position.y)
                             .w_h(radius * 2.0, radius * 2.0)
-                            .color(curve.material.coloration)
+                            .color(element.material().coloration)
                             .stroke_weight(model.wall_width);
                     }
                     _ => {}

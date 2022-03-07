@@ -60,6 +60,9 @@ pub enum Element {
     Circle(Circle),
 }
 
+// TODO:
+// implement draw methods
+
 impl Element {
     pub fn material(&self) -> &Material{
         match *self {
@@ -67,10 +70,60 @@ impl Element {
             Element::Circle(ref ci) => &ci.material,
         }
     }
+    pub fn bounding_volume(&self) -> Option<&BoundingVolume>{
+        match *self {
+            Element::Curve(ref cu) => cu.bounding_volume.as_ref(),
+            Element::Circle(ref ci) => ci.bounding_volume.as_ref(),
+        }
+    }
+    pub fn ray_anchor_point(&self) -> Option<&Vec2>{
+        match *self {
+            Element::Curve(ref cu) => cu.ray_anchor_point.as_ref(),
+            Element::Circle(ref ci) => ci.ray_anchor_point.as_ref(),
+        }
+    }
+    pub fn material_mut(&mut self) -> &mut Material {
+        match *self {
+            Element::Curve(ref mut cu) => &mut cu.material,
+            Element::Circle(ref mut ci) => &mut ci.material,
+        }
+    }
+
+    pub fn draw(&self, draw: &Draw, wall_width: &f32) {
+        //println!("{:?}", curve.points.len());
+        match *self {
+            Element::Curve(ref curve) => {
+                draw.polyline()
+                .weight(*wall_width)
+                .color(curve.material.coloration)
+                .points(curve.points.clone());
+            },
+            Element::Circle(ref circle) => {
+                draw.ellipse()
+                .no_fill()
+                .x_y(circle.position.x, circle.position.y)
+                .w_h(circle.radius * 2.0, circle.radius * 2.0)
+                .color(circle.material.coloration)
+                .stroke_weight(*wall_width);
+            }
+        }
+
+    }
+
+
 }
 
 pub trait Intersectable {
     fn intersect(&self, ray : &Ray2D) -> Option<(f32, Vec2)>;
+}
+
+impl Intersectable for Element {
+    fn intersect(&self, ray : &Ray2D) -> Option<(f32, Vec2)>{
+        match *self {
+            Element::Curve(ref cu) => cu.intersect(ray),
+            Element::Circle(ref ci) => ci.intersect(ray),
+        }
+    }
 }
 
 impl Intersectable for Circle {

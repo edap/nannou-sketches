@@ -1,5 +1,5 @@
 pub use crate::bouncing::BouncingRay2D;
-use crate::scene::Curve;
+use crate::scene::Element;
 pub use crate::wraycaster::Wraycaster;
 use nannou::image::math;
 use nannou::prelude::*;
@@ -41,7 +41,7 @@ pub fn make_raycasters(
     n_caster: u32, // 0 even, 1 random rotation, 2 one in the middle, 4 diamond
     max_reflection: usize,
     density: usize,
-    walls: &Vec<Curve>,
+    walls: &Vec<Element>,
     rays_position_mode: usize,
     rays_probability: f32,
 ) {
@@ -54,19 +54,19 @@ pub fn make_raycasters(
 
 fn inside_the_walls(
     raycasters: &mut Vec<Wraycaster>,
-    walls: &Vec<Curve>,
+    walls: &Vec<Element>,
     rays_probability: f32,
     density: usize,
     max_depth: usize,
 ) {
     raycasters.clear();
     for wall in walls.iter() {
-        match wall.ray_anchor_point {
+        match wall.ray_anchor_point() {
             Some(pt) => {
                 let coin = random_range(0.0, 1.0);
                 if coin <= rays_probability {
                     let dir = vec2(random_f32().cos(), random_f32().sin()).normalize();
-                    let raycaster = Wraycaster::new(pt, dir, max_depth, density);
+                    let raycaster = Wraycaster::new(*pt, dir, max_depth, density);
                     raycasters.push(raycaster);
                 }
             }

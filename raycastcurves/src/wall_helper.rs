@@ -1,13 +1,15 @@
 use crate::mondrian::split_squares;
 pub use crate::mondrian::Square;
+use crate::Element;
 use crate::scene::Curve;
+//use crate::Element::Curve;
 use crate::scene::Material;
 use crate::scene::SurfaceType;
 use nannou::prelude::*;
 use ray2d::BoundingVolume;
 
 pub fn make_walls(
-    walls: &mut Vec<Curve>,
+    walls: &mut Vec<Element>,
     win: &geom::Rect,
     tile_count_w: u32,
     wall_split: f32,
@@ -39,20 +41,20 @@ pub fn make_walls(
     change_color_walls(walls, color_a, color_b);
 }
 
-pub fn change_color_walls(walls: &mut Vec<Curve>, color_a: Rgba, color_b: Rgba) {
-    walls.iter_mut().for_each(|curve| {
+pub fn change_color_walls(walls: &mut Vec<Element>, color_a: Rgba, color_b: Rgba) {
+    walls.iter_mut().for_each(|element| {
         let color: Rgba = if random_range(0.0, 1.0) > 0.5 {
             color_a
         } else {
             color_b
         };
-        curve.material.coloration = color;
+        element.material_mut().coloration = color;
     });
 }
 
-pub fn change_surface_walls(walls: &mut Vec<Curve>, surface: &SurfaceType) {
-    walls.iter_mut().for_each(|curve| {
-        curve.material.surface = surface.clone();
+pub fn change_surface_walls(walls: &mut Vec<Element>, surface: &SurfaceType) {
+    walls.iter_mut().for_each(|element| {
+        element.material_mut().surface = surface.clone();
     });
 }
 
@@ -61,7 +63,7 @@ pub fn create_curve_from_square(
     padding: f32,
     hole: f32,
     hole_n: usize,
-    walls: &mut Vec<Curve>,
+    walls: &mut Vec<Element>,
     mat: &Material,
 ) {
     let center = vec2(
@@ -94,12 +96,13 @@ pub fn create_curve_from_square(
 
             if i == end_to {
                 points.push(center + vec2(x, y));
-                walls.push(Curve {
+
+                walls.push(scene::Element::Curve(Curve{
                     points: points.clone(),
                     material: cloned_mat,
                     ray_anchor_point: Some(center),
                     bounding_volume: Some(bounding_volume),
-                });
+                }));
                 points.clear();
                 start_from = i + pad;
                 end_to = start_from + wall_length - pad;
@@ -113,12 +116,12 @@ pub fn create_curve_from_square(
             let y = (square.height / 2.0 - padding) * rad.sin();
             points.push(center + vec2(x, y))
         }
-        walls.push(Curve {
+        walls.push(scene::Element::Curve(Curve{
             points: points.clone(),
             material: cloned_mat,
             ray_anchor_point: Some(center),
             bounding_volume: Some(bounding_volume),
-        });
+        }));
         points.clear();
     }
 }

@@ -1,6 +1,7 @@
 use crate::ray_light::Intersection;
 use crate::ray_light::RayLight;
-use crate::scene::Curve;
+use crate::scene::Element;
+use crate::scene::Intersectable;
 use crate::scene::Material;
 use crate::scene::SurfaceType;
 use nannou::color::Mix;
@@ -312,7 +313,7 @@ impl Wraycaster {
         animation: bool,
         animation_speed: f32,
         time: f32,
-        scene: &Vec<Curve>,
+        scene: &Vec<Element>,
         win: geom::Rect,
     ) {
         self.ray_lights.par_iter_mut().for_each(|pray| {
@@ -343,7 +344,7 @@ pub fn cast_ray(
     depth: &mut usize,
     max_depth: usize,
     intersections: &mut Vec<Intersection>,
-    scene: &Vec<Curve>,
+    scene: &Vec<Element>,
     light_amount: f64,
 ) {
     if *depth < max_depth {
@@ -352,40 +353,50 @@ pub fn cast_ray(
         let mut surface_normal: Vec2 = vec2(0.0, 0.0);
         let mut material: Material = Material::default();
         // find the closest intersection point between the ray and the scene
-        for curve in scene.iter() {
+        for element in scene.iter() {
             // if a bounding volume is present, use it to pre-test the intersection
             // otherwise test everything
-            match &curve.bounding_volume {
-                Some(volume) => {
-                    let pretest = ray.intersect_bounding_volume(volume);
-                    match pretest {
-                        Some(_) => {
-                            if let Some(collision) = ray.intersect_polyline(&curve.points) {
-                                // save the closest possible collision
-                                if collision.0 < distance {
-                                    distance = collision.0;
-                                    surface_normal = collision.1;
-                                    material = curve.material;
-                                }
-                            }
-                        }
 
-                        None => {}
-                    }
-                }
-                // There is no acceleration structure available to pre-test the intersection
-                // proceed to test.
-                None => {
-                    if let Some(collision) = ray.intersect_polyline(&curve.points) {
-                        // save the closest possible collision
-                        if collision.0 < distance {
-                            distance = collision.0;
-                            surface_normal = collision.1;
-                            material = curve.material;
-                        }
-                    }
-                }
+            if let Some((element_dist, element_surface_normal)) = element.intersect(ray){
+                // save the closest possible collision
+                if element_dist < distance {
+                    distance = element_dist;
+                    surface_normal = element_surface_normal;
+                    material = *element.material();
+                }   
             }
+
+            // match &element.bounding_volume() {
+            //     Some(volume) => {
+            //         let pretest = ray.intersect_bounding_volume(volume);
+            //         match pretest {
+            //             Some(_) => {
+            //                 if let Some(collision) = ray.intersect_polyline(&curve.points) {
+            //                     // save the closest possible collision
+            //                     if collision.0 < distance {
+            //                         distance = collision.0;
+            //                         surface_normal = collision.1;
+            //                         material = curve.material;
+            //                     }
+            //                 }
+            //             }
+
+            //             None => {}
+            //         }
+            //     }
+            //     // There is no acceleration structure available to pre-test the intersection
+            //     // proceed to test.
+            //     None => {
+            //         if let Some(collision) = ray.intersect_polyline(&curve.points) {
+            //             // save the closest possible collision
+            //             if collision.0 < distance {
+            //                 distance = collision.0;
+            //                 surface_normal = collision.1;
+            //                 material = curve.material;
+            //             }
+            //         }
+            //     }
+            // }
         }
 
         if distance < Float::infinity() {
