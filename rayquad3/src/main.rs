@@ -1,6 +1,8 @@
 use edapx_colors::Palette;
 use nannou::prelude::*;
-use nannou::ui::prelude::*;
+use nannou_conrod as ui;
+use nannou_conrod::prelude::*;
+
 
 mod bouncing;
 pub use crate::bouncing::BouncingRay2D;
@@ -61,7 +63,7 @@ widget_ids! {
 
 fn model(app: &App) -> Model {
     let tile_count_w = 6;
-    app.new_window()
+    let win_id = app.new_window()
         .size(400, 400)
         .view(view)
         .key_pressed(key_pressed)
@@ -75,7 +77,7 @@ fn model(app: &App) -> Model {
     let draw_gui = true;
 
     // Create the UI.
-    let mut ui = app.new_ui().build().unwrap();
+    let mut ui = ui::builder(app).window(win_id).build().unwrap();
 
     // Generate some ids for our widgets.
     let ids = Ids::new(ui.widget_id_generator());
@@ -326,14 +328,14 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
             // find the closest intersection point between the ray and the walls
             for index in (0..model.walls.len()).step_by(2) {
                 if let Some(collision_distance) = r.ray.intersect_segment(
-                    model.walls[index].x,
-                    model.walls[index].y,
-                    model.walls[index + 1].x,
-                    model.walls[index + 1].y,
+                    &model.walls[index].x,
+                    &model.walls[index].y,
+                    &model.walls[index + 1].x,
+                    &model.walls[index + 1].y,
                 ) {
                     if collision_distance < distance {
                         distance = collision_distance;
-                        collision = r.ray.orig + r.ray.dir.with_magnitude(collision_distance);
+                        collision = r.ray.orig + r.ray.dir.normalize() * collision_distance;
                         let segment_dir = (model.walls[index] - model.walls[index + 1]).normalize();
                         surface_normal = vec2(segment_dir.y, -segment_dir.x);
                     }
@@ -344,7 +346,7 @@ fn update(_app: &App, model: &mut Model, _update: Update) {
                 r.bounces += 1;
                 let refl = r.ray.reflect(surface_normal);
                 r.refl_intensity.push(r.ray.dir.dot(refl).abs());
-                r.ray.orig = collision + refl.with_magnitude(0.03);
+                r.ray.orig = collision + refl.normalize() * 0.03;
                 r.ray.dir = refl;
                 r.collisions.push(collision);
                 //r.refractions.push(r.ray.refract(surface_normal, 1.0));
@@ -388,7 +390,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             .color(model.palette.get_first(model.scheme_id, model.color_off))
             .start(r.ray.orig)
             .stroke_weight(model.ray_width)
-            .end(r.ray.orig + r.ray.dir.with_magnitude(40.0));
+            .end(r.ray.orig + r.ray.dir.normalize() * 40.0);
         for (&c, &i) in r.collisions.iter().zip(r.refl_intensity.iter()) {
             draw.ellipse()
                 .no_fill()
@@ -413,7 +415,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 (pt2(co.x, co.y), col)
             });
 
-        if model.draw_polygon {
+        if model.draw_polygon && ppp.len() > 3 {
             draw.polygon()
                 //.stroke(model.palette.get_third(model.scheme_id, model.color_off))
                 .stroke(model.palette.get_second(model.scheme_id, model.color_off))
@@ -422,19 +424,21 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .points_colored(ppp);
         };
 
-        draw.path()
-            .stroke()
-            .stroke_weight(model.ray_width)
-            .caps_round()
-            .points(r.collisions.iter().cloned())
-            .color(model.palette.get_first(model.scheme_id, model.color_off));
-
-        for (&c, &r) in r.collisions.iter().zip(r.reflections.iter()) {
-            draw.arrow()
-                .start(c)
-                .end(c + r.with_magnitude(40.0))
+        if r.collisions.len() > 3 {
+            draw.path()
+                .stroke()
                 .stroke_weight(model.ray_width)
+                .caps_round()
+                .points(r.collisions.iter().cloned())
                 .color(model.palette.get_first(model.scheme_id, model.color_off));
+
+            for (&c, &r) in r.collisions.iter().zip(r.reflections.iter()) {
+                draw.arrow()
+                    .start(c)
+                    .end(c + r.normalize() * 40.0)
+                    .stroke_weight(model.ray_width)
+                    .color(model.palette.get_first(model.scheme_id, model.color_off));
+            }
         }
     }
     // if model.draw_tex_overlay {
@@ -478,7 +482,7 @@ fn make_walls(
                     }
                     if _x % 2 == 0 && _y % 2 == 0 {
                         let mut r = BouncingRay2D::new();
-                        r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                        r.primary_ray.dir = vec2(PI.cos(), PI.sin());
                         r.primary_ray.orig = start_p;
                         r.ray.orig = start_p;
                         rays.push(r);
@@ -497,7 +501,7 @@ fn make_walls(
                     }
                     if (_x == 2 && _y == 2) || (_x == 14 && _y == 14) {
                         let mut r = BouncingRay2D::new();
-                        r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                        r.primary_ray.dir = vec2(PI.cos(), PI.sin());
                         r.primary_ray.orig = start_p;
                         r.ray.orig = start_p;
                         rays.push(r);
@@ -511,8 +515,7 @@ fn make_walls(
                         start_p = vec2(xpos + padding, ypos + side as f32 - padding);
                         end_p = vec2(xpos + side as f32 - padding, ypos + padding);
                         let mut r = BouncingRay2D::new();
-                        //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                        r.primary_ray.dir = Vector2::from_angle(1.0);
+                        r.primary_ray.dir = vec2(1.0.cos(), 1.0.sin());
                         // r.primary_ray.orig = start_p;
                         // r.ray.orig = start_p;
                         let o = vec2(xpos + side as f32 / 2.0, ypos + side as f32 - padding);
