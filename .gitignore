@@ -3,3 +3,5 @@ screenshots
 **/target
 *.png
 **/*.png
+nannou_postproccessing
+nannou_postproccessing/*
