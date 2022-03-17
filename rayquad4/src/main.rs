@@ -77,7 +77,7 @@ widget_ids! {
 
 fn model(app: &App) -> Model {
     let tile_count_w = 8;
-    app.new_window()
+    let win_id = app.new_window()
         //.size(1280, 720)
         //.size(1777, 1000)
         //.size(1920,1080)
@@ -99,7 +99,7 @@ fn model(app: &App) -> Model {
     let draw_gui = true;
 
     // Create the UI.
-    let mut ui = app.new_ui().build().unwrap();
+    let mut ui = ui::builder(app).window(win_id).build().unwrap();
 
     // Generate some ids for our widgets.
     let ids = Ids::new(ui.widget_id_generator());
