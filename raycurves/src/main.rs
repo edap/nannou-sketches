@@ -1,6 +1,7 @@
 use edapx_colors::Palette;
 use nannou::prelude::*;
-use nannou::ui::prelude::*;
+use nannou_conrod as ui;
+use nannou_conrod::prelude::*;
 use rayon::prelude::*;
 
 mod bouncing;
@@ -86,18 +87,20 @@ widget_ids! {
 
 fn model(app: &App) -> Model {
     let tile_count_w = 8;
-    app.new_window()
+    let win_id = app.new_window()
         //.size(1280, 720)
-        .size(1600, 900)
         //.size(1777, 1000)
         //.size(1920,1080)
         // .size( 3840,2160)
         // .size(2560, 1440) // 16:9
+        .size(1280, 720)
+        //.size(1600, 900)
+        //.size(900, 900)
         .view(view)
+        .raw_event(raw_window_event)
         .key_pressed(key_pressed)
         .build()
         .unwrap();
-
     let mut walls: Vec<Curve> = Vec::new();
     let mut rays: Vec<BouncingRay2D> = Vec::new();
     let win = app.window_rect();
@@ -105,7 +108,7 @@ fn model(app: &App) -> Model {
     let draw_gui = true;
 
     // Create the UI.
-    let mut ui = app.new_ui().build().unwrap();
+    let mut ui = ui::builder(app).window(win_id).build().unwrap();
 
     // Generate some ids for our widgets.
     let ids = Ids::new(ui.widget_id_generator());
@@ -474,11 +477,11 @@ fn ray_collides(
     if r.bounces < r.max_bounces {
         if (distance - ARROW_LENGTH) < EPSILON + animation_speed {
             // bounce!
-            collision = r.ray.orig + r.ray.dir.with_magnitude(distance);
+            collision = r.ray.orig + r.ray.dir.normalize() * distance;
             r.bounces += 1;
             let refl = r.ray.reflect(surface_normal);
             r.refl_intensity.push(r.ray.dir.dot(refl).abs());
-            r.ray.orig = collision + refl.with_magnitude(EPSILON); // avoid self intersection bouncing a bit more far away
+            r.ray.orig = collision + refl.normalize() * EPSILON; // avoid self intersection bouncing a bit more far away
             r.ray.dir = refl;
             r.collisions.push(collision);
             //r.refractions.push(r.ray.refract(surface_normal, 1.0));
@@ -486,7 +489,7 @@ fn ray_collides(
         } else {
             // keep moving
             if distance < Float::infinity() {
-                r.ray.orig = r.ray.orig + r.ray.dir.with_magnitude(animation_speed);
+                r.ray.orig = r.ray.orig + r.ray.dir.normalize() * animation_speed;
             } else {
                 r.reset();
             }
@@ -524,7 +527,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
                 .color(model.palette.get_first(model.scheme_id, model.color_off))
                 .start(r.ray.orig)
                 .stroke_weight(model.ray_width)
-                .end(r.ray.orig + r.ray.dir.with_magnitude(ARROW_LENGTH));
+                .end(r.ray.orig + r.ray.dir.normalize() * ARROW_LENGTH);
         }
 
         if r.collisions.len() > 3 && model.collision_radius > 0.0 {
@@ -587,7 +590,7 @@ fn view(app: &App, model: &Model, frame: Frame) {
             if model.draw_arrows {
                 draw.arrow()
                     .start(c)
-                    .end(c + r.with_magnitude(40.0))
+                    .end(c + r.normalize() * 40.0)
                     .stroke_weight(model.ray_width)
                     .color(model.palette.get_first(model.scheme_id, model.color_off));
             }
@@ -639,7 +642,7 @@ fn make_walls(
             1 => {
                 let padding = step as f32 * perc_padding;
                 let mut r = BouncingRay2D::new();
-                r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
+                r.primary_ray.dir = vec2(random_f32().cos(), random_f32().sin());
                 r.primary_ray.orig = vec2(
                     square.x + square.width * 0.8,
                     square.y + square.height * 0.3,
@@ -653,7 +656,8 @@ fn make_walls(
                 if random_range(0.0, 1.0) > rays_prob {
                     let mut r = BouncingRay2D::new();
                     //r.primary_ray.dir = Vector2::from_angle(random_range(-PI, PI));
-                    r.primary_ray.dir = Vector2::from_angle(rot);
+                    r.primary_ray.dir = vec2(rot.cos(), rot.sin());
+
                     //r.primary_ray.set_dir_from_angle(model.rotation);
                     r.primary_ray.orig = vec2(
                         square.x + square.width * 0.5,
