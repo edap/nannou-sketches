@@ -117,24 +117,21 @@ fn main(
 
     //let tex = texture2D(u_texture_1,(gl_FragCoord.xy/ u_resolution.xy)+animated_c).xyz;
 
-
-
-
-
     let tex_x: i32 = i32(f32(tex_size.x) * (tex_coords.x + animated_c));
     let tex_y: i32 = i32(f32(tex_size.y) * (tex_coords.y + animated_c));
-
-
-
     let itex_coords: vec2<i32> = vec2<i32>(tex_x, tex_y);
 
     // Average the pixels with its neighbours
     var color: vec4<f32> = vec4<f32>(0.0, 0.0, 0.0, 0.0);
-    color = color + textureLoad(tex, itex_coords, 0);
-    color = color + textureLoad(tex, itex_coords, 1);
-    color = color + textureLoad(tex, itex_coords, 2);
-    color = color + textureLoad(tex, itex_coords, 3);
-    color = color * 0.25;
+    if (itex_coords.x >= tex_size.x || itex_coords.x <= 0 || itex_coords.y >= tex_size.y || itex_coords.y <= 0) {
+        color = textureLoad(tex, vec2<i32>(1,1), 0);
+    }else{
+        color = color + textureLoad(tex, itex_coords, 0);
+        color = color + textureLoad(tex, itex_coords, 1);
+        color = color + textureLoad(tex, itex_coords, 2);
+        color = color + textureLoad(tex, itex_coords, 3);
+        color = color * 0.25;
+    };
 
     // This is wrong, to apply a pixel effect on a pixel already averaged
     // leads to aliasing. Anyway ...

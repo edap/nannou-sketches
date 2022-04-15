@@ -12,5 +12,6 @@ nannou_conrod = { version ="0.18.0" }
 edapx-colors = { path = "../edapx-colors" }
 ray2d = { path = "../ray2d" }
 rayon = "1.5.0"
-nannou_postprocessing = {git = "https://github.com/edap/nannou_postprocessing"}
+# nannou_postprocessing = {git = "https://github.com/edap/nannou_postprocessing"}
+nannou_postprocessing = { path = "../nannou_postprocessing" }
 

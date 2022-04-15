@@ -4,4 +4,3 @@ screenshots
 *.png
 **/*.png
 nannou_postproccessing
-nannou_postproccessing/*

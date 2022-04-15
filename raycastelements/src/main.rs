@@ -84,10 +84,11 @@ struct Model {
 
 fn model(app: &App) -> Model {
     // we render on a 4k texture
-    let texture_size = [3_840, 2_160];
+    let texture_size = [1080, 1_350];
+    // let texture_size = [1920, 1350];
     //let texture_size = [2_160, 2_160];
     // Create the window, that is 4 times smaller than the texture
-    let [win_w, win_h] = [texture_size[0] / 4, texture_size[1] / 4];
+    let [win_w, win_h] = [texture_size[0], texture_size[1]];
     // we also draw on a 4k canvas
     let canvas_rect = geom::Rect::from_w_h(texture_size[0] as f32, texture_size[1] as f32);
 
@@ -251,6 +252,8 @@ fn model(app: &App) -> Model {
 fn update(app: &App, model: &mut Model, _update: Update) {
     // Use the frame number to animate, ensuring we get a constant update time.
     let elapsed_frames = app.main_window().elapsed_frames();
+
+    
     let time = elapsed_frames as f32 / 60.0;
     // let time = app.time;
 
