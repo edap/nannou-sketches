@@ -1,0 +1,17 @@
+[package]
+name = "rayparabolic"
+version = "0.1.0"
+authors = ["Davide Prati <lastexxit@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+nannou_egui = { version = "0.5" }
+nannou = { version = "0.18.1"}
+egui_demo_lib = "0.15"
+edapx-colors = { path = "../edapx-colors" }
+#ray2d = { path = "../ray2d" }
+nannou-ray2d = { git = "https://github.com/edap/nannou-ray2d" }
+rayon = "1.5.0"
+
