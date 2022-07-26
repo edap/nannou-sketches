@@ -10,6 +10,7 @@ edition = "2018"
 nannou = { version ="0.18.0"  }
 nannou_conrod = { version ="0.18.0" }
 edapx-colors = { path = "../edapx-colors" }
-ray2d = { path = "../ray2d" }
+#ray2d = { path = "../ray2d" }
+nannou-ray2d = { git = "https://github.com/edap/nannou-ray2d" }
 rayon = "1.5.0"
 

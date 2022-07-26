@@ -234,3 +234,51 @@ impl Ray2D {
 
 //let sphere = Element::Circle(vec2(10.0, 2.0),12,5);
 // WIP https://github.com/bheisler/raytracer/blob/master/src/scene.rs
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn it_has_a_default_direction() {
+        let r = Ray2D::new();
+        assert_eq!(r.dir, vec2(1.0, 0.0));
+    }
+
+    #[test]
+    fn it_get_the_reflection_vector(){
+
+    }
+
+    #[test]
+    fn it_get_the_refraction_vector(){
+        
+    }
+
+    #[test]
+    fn it_calculate_the_fresnel_coeficient(){
+        
+    }
+    #[test]
+    fn in_case_of_an_intersection_with_a_segment_it_return_the_distance_to_it(){
+        let mut r = Ray2D::new();
+        r.dir = vec2(0.0, 1.0);
+        let start_segment = vec2(-1.0, 2.0);
+        let end_segment = vec2(1.0, 2.0);
+        let distance_to_intersection = r.intersect_segment(&start_segment.x, &start_segment.y, &end_segment.x, &end_segment.y);
+        assert_eq!(distance_to_intersection.unwrap(), 2.0);
+    }
+    #[test]
+    fn when_there_isnt_an_intersection_with_a_segment_it_return_none(){
+        let mut r = Ray2D::new();
+        r.dir = vec2(0.0, -1.0);
+        let start_segment = vec2(-1.0, 2.0);
+        let end_segment = vec2(1.0, 2.0);
+        let distance_to_intersection = r.intersect_segment(&start_segment.x, &start_segment.y, &end_segment.x, &end_segment.y);
+        assert_eq!(distance_to_intersection, None);
+    }
+
+    #[test]
+    fn another() {
+        panic!("Make this test fail");
+    }
+}

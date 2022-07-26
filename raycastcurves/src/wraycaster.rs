@@ -8,7 +8,7 @@ use nannou::color::Mix;
 #[allow(dead_code)]
 use nannou::prelude::*;
 use nannou::rand::Rng;
-use ray2d::Ray2D;
+use nannou_ray2d::Ray2D;
 use rayon::prelude::*;
 
 const EPSILON: f32 = 0.05;
@@ -345,7 +345,7 @@ pub fn cast_ray(
     max_depth: usize,
     intersections: &mut Vec<Intersection>,
     scene: &Vec<Element>,
-    light_amount: f64,
+    light_amount: f32,
 ) {
     if *depth < max_depth {
         let collision: Vec2;

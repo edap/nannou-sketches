@@ -20,6 +20,7 @@ members = [
 	"raycircle3",
 	"raycurves",
 	"raycastcurves",
+	"rayparabolic",
 	"raycastelements",
 	"bezier",
 	"screeneffect",

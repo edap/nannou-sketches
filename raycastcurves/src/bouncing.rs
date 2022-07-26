@@ -1,5 +1,5 @@
 use nannou::prelude::*;
-use ray2d::Ray2D;
+use nannou_ray2d::Ray2D;
 #[derive(Debug)]
 pub struct BouncingRay2D {
     pub primary_ray: Ray2D,
@@ -19,8 +19,8 @@ impl BouncingRay2D {
         let reflections: Vec<Vec2> = Vec::new();
         let refl_intensity: Vec<f32> = Vec::new();
         BouncingRay2D {
-            primary_ray: Ray2D::new(),
-            ray: Ray2D::new(),
+            primary_ray: Ray2D::default(),
+            ray: Ray2D::default(),
             bounces: 0,
             max_bounces: 20,
             collisions,

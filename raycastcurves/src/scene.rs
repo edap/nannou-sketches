@@ -1,5 +1,5 @@
 use nannou::prelude::*;
-use ray2d::{BoundingVolume, Ray2D};
+use nannou_ray2d::{BoundingVolume, Ray2D};
 
 #[derive(Debug, Copy, Clone)]
 pub enum SurfaceType {
