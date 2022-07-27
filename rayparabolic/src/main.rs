@@ -222,95 +222,11 @@ fn model(app: &App) -> Model {
 }
 
 fn update(app: &App, model: &mut Model, update: Update) {
-    // Use the frame number to animate, ensuring we get a constant update time.
-    let elapsed_frames = app.main_window().elapsed_frames();
-    let time = elapsed_frames as f32 / 60.0;
-    // let time = app.time;
-
-    let rot = model.settings.rotation;
-    let anim = model.settings.animation;
-    let anim_speed = model.settings.animation_speed;
-    let scene = &model.scene;
-    let canvas_rect = model.canvas_rect;
-    let animation_mode = model.settings.animation_mode;
-
-    if model.settings.animation {
-        // Animate raycaster
-        model
-            .rays
-            .par_iter_mut()
-            .for_each(|r| r.animate(&canvas_rect, anim_speed, animation_mode, time))
-    }
-
-    model
-        .rays
-        .par_iter_mut()
-        .for_each(|ray| ray.collide(rot, anim, anim_speed, time, scene, canvas_rect));
-
-    // Because we draw in the texture, all the code that usually goes in the view method has to be moved into the update
-    // function.
-
-    // VIEW
-    // First, reset the `draw` state.
-    let d = &model.capturer.draw;
-    d.reset();
-    let blends = [BLEND_NORMAL, BLEND_ADD, BLEND_SUBTRACT, BLEND_LIGHTEST];
-    let draw = d.color_blend(blends[model.settings.blend_id].clone());
-
-    if model.settings.transparent_bg {
-        let mut color = model.palette.get_fifth(model.settings.scheme_id, model.settings.color_off);
-        color.alpha = 0.0;
-        draw.background().color(color);
-    }
-
-    if model.settings.clean_bg && !model.settings.transparent_bg {
-        let mut color = model.palette.get_fifth(model.settings.scheme_id, model.settings.color_off);
-        color.alpha = 1.0;
-        draw.background().color(color);
-    }
-
-    if model.settings.show_walls {
-        for element in model.scene.iter() {
-            element.draw(&draw, &model.settings.wall_width);
-            // Debug bounding volume
-            // if let Some(c) = element.bounding_volume() {
-            //     match c {
-            //         BoundingVolume::Circle { position, radius } => {
-            //             draw.ellipse()
-            //                 .no_fill()
-            //                 .x_y(position.x, position.y)
-            //                 .w_h(radius * 2.0, radius * 2.0)
-            //                 .color(element.material().coloration)
-            //                 .stroke_weight(model.wall_width);
-            //         }
-            //         _ => {}
-            //     }
-            // }
-        }
-    }
-
-    for r in &model.rays {
-        if model.settings.draw_polygon {
-            r.draw_polygon(
-                &draw,
-                model.settings.polygon_contour_weight,
-                model.settings.ray_width,
-                model.settings.draw_not_colliding_rays,
-                model.settings.draw_polygon_mode,
-            );
-        }
-
-        if model.settings.draw_arrows {
-            r.draw_arrows(&draw, model.settings.ray_width);
-        }
-
-        if model.settings.draw_rays {
-            r.draw_rays(&draw, model.settings.ray_width, model.settings.draw_not_colliding_rays);
-        }
-    }
+    // we call draw only if the redraw value is set to true.
+    // only in the gui it is possible to set it to true
+    let mut redraw = false;
 
     // egui
-
     let egui = &mut model.egui;
     let settings = &mut model.settings;
 
@@ -442,7 +358,39 @@ fn update(app: &App, model: &mut Model, update: Update) {
         ui.horizontal(|ui| {
             ui.label("Draw not collyding rays");
             ui.checkbox(&mut settings.draw_not_colliding_rays, "");
-         });
+        });
+        ui.horizontal(|ui| {
+            ui.label("animation");
+            ui.checkbox(&mut settings.animation, "");
+        });
+        ui.horizontal(|ui| {
+            ui.label("animation mode");
+            ui.add(egui::Slider::new(&mut settings.animation_mode, 0..=1));
+        });
+        //ui.interact(rect, id, sense)
+
+        // Check for drags:
+ 
+
+        // TODO. come triggare l'interaction con la gui
+        // egui/src/containers/collapsing_header.rs
+
+
+
+//         for value in gui::slider(model.animation_speed as f32, 80.0, 0.01)
+//             .label("animation speed")
+//             .set(model.ids.animation_speed, ui)
+//         {
+//             model.animation_speed = value;
+//         }
+        // if let Some(interaction) = ui.input().pointer.interact_pos() {
+        //     println!("pos:{:?}", interaction);
+        // }
+        //redraw if any of those was touched
+        if ui.input().pointer.any_released(){
+            redraw = true;
+            //println!("f:{:?}",app.main_window().elapsed_frames());
+        }
     });
 
     egui::CentralPanel::default().show(&ctx, |ui| {
@@ -483,15 +431,110 @@ fn update(app: &App, model: &mut Model, update: Update) {
 
 
 
+    if model.settings.animation | redraw {
 
-    // Render our drawing to the texture.
-    let window = app.main_window();
-    let device = window.device();
-    model.capturer.update(&window, &device, elapsed_frames);
+        // Use the frame number to animate, ensuring we get a constant update time.
+        let elapsed_frames = app.main_window().elapsed_frames();
+        let time = elapsed_frames as f32 / 60.0;
+        // let time = app.time;
+
+        let rot = model.settings.rotation;
+        let anim = model.settings.animation;
+        let anim_speed = model.settings.animation_speed;
+        let scene = &model.scene;
+        let canvas_rect = model.canvas_rect;
+        let animation_mode = model.settings.animation_mode;
+
+        if model.settings.animation {
+            // Animate raycaster
+            model
+                .rays
+                .par_iter_mut()
+                .for_each(|r| r.animate(&canvas_rect, anim_speed, animation_mode, time))
+        }
+
+        model
+            .rays
+            .par_iter_mut()
+            .for_each(|ray| ray.collide(rot, anim, anim_speed, time, scene, canvas_rect));
+
+        // Because we draw in the texture, all the code that usually goes in the view method has to be moved into the update
+        // function.
+
+        // VIEW
+        // First, reset the `draw` state.
+        let d = &model.capturer.draw;
+        d.reset();
+        let blends = [BLEND_NORMAL, BLEND_ADD, BLEND_SUBTRACT, BLEND_LIGHTEST];
+        let draw = d.color_blend(blends[model.settings.blend_id].clone());
+
+        if model.settings.transparent_bg {
+            let mut color = model.palette.get_fifth(model.settings.scheme_id, model.settings.color_off);
+            color.alpha = 0.0;
+            draw.background().color(color);
+        }
+
+        if model.settings.clean_bg && !model.settings.transparent_bg {
+            let mut color = model.palette.get_fifth(model.settings.scheme_id, model.settings.color_off);
+            color.alpha = 1.0;
+            draw.background().color(color);
+        }
+
+        if model.settings.show_walls {
+            for element in model.scene.iter() {
+                element.draw(&draw, &model.settings.wall_width);
+                // Debug bounding volume
+                // if let Some(c) = element.bounding_volume() {
+                //     match c {
+                //         BoundingVolume::Circle { position, radius } => {
+                //             draw.ellipse()
+                //                 .no_fill()
+                //                 .x_y(position.x, position.y)
+                //                 .w_h(radius * 2.0, radius * 2.0)
+                //                 .color(element.material().coloration)
+                //                 .stroke_weight(model.wall_width);
+                //         }
+                //         _ => {}
+                //     }
+                // }
+            }
+        }
+
+        for r in &model.rays {
+            if model.settings.draw_polygon {
+                r.draw_polygon(
+                    &draw,
+                    model.settings.polygon_contour_weight,
+                    model.settings.ray_width,
+                    model.settings.draw_not_colliding_rays,
+                    model.settings.draw_polygon_mode,
+                );
+            }
+
+            if model.settings.draw_arrows {
+                r.draw_arrows(&draw, model.settings.ray_width);
+            }
+
+            if model.settings.draw_rays {
+                r.draw_rays(&draw, model.settings.ray_width, model.settings.draw_not_colliding_rays);
+            }
+        }
+
+
+
+
+        // Render our drawing to the texture.
+        let window = app.main_window();
+        let device = window.device();
+        model.capturer.update(&window, &device, elapsed_frames);
+        redraw = false;
+        
+    }
+    
 }
 
 fn view(_app: &App, model: &Model, frame: Frame) {
-    model.capturer.view(frame);
+        model.capturer.view(frame);
 }
 
 fn key_pressed(_app: &App, model: &mut Model, key: Key) {
@@ -764,26 +807,7 @@ fn key_pressed(_app: &App, model: &mut Model, key: Key) {
 //             model.draw_arrows = v;
 //         }
 
-//         for v in gui::toggle(model.animation as bool)
-//             .label("Animation")
-//             .set(model.ids.animation, ui)
-//         {
-//             model.animation = v;
-//         }
 
-//         for value in gui::slider(model.animation_mode as f32, 0.0, 1.0)
-//             .label("animation_mode")
-//             .set(model.ids.animation_mode, ui)
-//         {
-//             model.animation_mode = value as usize;
-//         }
-
-//         for value in gui::slider(model.animation_speed as f32, 80.0, 0.01)
-//             .label("animation speed")
-//             .set(model.ids.animation_speed, ui)
-//         {
-//             model.animation_speed = value;
-//         }
 //     }
 // }
 
@@ -837,4 +861,5 @@ fn regenerate_scene_and_rays(rays: &mut Vec<Wraycaster>, scene: &mut Vec<Element
 fn raw_window_event(_app: &App, model: &mut Model, event: &nannou::winit::event::WindowEvent) {
     // Let egui handle things like keyboard and mouse input.
     model.egui.handle_raw_event(event);
+
 }
