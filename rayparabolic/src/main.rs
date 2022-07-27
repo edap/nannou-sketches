@@ -131,8 +131,6 @@ fn model(app: &App) -> Model {
         .build()
         .unwrap();
 
-
-
     // initialize the fields of the model
     let mut scene: Vec<Element> = Vec::new();
     let mut rays: Vec<Wraycaster> = Vec::new();
@@ -230,7 +228,7 @@ fn update(app: &App, model: &mut Model, update: Update) {
     let egui = &mut model.egui;
     let settings = &mut model.settings;
 
-    let canvas_rect =model.canvas_rect;
+    let canvas_rect = model.canvas_rect;
     let material = &model.material;
     let palette = &model.palette;
     let mut rays = &mut model.rays;
@@ -238,7 +236,6 @@ fn update(app: &App, model: &mut Model, update: Update) {
 
     egui.set_elapsed_time(update.since_start);
     let ctx = egui.begin_frame();
-
 
     egui::SidePanel::left("Scene").show(&ctx, |ui| {
         ui.heading("My scene");
@@ -290,7 +287,10 @@ fn update(app: &App, model: &mut Model, update: Update) {
         });
         ui.horizontal(|ui| {
             ui.label("collision_radius:");
-            ui.add(egui::Slider::new(&mut settings.collision_radius, 0.0..=185.0));
+            ui.add(egui::Slider::new(
+                &mut settings.collision_radius,
+                0.0..=185.0,
+            ));
         });
         ui.horizontal(|ui| {
             ui.label("rays position mode:");
@@ -320,9 +320,15 @@ fn update(app: &App, model: &mut Model, update: Update) {
         });
 
         if ui.add(egui::Button::new("Regenerate Walls")).clicked() {
-            regenerate_scene_and_rays(&mut rays, &mut scene, settings, canvas_rect, material,palette);
+            regenerate_scene_and_rays(
+                &mut rays,
+                &mut scene,
+                settings,
+                canvas_rect,
+                material,
+                palette,
+            );
         }
-
 
         //ui.add(toggle.(settings.draw_rayss))
         //ui.add(egui::Button: &mut settings.draw_rays, "test");
@@ -332,28 +338,19 @@ fn update(app: &App, model: &mut Model, update: Update) {
         //     ui.add(egui::Ra::new(&mut settings.draw_rays));
         // });
 
-
         //ui.add(egui::Slider::new(&mut settings.n_caster, 0..=120).text("n raycaster"));
-
 
         // if ui.button("Click each year").clicked() {
         //     self.age += 1;
         // }
         //ui.label(format!("Hello '{}', age {}", self.name, self.age));
-
-
-
-
-
-
-
     });
 
     egui::SidePanel::left("Style").show(&ctx, |ui| {
         ui.heading("My style");
         ui.horizontal(|ui| {
-           ui.label("Draw rays");
-           ui.checkbox(&mut settings.draw_rays, "");
+            ui.label("Draw rays");
+            ui.checkbox(&mut settings.draw_rays, "");
         });
         ui.horizontal(|ui| {
             ui.label("Draw not collyding rays");
@@ -370,24 +367,21 @@ fn update(app: &App, model: &mut Model, update: Update) {
         //ui.interact(rect, id, sense)
 
         // Check for drags:
- 
 
         // TODO. come triggare l'interaction con la gui
         // egui/src/containers/collapsing_header.rs
 
-
-
-//         for value in gui::slider(model.animation_speed as f32, 80.0, 0.01)
-//             .label("animation speed")
-//             .set(model.ids.animation_speed, ui)
-//         {
-//             model.animation_speed = value;
-//         }
+        //         for value in gui::slider(model.animation_speed as f32, 80.0, 0.01)
+        //             .label("animation speed")
+        //             .set(model.ids.animation_speed, ui)
+        //         {
+        //             model.animation_speed = value;
+        //         }
         // if let Some(interaction) = ui.input().pointer.interact_pos() {
         //     println!("pos:{:?}", interaction);
         // }
         //redraw if any of those was touched
-        if ui.input().pointer.any_released(){
+        if ui.input().pointer.any_released() {
             redraw = true;
             //println!("f:{:?}",app.main_window().elapsed_frames());
         }
@@ -406,7 +400,6 @@ fn update(app: &App, model: &mut Model, update: Update) {
         // }
         //ui.label(format!("Hello '{}', age {}", self.name, self.age));
     });
-
 
     // egui::Window::new("Settings").show(&ctx, |ui| {
     //     // Resolution slider
@@ -429,10 +422,7 @@ fn update(app: &App, model: &mut Model, update: Update) {
     //     // }
     // });
 
-
-
     if model.settings.animation | redraw {
-
         // Use the frame number to animate, ensuring we get a constant update time.
         let elapsed_frames = app.main_window().elapsed_frames();
         let time = elapsed_frames as f32 / 60.0;
@@ -469,13 +459,17 @@ fn update(app: &App, model: &mut Model, update: Update) {
         let draw = d.color_blend(blends[model.settings.blend_id].clone());
 
         if model.settings.transparent_bg {
-            let mut color = model.palette.get_fifth(model.settings.scheme_id, model.settings.color_off);
+            let mut color = model
+                .palette
+                .get_fifth(model.settings.scheme_id, model.settings.color_off);
             color.alpha = 0.0;
             draw.background().color(color);
         }
 
         if model.settings.clean_bg && !model.settings.transparent_bg {
-            let mut color = model.palette.get_fifth(model.settings.scheme_id, model.settings.color_off);
+            let mut color = model
+                .palette
+                .get_fifth(model.settings.scheme_id, model.settings.color_off);
             color.alpha = 1.0;
             draw.background().color(color);
         }
@@ -516,25 +510,24 @@ fn update(app: &App, model: &mut Model, update: Update) {
             }
 
             if model.settings.draw_rays {
-                r.draw_rays(&draw, model.settings.ray_width, model.settings.draw_not_colliding_rays);
+                r.draw_rays(
+                    &draw,
+                    model.settings.ray_width,
+                    model.settings.draw_not_colliding_rays,
+                );
             }
         }
-
-
-
 
         // Render our drawing to the texture.
         let window = app.main_window();
         let device = window.device();
         model.capturer.update(&window, &device, elapsed_frames);
         redraw = false;
-        
     }
-    
 }
 
 fn view(_app: &App, model: &Model, frame: Frame) {
-        model.capturer.view(frame);
+    model.capturer.view(frame);
 }
 
 fn key_pressed(_app: &App, model: &mut Model, key: Key) {
@@ -563,10 +556,6 @@ fn key_pressed(_app: &App, model: &mut Model, key: Key) {
 //         {
 //             model.wall_width = value;
 //         }
-
-
-
-
 
 //         for v in gui::toggle(model.show_walls as bool)
 //             .label("Show wall")
@@ -807,7 +796,6 @@ fn key_pressed(_app: &App, model: &mut Model, key: Key) {
 //             model.draw_arrows = v;
 //         }
 
-
 //     }
 // }
 
@@ -830,36 +818,41 @@ fn exit(app: &App, model: Model) {
     println!("Done!");
 }
 
-fn regenerate_scene_and_rays(rays: &mut Vec<Wraycaster>, scene: &mut Vec<Element>, settings: &mut Settings, canvas_rect: geom::Rect,material: &Material,palette: &Palette){
-        make_walls(
-            scene,
+fn regenerate_scene_and_rays(
+    rays: &mut Vec<Wraycaster>,
+    scene: &mut Vec<Element>,
+    settings: &mut Settings,
+    canvas_rect: geom::Rect,
+    material: &Material,
+    palette: &Palette,
+) {
+    make_walls(
+        scene,
         &canvas_rect,
-            settings.tile_count_w,
-            settings.wall_split,
-            settings.wall_padding,
-            settings.hole_pct,
-            settings.hole_n,
-            palette.get_first(settings.scheme_id, settings.color_off),
-            palette.get_second(settings.scheme_id, settings.color_off),
-            &material,
-        );
+        settings.tile_count_w,
+        settings.wall_split,
+        settings.wall_padding,
+        settings.hole_pct,
+        settings.hole_n,
+        palette.get_first(settings.scheme_id, settings.color_off),
+        palette.get_second(settings.scheme_id, settings.color_off),
+        &material,
+    );
 
-        make_raycasters(
-            rays,
-            &canvas_rect,
-            settings.tile_count_w,
-            settings.n_caster,
-            settings.max_bounces,
-            settings.raycaster_density,
-            scene,
-            settings.rays_position_mode,
-            settings.rays_prob,
-        )
+    make_raycasters(
+        rays,
+        &canvas_rect,
+        settings.tile_count_w,
+        settings.n_caster,
+        settings.max_bounces,
+        settings.raycaster_density,
+        scene,
+        settings.rays_position_mode,
+        settings.rays_prob,
+    )
 }
-
 
 fn raw_window_event(_app: &App, model: &mut Model, event: &nannou::winit::event::WindowEvent) {
     // Let egui handle things like keyboard and mouse input.
     model.egui.handle_raw_event(event);
-
 }
