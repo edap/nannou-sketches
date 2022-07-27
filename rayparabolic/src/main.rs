@@ -137,7 +137,7 @@ fn model(app: &App) -> Model {
     let mut scene: Vec<Element> = Vec::new();
     let mut rays: Vec<Wraycaster> = Vec::new();
     let mut settings = Settings {
-        tile_count_w: 12,
+        tile_count_w: 8,
         n_caster: 2,
         raycaster_density: 6,
         rays_position_mode: 1,
@@ -207,7 +207,7 @@ fn model(app: &App) -> Model {
 
     let window = app.window(main_window_id).unwrap();
     let egui = Egui::from_window(&window);
-    let mut the_model = Model {
+    let the_model = Model {
         egui,
         canvas_rect,
         scene,
@@ -309,38 +309,179 @@ fn update(app: &App, model: &mut Model, update: Update) {
         }
     }
 
+    // egui
 
-//egui
-let egui = &mut model.egui;
-let settings = &mut model.settings;
+    let egui = &mut model.egui;
+    let settings = &mut model.settings;
 
-egui.set_elapsed_time(update.since_start);
-let ctx = egui.begin_frame();
+    let canvas_rect =model.canvas_rect;
+    let material = &model.material;
+    let palette = &model.palette;
+    let mut rays = &mut model.rays;
+    let mut scene = &mut model.scene;
 
-egui::Window::new("Settings").show(&ctx, |ui| {
-    // Resolution slider
-    ui.label("Resolution:");
-    ui.add(egui::Slider::new(&mut settings.n_caster, 1..=6));
-
-    // Scale slider
-    ui.label("Scale:");
-    ui.add(egui::Slider::new(&mut settings.tile_count_w, 1..=20));
-
-    // Rotation slider
-    ui.label("Rotation:");
-    ui.add(egui::Slider::new(&mut settings.rotation, 0.0..=360.0));
-
-    // Random color button
-    let clicked = ui.button("Random color").clicked();
-
-    // if clicked {
-    //     settings.color = rgb(random(), random(), random());
-    // }
-});
+    egui.set_elapsed_time(update.since_start);
+    let ctx = egui.begin_frame();
 
 
+    egui::SidePanel::left("Scene").show(&ctx, |ui| {
+        ui.heading("My scene");
+        ui.horizontal(|ui| {
+            ui.label("n holes:");
+            ui.add(egui::Slider::new(&mut settings.hole_n, 1..=10));
+        });
+        ui.horizontal(|ui| {
+            ui.label("hole %:");
+            ui.add(egui::Slider::new(&mut settings.hole_pct, 0.0..=0.9));
+        });
+        ui.horizontal(|ui| {
+            ui.label("tiles count:");
+            ui.add(egui::Slider::new(&mut settings.tile_count_w, 1..=20));
+        });
+        ui.horizontal(|ui| {
+            ui.label("wall_split:");
+            ui.add(egui::Slider::new(&mut settings.wall_split, 0.0..=1.0));
+        });
+        ui.horizontal(|ui| {
+            ui.label("wall_padding:");
+            ui.add(egui::Slider::new(&mut settings.wall_padding, 0.02..=0.2));
+        });
+        ui.horizontal(|ui| {
+            ui.label("tiles count:");
+            ui.add(egui::Slider::new(&mut settings.tile_count_w, 1..=20));
+        });
 
-///
+        // if ui.button("Click each year").clicked() {
+        //     self.age += 1;
+        // }
+        //ui.label(format!("Hello '{}', age {}", self.name, self.age));
+    });
+
+    egui::SidePanel::left("Raycaster").show(&ctx, |ui| {
+        ui.heading("Rays");
+        ui.horizontal(|ui| {
+            ui.label("N. raycasters:");
+            ui.add(egui::Slider::new(&mut settings.n_caster, 1..=50));
+        });
+        ui.horizontal(|ui| {
+            ui.label("raycaster density:");
+            ui.add(egui::Slider::new(&mut settings.raycaster_density, 1..=36));
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("rays position mode:");
+            ui.add(egui::Slider::new(&mut settings.rays_position_mode, 0..=1));
+        });
+        ui.horizontal(|ui| {
+            ui.label("collision_radius:");
+            ui.add(egui::Slider::new(&mut settings.collision_radius, 0.0..=185.0));
+        });
+        ui.horizontal(|ui| {
+            ui.label("rays position mode:");
+            ui.add(egui::Slider::new(&mut settings.rays_position_mode, 0..=1));
+        });
+        ui.horizontal(|ui| {
+            ui.label("ray width:");
+            ui.add(egui::Slider::new(&mut settings.ray_width, 0.5..=10.0));
+        });
+        ui.horizontal(|ui| {
+            ui.label("rays prob:");
+            ui.add(egui::Slider::new(&mut settings.rays_prob, 0.0..=1.0));
+        });
+        ui.horizontal(|ui| {
+            ui.label("max bounces:");
+            ui.add(egui::Slider::new(&mut settings.max_bounces, 1..=6));
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("clear interval:");
+            ui.add(egui::Slider::new(&mut settings.clear_interval, 5..=20));
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("rotation:");
+            ui.add(egui::Slider::new(&mut settings.rotation, -PI..=PI));
+        });
+
+        if ui.add(egui::Button::new("Regenerate Walls")).clicked() {
+            regenerate_scene_and_rays(&mut rays, &mut scene, settings, canvas_rect, material,palette);
+        }
+
+
+        //ui.add(toggle.(settings.draw_rayss))
+        //ui.add(egui::Button: &mut settings.draw_rays, "test");
+
+        // ui.horizontal(|ui| {
+        //     ui.label("Draw rays:");
+        //     ui.add(egui::Ra::new(&mut settings.draw_rays));
+        // });
+
+
+        //ui.add(egui::Slider::new(&mut settings.n_caster, 0..=120).text("n raycaster"));
+
+
+        // if ui.button("Click each year").clicked() {
+        //     self.age += 1;
+        // }
+        //ui.label(format!("Hello '{}', age {}", self.name, self.age));
+
+
+
+
+
+
+
+    });
+
+    egui::SidePanel::left("Style").show(&ctx, |ui| {
+        ui.heading("My style");
+        ui.horizontal(|ui| {
+           ui.label("Draw rays");
+           ui.checkbox(&mut settings.draw_rays, "");
+        });
+        ui.horizontal(|ui| {
+            ui.label("Draw not collyding rays");
+            ui.checkbox(&mut settings.draw_not_colliding_rays, "");
+         });
+    });
+
+    egui::CentralPanel::default().show(&ctx, |ui| {
+        ui.heading("My egui Application");
+        // ui.horizontal(|ui| {
+        //     ui.label("Your name: ");
+        //     //ui.text_edit_singleline(&mut self.name);
+        // });
+        ui.label("Rotation:");
+        ui.add(egui::Slider::new(&mut settings.rotation, 0.0..=360.0));
+        // if ui.button("Click each year").clicked() {
+        //     self.age += 1;
+        // }
+        //ui.label(format!("Hello '{}', age {}", self.name, self.age));
+    });
+
+
+    // egui::Window::new("Settings").show(&ctx, |ui| {
+    //     // Resolution slider
+    //     ui.label("Resolution:");
+    //     ui.add(egui::Slider::new(&mut settings.n_caster, 1..=6));
+
+    //     // Scale slider
+    //     ui.label("Scale:");
+    //     ui.add(egui::Slider::new(&mut settings.tile_count_w, 1..=20));
+
+    //     // Rotation slider
+    //     ui.label("Rotation:");
+    //     ui.add(egui::Slider::new(&mut settings.rotation, 0.0..=360.0));
+
+    //     // Random color button
+    //     let clicked = ui.button("Random color").clicked();
+
+    //     // if clicked {
+    //     //     settings.color = rgb(random(), random(), random());
+    //     // }
+    // });
+
+
 
 
     // Render our drawing to the texture.
@@ -380,39 +521,9 @@ fn key_pressed(_app: &App, model: &mut Model, key: Key) {
 //             model.wall_width = value;
 //         }
 
-//         for value in gui::slider(model.wall_split as f32, 0.0, 1.0)
-//             .label("wall split")
-//             .set(model.ids.wall_split, ui)
-//         {
-//             model.wall_split = value;
-//         }
 
-//         for value in gui::slider(model.wall_padding as f32, 0.2, 0.02)
-//             .label("wall padding")
-//             .set(model.ids.wall_padding, ui)
-//         {
-//             model.wall_padding = value;
-//         }
 
-//         for value in gui::slider(model.hole_pct as f32, 0.0, 0.9)
-//             .label("hole")
-//             .set(model.ids.hole_pct, ui)
-//         {
-//             model.hole_pct = value;
-//         }
 
-//         for value in gui::slider(model.hole_n as f32, 0.0, 6.0)
-//             .label("hole_n")
-//             .set(model.ids.hole_n, ui)
-//         {
-//             model.hole_n = value as usize;
-//         }
-//         for value in gui::slider(model.tile_count_w as f32, 1.0, 20.0)
-//             .label("tile_count_w")
-//             .set(model.ids.tile_count_w, ui)
-//         {
-//             model.tile_count_w = value as u32;
-//         }
 
 //         for v in gui::toggle(model.show_walls as bool)
 //             .label("Show wall")
@@ -677,7 +788,6 @@ fn key_pressed(_app: &App, model: &mut Model, key: Key) {
 // }
 
 fn ui_view(app: &App, model: &Model, frame: Frame) {
-    //model.ui.draw_to_frame_if_changed(app, &frame).unwrap();
     model.egui.draw_to_frame(&frame).unwrap();
 }
 
@@ -695,6 +805,34 @@ fn exit(app: &App, model: Model) {
     model.capturer.exit(&device);
     println!("Done!");
 }
+
+fn regenerate_scene_and_rays(rays: &mut Vec<Wraycaster>, scene: &mut Vec<Element>, settings: &mut Settings, canvas_rect: geom::Rect,material: &Material,palette: &Palette){
+        make_walls(
+            scene,
+        &canvas_rect,
+            settings.tile_count_w,
+            settings.wall_split,
+            settings.wall_padding,
+            settings.hole_pct,
+            settings.hole_n,
+            palette.get_first(settings.scheme_id, settings.color_off),
+            palette.get_second(settings.scheme_id, settings.color_off),
+            &material,
+        );
+
+        make_raycasters(
+            rays,
+            &canvas_rect,
+            settings.tile_count_w,
+            settings.n_caster,
+            settings.max_bounces,
+            settings.raycaster_density,
+            scene,
+            settings.rays_position_mode,
+            settings.rays_prob,
+        )
+}
+
 
 fn raw_window_event(_app: &App, model: &mut Model, event: &nannou::winit::event::WindowEvent) {
     // Let egui handle things like keyboard and mouse input.
