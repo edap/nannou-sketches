@@ -34,7 +34,6 @@ const EPSILON: f32 = 0.05;
 // TODO
 
 // Draw the polygon grouping the points by depth level.
-// Add a bounding box for the curves.
 
 fn main() {
     nannou::app(model).update(update).exit(exit).run();
@@ -134,7 +133,7 @@ fn model(app: &App) -> Model {
     // initialize the fields of the model
     let mut scene: Vec<Element> = Vec::new();
     let mut rays: Vec<Wraycaster> = Vec::new();
-    let mut settings = Settings {
+    let settings = Settings {
         tile_count_w: 8,
         n_caster: 2,
         raycaster_density: 6,
@@ -170,7 +169,6 @@ fn model(app: &App) -> Model {
         clear_interval: 14,
     };
 
-    let light_color_pct: f32 = 0.5;
     let palette = Palette::new();
 
     let max_depth = 4;
@@ -229,7 +227,7 @@ fn update(app: &App, model: &mut Model, update: Update) {
     let settings = &mut model.settings;
 
     let canvas_rect = model.canvas_rect;
-    let material = &model.material;
+    let mut material = &mut model.material;
     let palette = &model.palette;
     let mut rays = &mut model.rays;
     let mut scene = &mut model.scene;
@@ -238,7 +236,7 @@ fn update(app: &App, model: &mut Model, update: Update) {
     let ctx = egui.begin_frame();
 
     egui::SidePanel::left("Scene").show(&ctx, |ui| {
-        ui.heading("My scene");
+        ui.heading("Scene");
         ui.horizontal(|ui| {
             ui.label("n holes:");
             ui.add(egui::Slider::new(&mut settings.hole_n, 1..=10));
@@ -274,7 +272,7 @@ fn update(app: &App, model: &mut Model, update: Update) {
         ui.heading("Rays");
         ui.horizontal(|ui| {
             ui.label("N. raycasters:");
-            ui.add(egui::Slider::new(&mut settings.n_caster, 1..=50));
+            ui.add(egui::Slider::new(&mut settings.n_caster, 1..=6));
         });
         ui.horizontal(|ui| {
             ui.label("raycaster density:");
@@ -328,62 +326,172 @@ fn update(app: &App, model: &mut Model, update: Update) {
                 material,
                 palette,
             );
-        }
-
-        //ui.add(toggle.(settings.draw_rayss))
-        //ui.add(egui::Button: &mut settings.draw_rays, "test");
-
-        // ui.horizontal(|ui| {
-        //     ui.label("Draw rays:");
-        //     ui.add(egui::Ra::new(&mut settings.draw_rays));
-        // });
-
-        //ui.add(egui::Slider::new(&mut settings.n_caster, 0..=120).text("n raycaster"));
-
-        // if ui.button("Click each year").clicked() {
-        //     self.age += 1;
-        // }
-        //ui.label(format!("Hello '{}', age {}", self.name, self.age));
+        };
     });
 
     egui::SidePanel::left("Style").show(&ctx, |ui| {
-        ui.heading("My style");
+        ui.heading("Animation");
         ui.horizontal(|ui| {
-            ui.label("Draw rays");
-            ui.checkbox(&mut settings.draw_rays, "");
-        });
-        ui.horizontal(|ui| {
-            ui.label("Draw not collyding rays");
-            ui.checkbox(&mut settings.draw_not_colliding_rays, "");
-        });
-        ui.horizontal(|ui| {
-            ui.label("animation");
+            ui.label("enable animation");
             ui.checkbox(&mut settings.animation, "");
         });
         ui.horizontal(|ui| {
             ui.label("animation mode");
             ui.add(egui::Slider::new(&mut settings.animation_mode, 0..=1));
         });
-        //ui.interact(rect, id, sense)
 
-        // Check for drags:
+        ui.heading("Ray Style");
+        ui.horizontal(|ui| {
+            ui.label("draw rays");
+            ui.checkbox(&mut settings.draw_rays, "");
+        });
+        ui.horizontal(|ui| {
+            ui.label("draw not collyding rays");
+            ui.checkbox(&mut settings.draw_not_colliding_rays, "");
+        });
+        ui.horizontal(|ui| {
+            ui.label("draw arrows");
+            ui.checkbox(&mut settings.draw_arrows, "");
+        });
 
-        // TODO. come triggare l'interaction con la gui
-        // egui/src/containers/collapsing_header.rs
+        ui.heading("General Colors");
+        ui.horizontal(|ui| {
+            ui.label("scheme id");
+            ui.add(egui::Slider::new(&mut settings.scheme_id, 0..=5));
+            if ui.input().pointer.any_released() {
+                change_color_walls(
+                    scene,
+                    palette.get_first(settings.scheme_id, settings.color_off),
+                    palette.get_second(settings.scheme_id, settings.color_off),
+                );
+            }
+        });
 
-        //         for value in gui::slider(model.animation_speed as f32, 80.0, 0.01)
-        //             .label("animation speed")
-        //             .set(model.ids.animation_speed, ui)
-        //         {
-        //             model.animation_speed = value;
-        //         }
-        // if let Some(interaction) = ui.input().pointer.interact_pos() {
-        //     println!("pos:{:?}", interaction);
-        // }
+        ui.horizontal(|ui| {
+            ui.label("blend mode");
+            ui.add(egui::Slider::new(&mut settings.blend_id, 0..=3));
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("color offset");
+            ui.add(egui::Slider::new(&mut settings.color_off, 0..=4));
+            if ui.input().pointer.any_released() {
+                change_color_walls(
+                    scene,
+                    palette.get_first(settings.scheme_id, settings.color_off),
+                    palette.get_second(settings.scheme_id, settings.color_off),
+                );
+            }
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("light color %");
+            ui.add(egui::Slider::new(&mut settings.light_color_pct, 0.0..=1.0));
+            if ui.input().pointer.any_released() {
+                change_color_walls(
+                    scene,
+                    palette.get_first(settings.scheme_id, settings.color_off),
+                    palette.get_second(settings.scheme_id, settings.color_off),
+                );
+            }
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("palette alpha %");
+            ui.add(egui::Slider::new(&mut settings.palette_alpha, 0.0..=1.0));
+            if ui.input().pointer.any_released() {
+                change_color_walls(
+                    scene,
+                    palette.get_first(settings.scheme_id, settings.color_off),
+                    palette.get_second(settings.scheme_id, settings.color_off),
+                );
+            }
+        });
+
+        ui.heading("Polygon Style");
+        ui.horizontal(|ui| {
+            ui.label("draw polygon");
+            ui.checkbox(&mut settings.draw_polygon, "");
+        });
+        ui.horizontal(|ui| {
+            ui.label("polygon contour weight");
+            ui.add(egui::Slider::new(
+                &mut settings.polygon_contour_weight,
+                0.5..=30.0,
+            ));
+        });
+        ui.horizontal(|ui| {
+            ui.label("draw polygon mode");
+            ui.add(egui::Slider::new(&mut settings.draw_polygon_mode, 0..=2));
+        });
+
+        ui.heading("Background Style");
+        ui.horizontal(|ui| {
+            ui.label("clean bg");
+            ui.checkbox(&mut settings.clean_bg, "");
+        });
+        ui.horizontal(|ui| {
+            ui.label("transparent bg");
+            ui.checkbox(&mut settings.transparent_bg, "");
+        });
+
+        ui.heading("Wall Style");
+        ui.horizontal(|ui| {
+            ui.label("show walls");
+            ui.checkbox(&mut settings.show_walls, "");
+        });
+        ui.horizontal(|ui| {
+            ui.label("walls width");
+            ui.add(egui::Slider::new(&mut settings.wall_width, 1.0..=15.0));
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("material");
+            if ui
+                .add(egui::RadioButton::new(
+                    material.surface == SurfaceType::Diffuse,
+                    "Diffuse",
+                ))
+                .clicked()
+            {
+                material.surface = SurfaceType::Diffuse;
+                change_surface_walls(&mut scene, &material.surface)
+            }
+            if ui
+                .add(egui::RadioButton::new(
+                    material.surface
+                        == SurfaceType::Reflective {
+                            reflectivity: (1.0),
+                        },
+                    "Reflective",
+                ))
+                .clicked()
+            {
+                material.surface = SurfaceType::Reflective {
+                    reflectivity: (1.0),
+                }
+            }
+            if ui
+                .add(egui::RadioButton::new(
+                    material.surface
+                        == SurfaceType::ReflectiveAndRefractive {
+                            reflectivity: (1.0),
+                            ior: (1.4),
+                        },
+                    "ReflectiveAndRefractive",
+                ))
+                .clicked()
+            {
+                material.surface = SurfaceType::ReflectiveAndRefractive {
+                    reflectivity: (1.0),
+                    ior: (1.4),
+                }
+            }
+        });
+
         //redraw if any of those was touched
         if ui.input().pointer.any_released() {
             redraw = true;
-            //println!("f:{:?}",app.main_window().elapsed_frames());
         }
     });
 
@@ -399,28 +507,11 @@ fn update(app: &App, model: &mut Model, update: Update) {
         //     self.age += 1;
         // }
         //ui.label(format!("Hello '{}', age {}", self.name, self.age));
+        //redraw if any of those was touched
+        if ui.input().pointer.any_released() {
+            redraw = true;
+        }
     });
-
-    // egui::Window::new("Settings").show(&ctx, |ui| {
-    //     // Resolution slider
-    //     ui.label("Resolution:");
-    //     ui.add(egui::Slider::new(&mut settings.n_caster, 1..=6));
-
-    //     // Scale slider
-    //     ui.label("Scale:");
-    //     ui.add(egui::Slider::new(&mut settings.tile_count_w, 1..=20));
-
-    //     // Rotation slider
-    //     ui.label("Rotation:");
-    //     ui.add(egui::Slider::new(&mut settings.rotation, 0.0..=360.0));
-
-    //     // Random color button
-    //     let clicked = ui.button("Random color").clicked();
-
-    //     // if clicked {
-    //     //     settings.color = rgb(random(), random(), random());
-    //     // }
-    // });
 
     if model.settings.animation | redraw {
         // Use the frame number to animate, ensuring we get a constant update time.
@@ -530,9 +621,16 @@ fn view(_app: &App, model: &Model, frame: Frame) {
     model.capturer.view(frame);
 }
 
-fn key_pressed(_app: &App, model: &mut Model, key: Key) {
+fn key_pressed(app: &App, model: &mut Model, key: Key) {
     match key {
-        Key::S => model.capturer.take_screenshot(),
+        Key::S => {
+            // let window = app.main_window();
+            // let device = window.device();
+            // model
+            //     .capturer
+            //     .update(&window, &device, app.main_window().elapsed_frames());
+            model.capturer.take_screenshot();
+        }
         Key::R => model.capturer.start_recording(),
         Key::P => model.capturer.stop_recording(),
         // Key::S => match app.window(model.main_window_id) {
@@ -545,261 +643,7 @@ fn key_pressed(_app: &App, model: &mut Model, key: Key) {
     }
 }
 
-// fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
-//     let ui = &mut model.ui.set_widgets();
-//     {
-//         // WALLS
-//         for value in gui::slider(model.wall_width as f32, 1.0, 15.0)
-//             .top_left_with_margin(20.0)
-//             .label("wall width")
-//             .set(model.ids.wall_width, ui)
-//         {
-//             model.wall_width = value;
-//         }
-
-//         for v in gui::toggle(model.show_walls as bool)
-//             .label("Show wall")
-//             .set(model.ids.show_walls, ui)
-//         {
-//             model.show_walls = v;
-//         }
-//         for _click in gui::button()
-//             .label("Walls Refl Refr")
-//             .set(model.ids.button_refl_refr, ui)
-//         {
-//             let surface = SurfaceType::ReflectiveAndRefractive {
-//                 reflectivity: 1.0,
-//                 ior: 1.4,
-//             };
-//             model.material.surface = surface;
-//             change_surface_walls(&mut model.scene, &surface)
-//         }
-//         for _click in gui::button()
-//             .label("Walls Refl")
-//             .set(model.ids.button_refl, ui)
-//         {
-//             let surface = SurfaceType::Reflective { reflectivity: 1.0 };
-//             model.material.surface = surface;
-//             change_surface_walls(&mut model.scene, &surface)
-//         }
-//         for _click in gui::button()
-//             .label("Walls Diffuse")
-//             .set(model.ids.button_diffuse, ui)
-//         {
-//             let surface = SurfaceType::Diffuse;
-//             model.material.surface = surface;
-//             change_surface_walls(&mut model.scene, &surface)
-//         }
-
-//         for _click in gui::button()
-//             .label("Regenerate Walls")
-//             .set(model.ids.button_regenerate, ui)
-//         {
-//             let canvas_rect = model.canvas_rect;
-//             make_walls(
-//                 &mut model.scene,
-//                 &canvas_rect,
-//                 model.tile_count_w,
-//                 model.wall_split,
-//                 model.wall_padding,
-//                 model.hole_pct,
-//                 model.hole_n,
-//                 model.palette.get_first(model.scheme_id, model.color_off),
-//                 model.palette.get_second(model.scheme_id, model.color_off),
-//                 &model.material,
-//             );
-
-//             make_raycasters(
-//                 &mut model.rays,
-//                 &canvas_rect,
-//                 model.tile_count_w,
-//                 model.n_caster,
-//                 model.max_bounces,
-//                 model.raycaster_density,
-//                 &model.scene,
-//                 model.rays_position_mode,
-//                 model.rays_prob,
-//             )
-//         }
-
-//         // RAYCASTER
-//         for value in gui::slider(model.n_caster as f32, 1.0, 50.0)
-//             //.left(gui::PAD + gui::COL_W)
-//             //.top_left_with_margin_on(model.ids.wall_width, 30.0)
-//             .top_left_with_margins_on(model.ids.wall_width, 0.0, gui::PAD + gui::COL_W)
-//             //.top_right_with_margins_on(model.ids.wall_width, gui::PAD, 15.0)
-//             //.top_right_of(model.ids.wall_width)
-//             .label("n_caster ")
-//             .set(model.ids.n_caster, ui)
-//         {
-//             model.n_caster = value as u32;
-//         }
-
-//         for value in gui::slider(model.raycaster_density as f32, 1.0, 36.0)
-//             .label("raycaster_density ")
-//             .set(model.ids.raycaster_density, ui)
-//         {
-//             model.raycaster_density = value as usize;
-//         }
-
-//         for value in gui::slider(model.rays_position_mode as f32, 0.0, 1.0)
-//             .label("raycaster pos mode")
-//             .set(model.ids.rays_position_mode, ui)
-//         {
-//             model.rays_position_mode = value as usize;
-//         }
-
-//         for value in gui::slider(model.collision_radius as f32, 0.0, 185.0)
-//             .label("collision radius")
-//             .set(model.ids.collision_radius, ui)
-//         {
-//             model.collision_radius = value;
-//         }
-
-//         for value in gui::slider(model.ray_width, 0.5, 10.0)
-//             .label("ray width")
-//             .set(model.ids.ray_width, ui)
-//         {
-//             model.ray_width = value;
-//         }
-//         for value in gui::slider(model.rays_prob as f32, 0.0, 1.0)
-//             .label("rays prob.")
-//             .set(model.ids.rays_prob, ui)
-//         {
-//             model.rays_prob = value;
-//         }
-//         for value in gui::slider(model.max_bounces as f32, 1.0, 6.0)
-//             .label("max_bounces")
-//             .set(model.ids.max_bounces, ui)
-//         {
-//             model.max_bounces = value as usize;
-//         }
-
-//         for value in gui::slider(model.clear_interval as f32, 5.0, 20.0)
-//             .label("clear_interval")
-//             .set(model.ids.clear_interval, ui)
-//         {
-//             model.clear_interval = value as usize;
-//         }
-
-//         for val in gui::slider(model.rotation, -PI, PI)
-//             .label("Rotation")
-//             .set(model.ids.rotation, ui)
-//         {
-//             model.rotation = val;
-//         }
-
-//         for v in gui::toggle(model.draw_rays as bool)
-//             .label("Draw rays")
-//             .set(model.ids.draw_rays, ui)
-//         {
-//             model.draw_rays = v;
-//         }
-
-//         for v in gui::toggle(model.draw_not_colliding_rays as bool)
-//             .label("Draw Not Colliding rays")
-//             .set(model.ids.draw_not_colliding_rays, ui)
-//         {
-//             model.draw_not_colliding_rays = v;
-//         }
-
-//         // COLORS
-//         for value in gui::slider(model.scheme_id as f32, 0.0, 5.0)
-//             .top_left_with_margins_on(model.ids.n_caster, 0.0, gui::PAD + gui::COL_W)
-//             .label("scheme_id")
-//             .set(model.ids.scheme_id, ui)
-//         {
-//             model.scheme_id = value as usize;
-//             change_color_walls(
-//                 &mut model.scene,
-//                 model.palette.get_first(model.scheme_id, model.color_off),
-//                 model.palette.get_second(model.scheme_id, model.color_off),
-//             );
-//         }
-
-//         for value in gui::slider(model.blend_id as f32, 0.0, 3.0)
-//             .label("blend_id")
-//             .set(model.ids.blend_id, ui)
-//         {
-//             model.blend_id = value as usize;
-//         }
-
-//         for value in gui::slider(model.color_off as f32, 0.0, 4.0)
-//             .label("color_off")
-//             .set(model.ids.color_off, ui)
-//         {
-//             model.color_off = value as usize;
-//             change_color_walls(
-//                 &mut model.scene,
-//                 model.palette.get_first(model.scheme_id, model.color_off),
-//                 model.palette.get_second(model.scheme_id, model.color_off),
-//             );
-//         }
-//         for value in gui::slider(model.light_color_pct as f32, 0.0, 1.0)
-//             .label("light color %")
-//             .set(model.ids.light_color_pct, ui)
-//         {
-//             model.light_color_pct = value;
-//         }
-
-//         for value in gui::slider(model.palette_alpha as f32, 0.0, 1.0)
-//             .label("palette_alpha")
-//             .set(model.ids.palette_alpha, ui)
-//         {
-//             model.palette_alpha = value;
-//             model.palette.set_alpha(value);
-//             change_color_walls(
-//                 &mut model.scene,
-//                 model.palette.get_first(model.scheme_id, model.color_off),
-//                 model.palette.get_second(model.scheme_id, model.color_off),
-//             );
-//         }
-
-//         for value in gui::slider(model.polygon_contour_weight, 0.5, 30.0)
-//             .label("polygon cont weight")
-//             .set(model.ids.polygon_contour_weight, ui)
-//         {
-//             model.polygon_contour_weight = value;
-//         }
-
-//         for v in gui::toggle(model.clean_bg as bool)
-//             .label("Draw Bg")
-//             .set(model.ids.clean_bg, ui)
-//         {
-//             model.clean_bg = v;
-//         }
-//         for v in gui::toggle(model.transparent_bg as bool)
-//             .label("Transparent Bg")
-//             .set(model.ids.transparent_bg, ui)
-//         {
-//             model.transparent_bg = v;
-//         }
-
-//         for v in gui::toggle(model.draw_polygon as bool)
-//             .label("Draw poly")
-//             .set(model.ids.draw_polygon, ui)
-//         {
-//             model.draw_polygon = v;
-//         }
-
-//         for value in gui::slider(model.draw_polygon_mode as f32, 0.0, 2.0)
-//             .label("Draw poly mode")
-//             .set(model.ids.draw_polygon_mode, ui)
-//         {
-//             model.draw_polygon_mode = value as usize;
-//         }
-
-//         for v in gui::toggle(model.draw_arrows as bool)
-//             .label("Draw Arrows")
-//             .set(model.ids.draw_arrows, ui)
-//         {
-//             model.draw_arrows = v;
-//         }
-
-//     }
-// }
-
-fn ui_view(app: &App, model: &Model, frame: Frame) {
+fn ui_view(_app: &App, model: &Model, frame: Frame) {
     model.egui.draw_to_frame(&frame).unwrap();
 }
 

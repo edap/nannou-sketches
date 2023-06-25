@@ -84,7 +84,7 @@ struct Model {
 
 fn model(app: &App) -> Model {
     // we render on a 4k texture
-    let texture_size = [2160, 2700];
+    let texture_size = [1587, 2245];
     //let texture_size = [3_840, 2_160];
     //let texture_size = [2_160, 2_160];
     // Create the window, that is 4 times smaller than the texture
@@ -631,7 +631,7 @@ fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
             model.draw_polygon = v;
         }
 
-        for value in gui::slider(model.draw_polygon_mode as f32, 0.0, 2.0)
+        for value in gui::slider(model.draw_polygon_mode as f32, 0.0, 3.0)
             .label("Draw poly mode")
             .set(model.ids.draw_polygon_mode, ui)
         {

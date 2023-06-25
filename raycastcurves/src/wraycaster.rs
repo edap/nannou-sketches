@@ -202,6 +202,30 @@ impl Wraycaster {
                     }
                 }
             }
+            3 => {
+                // For Oscar
+                for pray in self.ray_lights.iter() {
+                    if pray.intersections.len() > 3 {
+                        let color = pray.intersections[1].color;
+                        let pp = pray
+                            .intersections
+                            .iter()
+                            .map(|&inter| (inter.pos, inter.color));
+                        //.map(|&inter| (inter.pos, color));
+                        //if poly_weight > 0.5 {
+                        draw.polyline()
+                            .stroke_weight(poly_weight)
+                            .caps_round()
+                            //.stroke(pray.intersections[0].color)
+                            .join_round()
+                            .points_colored(pp);
+                        //}
+                        //  else {
+                        //     draw.polygon().points_colored(pp);
+                        // }
+                    }
+                }
+            }
             _ => {}
         }
     }
@@ -357,13 +381,13 @@ pub fn cast_ray(
             // if a bounding volume is present, use it to pre-test the intersection
             // otherwise test everything
 
-            if let Some((element_dist, element_surface_normal)) = element.intersect(ray){
+            if let Some((element_dist, element_surface_normal)) = element.intersect(ray) {
                 // save the closest possible collision
                 if element_dist < distance {
                     distance = element_dist;
                     surface_normal = element_surface_normal;
                     material = *element.material();
-                }   
+                }
             }
 
             // match &element.bounding_volume() {

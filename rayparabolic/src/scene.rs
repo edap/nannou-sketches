@@ -1,7 +1,7 @@
 use nannou::prelude::*;
 use nannou_ray2d::{BoundingVolume, Ray2D};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum SurfaceType {
     Diffuse,
     Reflective { reflectivity: f32 },
@@ -19,7 +19,7 @@ pub struct Material {
 impl Default for Material {
     fn default() -> Self {
         let coin = random_range(0.0, 1.0);
-        let mut sur;
+        let sur;
         if coin > 0.5 {
             sur = SurfaceType::ReflectiveAndRefractive {
                 reflectivity: 1.0,
@@ -60,19 +60,19 @@ pub enum Element {
 }
 
 impl Element {
-    pub fn material(&self) -> &Material{
+    pub fn material(&self) -> &Material {
         match *self {
             Element::Curve(ref cu) => &cu.material,
             Element::Circle(ref ci) => &ci.material,
         }
     }
-    pub fn bounding_volume(&self) -> Option<&BoundingVolume>{
+    pub fn bounding_volume(&self) -> Option<&BoundingVolume> {
         match *self {
             Element::Curve(ref cu) => cu.bounding_volume.as_ref(),
             Element::Circle(ref ci) => ci.bounding_volume.as_ref(),
         }
     }
-    pub fn ray_anchor_point(&self) -> Option<&Vec2>{
+    pub fn ray_anchor_point(&self) -> Option<&Vec2> {
         match *self {
             Element::Curve(ref cu) => cu.ray_anchor_point.as_ref(),
             Element::Circle(ref ci) => ci.ray_anchor_point.as_ref(),
@@ -90,28 +90,28 @@ impl Element {
         match *self {
             Element::Curve(ref curve) => {
                 draw.polyline()
-                .weight(*wall_width)
-                .color(curve.material.coloration)
-                .points(curve.points.clone());
-            },
+                    .weight(*wall_width)
+                    .color(curve.material.coloration)
+                    .points(curve.points.clone());
+            }
             Element::Circle(ref circle) => {
                 draw.ellipse()
-                .no_fill()
-                .x_y(circle.position.x, circle.position.y)
-                .w_h(circle.radius * 2.0, circle.radius * 2.0)
-                .color(circle.material.coloration)
-                .stroke_weight(*wall_width);
+                    .no_fill()
+                    .x_y(circle.position.x, circle.position.y)
+                    .w_h(circle.radius * 2.0, circle.radius * 2.0)
+                    .color(circle.material.coloration)
+                    .stroke_weight(*wall_width);
             }
         }
     }
 }
 
 pub trait Intersectable {
-    fn intersect(&self, ray : &Ray2D) -> Option<(f32, Vec2)>;
+    fn intersect(&self, ray: &Ray2D) -> Option<(f32, Vec2)>;
 }
 
 impl Intersectable for Element {
-    fn intersect(&self, ray : &Ray2D) -> Option<(f32, Vec2)>{
+    fn intersect(&self, ray: &Ray2D) -> Option<(f32, Vec2)> {
         match *self {
             Element::Curve(ref cu) => cu.intersect(ray),
             Element::Circle(ref ci) => ci.intersect(ray),
@@ -120,30 +120,25 @@ impl Intersectable for Element {
 }
 
 impl Intersectable for Circle {
-    fn intersect(&self, ray : &Ray2D) -> Option<(f32, Vec2)>{
+    fn intersect(&self, ray: &Ray2D) -> Option<(f32, Vec2)> {
         ray.intersect_circle(&self.position, &self.radius)
     }
 }
 
 impl Intersectable for Curve {
-    fn intersect(&self, ray : &Ray2D) -> Option<(f32, Vec2)>{
-            // if a bounding volume is present, use it to pre-test the intersection
-            match &self.bounding_volume {
-                Some(volume) => {
-                    let pretest = ray.intersect_bounding_volume(volume);
-                    match pretest {
-                        Some(_) => {
-                            ray.intersect_polyline(&self.points)
-                        }
-                        None => None
-                    }
-                }
-                // There is no acceleration structure available to pre-test the intersection
-                // proceed to test every segment in the polyline.
-                None => {
-                    ray.intersect_polyline(&self.points)
+    fn intersect(&self, ray: &Ray2D) -> Option<(f32, Vec2)> {
+        // if a bounding volume is present, use it to pre-test the intersection
+        match &self.bounding_volume {
+            Some(volume) => {
+                let pretest = ray.intersect_bounding_volume(volume);
+                match pretest {
+                    Some(_) => ray.intersect_polyline(&self.points),
+                    None => None,
                 }
             }
-        
-    }   
+            // There is no acceleration structure available to pre-test the intersection
+            // proceed to test every segment in the polyline.
+            None => ray.intersect_polyline(&self.points),
+        }
+    }
 }

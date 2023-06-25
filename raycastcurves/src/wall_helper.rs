@@ -1,7 +1,7 @@
 use crate::mondrian::split_squares;
 pub use crate::mondrian::Square;
-use crate::Element;
 use crate::scene::Curve;
+use crate::Element;
 //use crate::Element::Curve;
 use crate::scene::Material;
 use crate::scene::SurfaceType;
@@ -97,7 +97,7 @@ pub fn create_curve_from_square(
             if i == end_to {
                 points.push(center + vec2(x, y));
 
-                walls.push(Element::Curve(Curve{
+                walls.push(Element::Curve(Curve {
                     points: points.clone(),
                     material: cloned_mat,
                     ray_anchor_point: Some(center),
@@ -116,7 +116,7 @@ pub fn create_curve_from_square(
             let y = (square.height / 2.0 - padding) * rad.sin();
             points.push(center + vec2(x, y))
         }
-        walls.push(Element::Curve(Curve{
+        walls.push(Element::Curve(Curve {
             points: points.clone(),
             material: cloned_mat,
             ray_anchor_point: Some(center),
