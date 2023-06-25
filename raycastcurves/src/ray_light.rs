@@ -1,5 +1,5 @@
 use nannou::prelude::*;
-use nannou_ray2d::Ray2D;
+use nannou_raycast::ray2d::Ray2d;
 #[derive(Debug, Clone, Copy)]
 pub struct Intersection {
     pub pos: Vec2,
@@ -23,7 +23,7 @@ pub struct RayLight {
     pub color: Hsla,
     pub max_depth: usize,
     pub count_depth: usize,
-    pub ray: Ray2D,
+    pub ray: Ray2d,
     pub starting_pos: Vec2,
     pub starting_dir: Vec2,
 }
@@ -31,7 +31,7 @@ pub struct RayLight {
 impl RayLight {
     pub fn new(origin: Vec2, direction: Vec2, max_depth: usize) -> Self{
         let intersections: Vec<Intersection> = Vec::new();
-        let mut ray = Ray2D::default();
+        let mut ray = Ray2d::default();
         let color: Hsla = hsla(random_range(0.0, 1.0), 1.0, random_range(0.5, 1.0)  , 1.0);
         ray.orig = origin;
         ray.dir = direction;

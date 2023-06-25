@@ -1929,6 +1929,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "nannou_raycast"
+version = "0.1.2"
+source = "git+https://github.com/edap/nannou-ray2d?branch=main#cc482613c473d2f0136936348e489b6323347f5c"
+dependencies = [
+ "nannou 0.18.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "nannou_wgpu"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2699,8 +2707,8 @@ version = "0.1.0"
 dependencies = [
  "edapx-colors",
  "nannou 0.18.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "nannou-ray2d",
  "nannou_conrod",
+ "nannou_raycast",
  "rayon",
 ]
 

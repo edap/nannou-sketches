@@ -8,7 +8,7 @@ use nannou::color::Mix;
 #[allow(dead_code)]
 use nannou::prelude::*;
 use nannou::rand::Rng;
-use nannou_ray2d::Ray2D;
+use nannou_raycast::ray2d::Ray2d;
 use rayon::prelude::*;
 
 const EPSILON: f32 = 0.05;
@@ -364,7 +364,7 @@ impl Wraycaster {
 // https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-overview/light-transport-ray-tracing-whitted
 // look at a whitted rt and implement thiss
 pub fn cast_ray(
-    ray: &mut Ray2D,
+    ray: &mut Ray2d,
     depth: &mut usize,
     max_depth: usize,
     intersections: &mut Vec<Intersection>,

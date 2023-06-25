@@ -25,7 +25,7 @@ mod raycaster;
 pub use crate::wraycaster::Wraycaster;
 pub mod capturer;
 pub use crate::capturer::Capturer;
-use nannou_ray2d::BoundingVolume;
+use nannou_raycast::bounding_volume::BoundingVolume;
 
 const EPSILON: f32 = 0.05;
 

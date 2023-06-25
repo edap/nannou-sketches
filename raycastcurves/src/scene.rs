@@ -1,5 +1,5 @@
 use nannou::prelude::*;
-use nannou_ray2d::{BoundingVolume, Ray2D};
+use nannou_raycast::{bounding_volume::BoundingVolume, ray2d::Ray2d};
 
 #[derive(Debug, Copy, Clone)]
 pub enum SurfaceType {
@@ -107,11 +107,11 @@ impl Element {
 }
 
 pub trait Intersectable {
-    fn intersect(&self, ray : &Ray2D) -> Option<(f32, Vec2)>;
+    fn intersect(&self, ray : &Ray2d) -> Option<(f32, Vec2)>;
 }
 
 impl Intersectable for Element {
-    fn intersect(&self, ray : &Ray2D) -> Option<(f32, Vec2)>{
+    fn intersect(&self, ray : &Ray2d) -> Option<(f32, Vec2)>{
         match *self {
             Element::Curve(ref cu) => cu.intersect(ray),
             Element::Circle(ref ci) => ci.intersect(ray),
@@ -120,13 +120,13 @@ impl Intersectable for Element {
 }
 
 impl Intersectable for Circle {
-    fn intersect(&self, ray : &Ray2D) -> Option<(f32, Vec2)>{
+    fn intersect(&self, ray : &Ray2d) -> Option<(f32, Vec2)>{
         ray.intersect_circle(&self.position, &self.radius)
     }
 }
 
 impl Intersectable for Curve {
-    fn intersect(&self, ray : &Ray2D) -> Option<(f32, Vec2)>{
+    fn intersect(&self, ray : &Ray2d) -> Option<(f32, Vec2)>{
             // if a bounding volume is present, use it to pre-test the intersection
             match &self.bounding_volume {
                 Some(volume) => {

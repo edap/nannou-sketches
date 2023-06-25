@@ -6,7 +6,7 @@ use crate::Element;
 use crate::scene::Material;
 use crate::scene::SurfaceType;
 use nannou::prelude::*;
-use nannou_ray2d::BoundingVolume;
+use nannou_raycast::bounding_volume::BoundingVolume;
 
 pub fn make_walls(
     walls: &mut Vec<Element>,
