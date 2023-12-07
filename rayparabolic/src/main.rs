@@ -1,5 +1,6 @@
-pub const WIN_W: u32 = 600;
-pub const WIN_H: u32 = 900;
+pub const WIN_W: u32 = 970;
+pub const WIN_H: u32 = 350;
+pub const ENABLE_4K_CAPTURE: bool = false;
 
 use edapx_colors::Palette;
 use nannou::prelude::*;
@@ -88,11 +89,21 @@ struct Model {
 
 fn model(app: &App) -> Model {
     // we render on a 4k texture
-    let texture_size = [2160, 2700];
+    //let texture_size = [2160, 2700];
+    //let texture_size = [1587, 2245];
     //let texture_size = [3_840, 2_160];
+    let texture_size = [1920, 1080];
     //let texture_size = [2_160, 2_160];
     // Create the window, that is 4 times smaller than the texture
-    let [win_w, win_h] = [texture_size[0] / 4, texture_size[1] / 4];
+
+    let mut win_w = texture_size[0];
+    let mut win_h = texture_size[1];
+
+    if ENABLE_4K_CAPTURE {
+        win_w = texture_size[0] / 4;
+        win_h = texture_size[1] / 4;
+    }
+    
     // we also draw on a 4k canvas
     let canvas_rect = geom::Rect::from_w_h(texture_size[0] as f32, texture_size[1] as f32);
 
@@ -262,6 +273,71 @@ fn update(app: &App, model: &mut Model, update: Update) {
             ui.add(egui::Slider::new(&mut settings.tile_count_w, 1..=20));
         });
 
+        ui.heading("Wall Style");
+        ui.horizontal(|ui| {
+            ui.label("show walls");
+            ui.checkbox(&mut settings.show_walls, "");
+        });
+        ui.horizontal(|ui| {
+            ui.label("walls width");
+            ui.add(egui::Slider::new(&mut settings.wall_width, 1.0..=15.0));
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("material");
+            if ui
+                .add(egui::RadioButton::new(
+                    material.surface == SurfaceType::Diffuse,
+                    "Diffuse",
+                ))
+                .clicked()
+            {
+                material.surface = SurfaceType::Diffuse;
+                change_surface_walls(&mut scene, &material.surface)
+            }
+            if ui
+                .add(egui::RadioButton::new(
+                    material.surface
+                        == SurfaceType::Reflective {
+                            reflectivity: (1.0),
+                        },
+                    "Reflective",
+                ))
+                .clicked()
+            {
+                material.surface = SurfaceType::Reflective {
+                    reflectivity: (1.0),
+                }
+            }
+            if ui
+                .add(egui::RadioButton::new(
+                    material.surface
+                        == SurfaceType::ReflectiveAndRefractive {
+                            reflectivity: (1.0),
+                            ior: (1.4),
+                        },
+                    "ReflectiveAndRefractive",
+                ))
+                .clicked()
+            {
+                material.surface = SurfaceType::ReflectiveAndRefractive {
+                    reflectivity: (1.0),
+                    ior: (1.4),
+                }
+            }
+        });
+
+        if ui.add(egui::Button::new("Regenerate Walls")).clicked() {
+            regenerate_scene_and_rays(
+                &mut rays,
+                &mut scene,
+                settings,
+                canvas_rect,
+                material,
+                palette,
+            );
+        };
+
         // if ui.button("Click each year").clicked() {
         //     self.age += 1;
         // }
@@ -317,29 +393,6 @@ fn update(app: &App, model: &mut Model, update: Update) {
             ui.add(egui::Slider::new(&mut settings.rotation, -PI..=PI));
         });
 
-        if ui.add(egui::Button::new("Regenerate Walls")).clicked() {
-            regenerate_scene_and_rays(
-                &mut rays,
-                &mut scene,
-                settings,
-                canvas_rect,
-                material,
-                palette,
-            );
-        };
-    });
-
-    egui::SidePanel::left("Style").show(&ctx, |ui| {
-        ui.heading("Animation");
-        ui.horizontal(|ui| {
-            ui.label("enable animation");
-            ui.checkbox(&mut settings.animation, "");
-        });
-        ui.horizontal(|ui| {
-            ui.label("animation mode");
-            ui.add(egui::Slider::new(&mut settings.animation_mode, 0..=1));
-        });
-
         ui.heading("Ray Style");
         ui.horizontal(|ui| {
             ui.label("draw rays");
@@ -353,6 +406,19 @@ fn update(app: &App, model: &mut Model, update: Update) {
             ui.label("draw arrows");
             ui.checkbox(&mut settings.draw_arrows, "");
         });
+    });
+
+    egui::SidePanel::left("Style").show(&ctx, |ui| {
+        ui.heading("Animation");
+        ui.horizontal(|ui| {
+            ui.label("enable animation");
+            ui.checkbox(&mut settings.animation, "");
+        });
+        ui.horizontal(|ui| {
+            ui.label("animation mode");
+            ui.add(egui::Slider::new(&mut settings.animation_mode, 0..=1));
+        });
+
 
         ui.heading("General Colors");
         ui.horizontal(|ui| {
@@ -435,78 +501,6 @@ fn update(app: &App, model: &mut Model, update: Update) {
             ui.checkbox(&mut settings.transparent_bg, "");
         });
 
-        ui.heading("Wall Style");
-        ui.horizontal(|ui| {
-            ui.label("show walls");
-            ui.checkbox(&mut settings.show_walls, "");
-        });
-        ui.horizontal(|ui| {
-            ui.label("walls width");
-            ui.add(egui::Slider::new(&mut settings.wall_width, 1.0..=15.0));
-        });
-
-        ui.horizontal(|ui| {
-            ui.label("material");
-            if ui
-                .add(egui::RadioButton::new(
-                    material.surface == SurfaceType::Diffuse,
-                    "Diffuse",
-                ))
-                .clicked()
-            {
-                material.surface = SurfaceType::Diffuse;
-                change_surface_walls(&mut scene, &material.surface)
-            }
-            if ui
-                .add(egui::RadioButton::new(
-                    material.surface
-                        == SurfaceType::Reflective {
-                            reflectivity: (1.0),
-                        },
-                    "Reflective",
-                ))
-                .clicked()
-            {
-                material.surface = SurfaceType::Reflective {
-                    reflectivity: (1.0),
-                }
-            }
-            if ui
-                .add(egui::RadioButton::new(
-                    material.surface
-                        == SurfaceType::ReflectiveAndRefractive {
-                            reflectivity: (1.0),
-                            ior: (1.4),
-                        },
-                    "ReflectiveAndRefractive",
-                ))
-                .clicked()
-            {
-                material.surface = SurfaceType::ReflectiveAndRefractive {
-                    reflectivity: (1.0),
-                    ior: (1.4),
-                }
-            }
-        });
-
-        //redraw if any of those was touched
-        if ui.input().pointer.any_released() {
-            redraw = true;
-        }
-    });
-
-    egui::CentralPanel::default().show(&ctx, |ui| {
-        ui.heading("My egui Application");
-        // ui.horizontal(|ui| {
-        //     ui.label("Your name: ");
-        //     //ui.text_edit_singleline(&mut self.name);
-        // });
-        ui.label("Rotation:");
-        ui.add(egui::Slider::new(&mut settings.rotation, 0.0..=360.0));
-        // if ui.button("Click each year").clicked() {
-        //     self.age += 1;
-        // }
-        //ui.label(format!("Hello '{}', age {}", self.name, self.age));
         //redraw if any of those was touched
         if ui.input().pointer.any_released() {
             redraw = true;
