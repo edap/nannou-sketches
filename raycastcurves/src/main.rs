@@ -37,7 +37,7 @@ const EPSILON: f32 = 0.05;
 // Add a bounding box for the curves.
 
 fn main() {
-    nannou::app(model).update(update).exit(exit).run();
+    nannou::app(model).update(update).run();
 }
 
 struct Model {
@@ -80,18 +80,15 @@ struct Model {
     draw_polygon_mode: usize,
     polygon_contour_weight: f32,
     clear_interval: usize,
-    capturer: Capturer,
+    //capturer: Capturer,
     material: Material,
 }
 
 fn model(app: &App) -> Model {
-    // we render on a 4k texture
-    //let texture_size = [1587, 2245];
-    let texture_size = [3_840, 2_160];
+    let texture_size = [1280, 700];
+    //let texture_size = [3_840, 2_160];
     //let texture_size = [2_160, 2_160];
-    // Create the window, that is 4 times smaller than the texture
-    let [win_w, win_h] = [texture_size[0] / 4, texture_size[1] / 4];
-    // we also draw on a 4k canvas
+    let [win_w, win_h] = [texture_size[0], texture_size[1]];
     let canvas_rect = geom::Rect::from_w_h(texture_size[0] as f32, texture_size[1] as f32);
 
     let tile_count_w = 8;
@@ -100,22 +97,8 @@ fn model(app: &App) -> Model {
         .size(win_w, win_h)
         .view(view)
         .raw_event(raw_window_event)
-        .key_pressed(key_pressed)
         .build()
         .unwrap();
-
-    // set up the capturer
-    let sample_count = app.window(main_window_id).unwrap().msaa_samples();
-    //let path = capture_directory(app);
-    let path = app.assets_path().unwrap();
-    let capturer = Capturer::new(
-        texture_size,
-        sample_count,
-        app.window(main_window_id).unwrap().device(),
-        path,
-        false,
-    );
-    // end capturer
 
     // Create the UI.
     let ui_window = app
@@ -125,7 +108,6 @@ fn model(app: &App) -> Model {
         .view(ui_view)
         .event(ui_event)
         .raw_event(raw_window_event)
-        .key_pressed(key_pressed)
         .build()
         .unwrap();
 
@@ -244,7 +226,6 @@ fn model(app: &App) -> Model {
         polygon_contour_weight,
         draw_not_colliding_rays,
         clear_interval,
-        capturer,
         material,
     };
     ui_event(&app, &mut the_model, WindowEvent::Focused);
@@ -276,16 +257,13 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         .rays
         .par_iter_mut()
         .for_each(|ray| ray.collide(rot, anim, anim_speed, time, scene, canvas_rect));
+}
 
-    // Because we draw in the texture, all the code that usually goes in the view method has to be moved into the update
-    // function.
-
-    // VIEW
-    // First, reset the `draw` state.
-    let d = &model.capturer.draw;
-    d.reset();
+fn view(app: &App, model: &Model, frame: Frame) {
     let blends = [BLEND_NORMAL, BLEND_ADD, BLEND_SUBTRACT, BLEND_LIGHTEST];
-    let draw = d.color_blend(blends[model.blend_id].clone());
+    //let draw = d.color_blend(blends[model.blend_id].clone());
+    let draw = app.draw().color_blend(blends[model.blend_id].clone());
+    frame.clear(model.palette.get_fifth(model.scheme_id, model.color_off));
 
     if model.transparent_bg {
         let mut color = model.palette.get_fifth(model.scheme_id, model.color_off);
@@ -303,19 +281,19 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         for element in model.scene.iter() {
             element.draw(&draw, &model.wall_width);
             // Debug bounding volume
-            // if let Some(c) = element.bounding_volume() {
-            //     match c {
-            //         BoundingVolume::Circle { position, radius } => {
-            //             draw.ellipse()
-            //                 .no_fill()
-            //                 .x_y(position.x, position.y)
-            //                 .w_h(radius * 2.0, radius * 2.0)
-            //                 .color(element.material().coloration)
-            //                 .stroke_weight(model.wall_width);
-            //         }
-            //         _ => {}
-            //     }
-            // }
+            if let Some(c) = element.bounding_volume() {
+                match c {
+                    BoundingVolume::Circle { position, radius } => {
+                        draw.ellipse()
+                            .no_fill()
+                            .x_y(position.x, position.y)
+                            .w_h(radius * 2.0, radius * 2.0)
+                            .color(element.material().coloration)
+                            .stroke_weight(model.wall_width);
+                    }
+                    _ => {}
+                }
+            }
         }
     }
 
@@ -338,30 +316,10 @@ fn update(app: &App, model: &mut Model, _update: Update) {
             r.draw_rays(&draw, model.ray_width, model.draw_not_colliding_rays);
         }
     }
-    // Render our drawing to the texture.
-    let window = app.main_window();
-    let device = window.device();
-    model.capturer.update(&window, &device, elapsed_frames);
+
+    draw.to_frame(app, &frame).unwrap();
 }
 
-fn view(_app: &App, model: &Model, frame: Frame) {
-    model.capturer.view(frame);
-}
-
-fn key_pressed(_app: &App, model: &mut Model, key: Key) {
-    match key {
-        Key::S => model.capturer.take_screenshot(),
-        Key::R => model.capturer.start_recording(),
-        Key::P => model.capturer.stop_recording(),
-        // Key::S => match app.window(model.main_window_id) {
-        //     Some(window) => {
-        //         window.capture_frame(app.time.to_string() + ".png");
-        //     }
-        //     None => {}
-        // },
-        _other_key => {}
-    }
-}
 
 fn ui_event(_app: &App, model: &mut Model, _event: WindowEvent) {
     let ui = &mut model.ui.set_widgets();
@@ -675,21 +633,6 @@ fn ui_view(app: &App, model: &Model, frame: Frame) {
     model.ui.draw_to_frame_if_changed(app, &frame).unwrap();
 }
 
-// The directory where we'll save the frames.
-fn capture_directory(app: &App) -> std::path::PathBuf {
-    env::current_dir()
-    //app.project_path()
-        .expect("could not locate project_path")
-        .join(app.exe_name().unwrap())
-}
-// Wait for capture to finish.
-fn exit(app: &App, model: Model) {
-    println!("Waiting for PNG writing to complete...");
-    let window = app.main_window();
-    let device = window.device();
-    model.capturer.exit(&device);
-    println!("Done!");
-}
 
 fn raw_window_event(app: &App, model: &mut Model, event: &ui::RawWindowEvent) {
     model.ui.handle_raw_event(app, event);
