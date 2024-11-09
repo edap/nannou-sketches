@@ -1827,14 +1827,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nannou-ray2d"
-version = "0.1.1"
-source = "git+https://github.com/edap/nannou-ray2d#3ce6365c88ad46ccd79e9959c1ae02dad70cf654"
-dependencies = [
- "nannou 0.18.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "nannou_conrod"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1931,7 +1923,15 @@ dependencies = [
 [[package]]
 name = "nannou_raycast"
 version = "0.1.2"
-source = "git+https://github.com/edap/nannou-ray2d?branch=main#cc482613c473d2f0136936348e489b6323347f5c"
+source = "git+https://github.com/edap/nannou_raycast?branch=main#cc482613c473d2f0136936348e489b6323347f5c"
+dependencies = [
+ "nannou 0.18.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "nannou_raycast"
+version = "0.1.2"
+source = "git+https://github.com/edap/nannou_raycast#cc482613c473d2f0136936348e489b6323347f5c"
 dependencies = [
  "nannou 0.18.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -2708,7 +2708,7 @@ dependencies = [
  "edapx-colors",
  "nannou 0.18.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "nannou_conrod",
- "nannou_raycast",
+ "nannou_raycast 0.1.2 (git+https://github.com/edap/nannou_raycast?branch=main)",
  "rayon",
 ]
 
@@ -2796,8 +2796,8 @@ dependencies = [
  "edapx-colors",
  "egui_demo_lib",
  "nannou 0.18.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "nannou-ray2d",
  "nannou_egui",
+ "nannou_raycast 0.1.2 (git+https://github.com/edap/nannou_raycast)",
  "rayon",
 ]
 

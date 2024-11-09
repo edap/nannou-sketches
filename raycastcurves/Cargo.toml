@@ -7,10 +7,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-nannou = { version ="0.18.0"  }
+nannou = { version ="0.18.1"  }
 nannou_conrod = { version ="0.18.0" }
 edapx-colors = { path = "../edapx-colors" }
 #ray2d = { path = "../ray2d" }
-nannou_raycast = { git = "https://github.com/edap/nannou-ray2d" , branch = "main"}
+nannou_raycast = { git = "https://github.com/edap/nannou_raycast" , branch = "main"}
 rayon = "1.5.0"
+# web-sys = { version = "0.3.72", features = ["GpuBufferUsage"] }
 

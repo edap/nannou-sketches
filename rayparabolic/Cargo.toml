@@ -12,6 +12,6 @@ nannou = { version = "0.18.1"}
 egui_demo_lib = "0.15"
 edapx-colors = { path = "../edapx-colors" }
 #ray2d = { path = "../ray2d" }
-nannou-ray2d = { git = "https://github.com/edap/nannou-ray2d" }
+nannou_raycast = { git = "https://github.com/edap/nannou_raycast" }
 rayon = "1.5.0"
 
