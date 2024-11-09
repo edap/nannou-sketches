@@ -5,6 +5,8 @@ use nannou_conrod::prelude::*;
 use rayon::prelude::*;
 use scene::Material;
 use wall_helper::change_surface_walls;
+use std::env;
+use std::path::PathBuf;
 
 mod gui;
 mod ray_light;
@@ -104,7 +106,8 @@ fn model(app: &App) -> Model {
 
     // set up the capturer
     let sample_count = app.window(main_window_id).unwrap().msaa_samples();
-    let path = capture_directory(app);
+    //let path = capture_directory(app);
+    let path = app.assets_path().unwrap();
     let capturer = Capturer::new(
         texture_size,
         sample_count,
@@ -674,7 +677,8 @@ fn ui_view(app: &App, model: &Model, frame: Frame) {
 
 // The directory where we'll save the frames.
 fn capture_directory(app: &App) -> std::path::PathBuf {
-    app.project_path()
+    env::current_dir()
+    //app.project_path()
         .expect("could not locate project_path")
         .join(app.exe_name().unwrap())
 }

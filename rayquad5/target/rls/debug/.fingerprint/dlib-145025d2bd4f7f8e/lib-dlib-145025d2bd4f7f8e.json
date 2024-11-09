@@ -1,1 +1,0 @@
-{"rustc":10461004854123552879,"features":"[\"dlopen\"]","target":13532549105779706473,"profile":14672114853574311971,"path":11388562387551809616,"deps":[[9238370402709201017,"libloading",false,9501458706994844522]],"local":[{"CheckDepInfo":{"dep_info":"debug/.fingerprint/dlib-145025d2bd4f7f8e/dep-lib-dlib-145025d2bd4f7f8e"}}],"rustflags":[],"metadata":14513833357964803601}

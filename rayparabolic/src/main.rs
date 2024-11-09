@@ -8,6 +8,9 @@ use nannou_egui::{self, egui, Egui};
 use rayon::prelude::*;
 use scene::Material;
 use wall_helper::change_surface_walls;
+use std::env;
+use std::path::PathBuf;
+use std::path::Path;
 
 //mod gui;
 mod ray_light;
@@ -119,7 +122,9 @@ fn model(app: &App) -> Model {
 
     // set up the capturer
     let sample_count = app.window(main_window_id).unwrap().msaa_samples();
-    let path = capture_directory(app);
+    //let path = capture_directory(app);
+    let path = app.assets_path().unwrap();
+    //let path = env::current_dir()?;
     let capturer = Capturer::new(
         texture_size,
         sample_count,
@@ -643,9 +648,12 @@ fn ui_view(_app: &App, model: &Model, frame: Frame) {
 
 // The directory where we'll save the frames.
 fn capture_directory(app: &App) -> std::path::PathBuf {
-    app.project_path()
-        .expect("could not locate project_path")
-        .join(app.exe_name().unwrap())
+//         env::current_dir()
+//    // app.project_path()
+//         .expect("could not locate project_path")
+//         .join(app.exe_name().unwrap())
+
+       Path::new("/home/dapx/").to_path_buf()
 }
 // Wait for capture to finish.
 fn exit(app: &App, model: Model) {
